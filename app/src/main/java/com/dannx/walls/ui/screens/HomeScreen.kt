@@ -20,6 +20,7 @@ import androidx.compose.foundation.lazy.staggeredgrid.LazyVerticalStaggeredGrid
 import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridCells
 import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridItemSpan
 import androidx.compose.foundation.lazy.staggeredgrid.items
+import androidx.compose.foundation.lazy.staggeredgrid.itemsIndexed
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
@@ -63,7 +64,11 @@ fun HomeScreen(
     onOpenWallpaper: (Wallpaper) -> Unit,
     onToggleFavorite: (String) -> Unit,
 ) {
-    val featured = state.featured
+    val featured = remember(state.wallpapers) { state.featured }
+    val filtered = remember(state.wallpapers, state.query, state.category, state.tag) {
+        state.filtered
+    }
+    val availableTags = remember(state.wallpapers) { state.availableTags }
     val showHero = state.query.isBlank() && state.category == null && state.tag == null &&
         featured.isNotEmpty()
     val categories = remember(state.wallpapers) {
@@ -141,7 +146,7 @@ fun HomeScreen(
             }
         }
 
-        if (state.availableTags.isNotEmpty()) {
+        if (availableTags.isNotEmpty()) {
             item(span = StaggeredGridItemSpan.FullLine) {
                 Column {
                     Text(
@@ -162,7 +167,7 @@ fun HomeScreen(
                                 shape = CircleShape,
                             )
                         }
-                        items(state.availableTags, key = { "tag-$it" }) { tag ->
+                        items(availableTags, key = { "tag-$it" }) { tag ->
                             FilterChip(
                                 selected = state.tag == tag,
                                 onClick = {
@@ -266,7 +271,7 @@ fun HomeScreen(
                     modifier = Modifier.weight(1f),
                 )
                 Text(
-                    text = "${state.filtered.size} fondos",
+                    text = "${filtered.size} fondos",
                     style = MaterialTheme.typography.labelLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -355,11 +360,10 @@ fun HomeScreen(
             }
 
             else -> {
-                items(
-                    items = state.filtered,
-                    key = { it.id },
-                ) { wallpaper ->
-                    val index = state.filtered.indexOf(wallpaper)
+                itemsIndexed(
+                    items = filtered,
+                    key = { _, wallpaper -> wallpaper.id },
+                ) { index, wallpaper ->
                     WallpaperCard(
                         wallpaper = wallpaper,
                         isFavorite = wallpaper.id in state.favorites,

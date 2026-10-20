@@ -36,8 +36,10 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import coil.imageLoader
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
+import coil.size.Size
 import com.dannx.walls.data.Wallpaper
 
 @Composable
@@ -49,30 +51,39 @@ fun WallpaperCard(
     modifier: Modifier = Modifier,
 ) {
     val shape = MaterialTheme.shapes.extraLarge
+    val context = LocalContext.current
     Card(
         modifier = modifier
             .clip(shape)
-            .clickable(onClick = onClick),
+            .clickable {
+                context.imageLoader.enqueue(
+                    ImageRequest.Builder(context)
+                        .data(wallpaper.imageUrl)
+                        .size(Size.ORIGINAL)
+                        .build(),
+                )
+                onClick()
+            },
         shape = shape,
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceVariant,
         ),
     ) {
         Box(Modifier.fillMaxSize()) {
-            WallpaperImage(wallpaper)
-            Box(
-                Modifier
-                    .fillMaxSize()
-                    .background(
-                        Brush.verticalGradient(
-                            colors = listOf(
-                                Color.Transparent,
-                                Color.Black.copy(alpha = 0.15f),
-                                Color.Black.copy(alpha = 0.78f),
-                            ),
+        WallpaperImage(wallpaper, isHero = false)
+        Box(
+            Modifier
+                .fillMaxSize()
+                .background(
+                    Brush.verticalGradient(
+                        colors = listOf(
+                            Color.Transparent,
+                            Color.Black.copy(alpha = 0.15f),
+                            Color.Black.copy(alpha = 0.78f),
                         ),
                     ),
-            )
+                ),
+        )
             Column(
                 Modifier
                     .align(Alignment.BottomStart)
@@ -112,12 +123,21 @@ fun FeaturedCard(
     modifier: Modifier = Modifier,
 ) {
     val shape = MaterialTheme.shapes.extraLarge
+    val context = LocalContext.current
     Box(
         modifier = modifier
             .clip(shape)
-            .clickable(onClick = onClick),
+            .clickable {
+                context.imageLoader.enqueue(
+                    ImageRequest.Builder(context)
+                        .data(wallpaper.imageUrl)
+                        .size(Size.ORIGINAL)
+                        .build(),
+                )
+                onClick()
+            },
     ) {
-        WallpaperImage(wallpaper)
+        WallpaperImage(wallpaper, isHero = true)
         Box(
             Modifier
                 .fillMaxSize()
@@ -196,11 +216,12 @@ fun FeaturedCard(
 }
 
 @Composable
-private fun WallpaperImage(wallpaper: Wallpaper) {
+private fun WallpaperImage(wallpaper: Wallpaper, isHero: Boolean) {
     AsyncImage(
         model = ImageRequest.Builder(LocalContext.current)
-            .data(wallpaper.imageUrl)
-            .crossfade(true)
+            .data(if (isHero) wallpaper.imageUrl else wallpaper.thumbnailUrl)
+            .size(if (isHero) 1080 else 600)
+            .crossfade(if (isHero) 150 else 0)
             .build(),
         contentDescription = wallpaper.title,
         contentScale = ContentScale.Crop,

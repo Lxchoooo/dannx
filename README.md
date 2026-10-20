@@ -55,7 +55,7 @@ Variables** y crea:
 | `SUPABASE_ANON_KEY` | Tu anon public key |
 
 Cada vez que se suba un cambio a `main`, GitHub Actions compila y publica el
-APK en la sección **Actions > último run > Artifacts** como `DannX-debug`.
+APK en la sección **Actions > último run > Artifacts** como `DannX`.
 
 Para lanzar una versión con enlace de descarga fijo, crea un tag:
 
@@ -68,14 +68,15 @@ El APK queda adjunto en **Releases**.
 
 ## 3. Instalar la app
 
-1. Descarga `app-debug.apk` desde Actions o Releases.
+1. Descarga `DannX.apk` desde Actions o Releases.
 2. Ábrelo en el teléfono y acepta "instalar apps de origen desconocido".
-3. Listo. Sin Supabase funciona en modo demo; con Supabase cargará los
-   fondos reales.
+3. Listo. Sin Supabase funciona con un feed de ejemplo; con Supabase carga
+   los fondos reales.
 
-Es un APK de depuración, suficiente para compartir con amigos y familia.
-Para publicar en Play Store más adelante habría que firmar una versión
-`release`.
+El APK queda firmado siempre con la misma clave incluida en el repositorio:
+las actualizaciones se instalan encima sin necesidad de desinstalar. Para
+publicar en Play Store más adelante se recomienda mover la firma a un
+keystore privado.
 
 ## 4. Colecciones y tags
 
@@ -88,8 +89,7 @@ La idea es combinar lo visual de Wallcraft con la libertad de Zedge:
 - Los tags son libres: se escriben separados por comas al publicar y se
   pueden buscar desde el feed. No hay moderación automática que borre un
   fondo por usar un tag.
-- En modo demo, las colecciones se guardan en el teléfono para probar la
-  experiencia sin Supabase.
+- Sin Supabase configurado, las colecciones se guardan en el teléfono.
 
 ## 5. Cómo publica tu amigo
 

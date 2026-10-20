@@ -41,6 +41,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -49,6 +50,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
+import coil.request.ImageRequest
 import com.dannx.walls.UiState
 import com.dannx.walls.data.WallpaperCollection
 
@@ -180,7 +182,10 @@ private fun CollectionCard(
         ) {
             if (cover != null) {
                 AsyncImage(
-                    model = cover.imageUrl,
+                    model = ImageRequest.Builder(LocalContext.current)
+                        .data(cover.thumbnailUrl)
+                        .size(720)
+                        .build(),
                     contentDescription = collection.name,
                     contentScale = ContentScale.Crop,
                     modifier = Modifier.fillMaxSize(),

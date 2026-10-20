@@ -17,6 +17,7 @@ import androidx.compose.foundation.lazy.staggeredgrid.LazyVerticalStaggeredGrid
 import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridCells
 import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridItemSpan
 import androidx.compose.foundation.lazy.staggeredgrid.items
+import androidx.compose.foundation.lazy.staggeredgrid.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.ArrowBack
@@ -31,6 +32,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -55,7 +57,9 @@ fun CollectionDetailScreen(
     onRemove: (String) -> Unit,
     onDelete: () -> Unit,
 ) {
-    val items = state.wallpapersIn(collection)
+    val items = remember(state.wallpapers, collection.wallpaperIds) {
+        state.wallpapersIn(collection)
+    }
     val canEdit = state.canEdit(collection)
     var confirmDelete by rememberSaveable { mutableStateOf(false) }
 
@@ -148,8 +152,7 @@ fun CollectionDetailScreen(
                 }
             }
         } else {
-            items(items = items, key = { it.id }) { wallpaper ->
-                val index = items.indexOf(wallpaper)
+            itemsIndexed(items = items, key = { _, wallpaper -> wallpaper.id }) { index, wallpaper ->
                 Box {
                     WallpaperCard(
                         wallpaper = wallpaper,

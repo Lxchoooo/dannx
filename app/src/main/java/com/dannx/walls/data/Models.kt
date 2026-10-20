@@ -9,13 +9,17 @@ data class Wallpaper(
     val title: String,
     val category: String,
     val imageUrl: String,
+    val thumbUrl: String = "",
     val author: String = "DannX",
     val width: Int = 0,
     val height: Int = 0,
     val featured: Boolean = false,
     val createdAt: String = "",
     val tags: List<String> = emptyList(),
-)
+) {
+    val thumbnailUrl: String
+        get() = thumbUrl.ifBlank { imageUrl }
+}
 
 data class AdminSession(
     val email: String,

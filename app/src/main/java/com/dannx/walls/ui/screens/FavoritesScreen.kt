@@ -14,6 +14,7 @@ import androidx.compose.foundation.lazy.staggeredgrid.LazyVerticalStaggeredGrid
 import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridCells
 import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridItemSpan
 import androidx.compose.foundation.lazy.staggeredgrid.items
+import androidx.compose.foundation.lazy.staggeredgrid.itemsIndexed
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.FavoriteBorder
 import androidx.compose.material3.Button
@@ -21,6 +22,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
@@ -36,7 +38,7 @@ fun FavoritesScreen(
     onToggleFavorite: (String) -> Unit,
     onExplore: () -> Unit,
 ) {
-    val items = state.favoriteWallpapers
+    val items = remember(state.wallpapers, state.favorites) { state.favoriteWallpapers }
     LazyVerticalStaggeredGrid(
         columns = StaggeredGridCells.Fixed(2),
         modifier = Modifier
@@ -95,8 +97,7 @@ fun FavoritesScreen(
                 }
             }
         } else {
-            items(items = items, key = { it.id }) { wallpaper ->
-                val index = items.indexOf(wallpaper)
+            itemsIndexed(items = items, key = { _, wallpaper -> wallpaper.id }) { index, wallpaper ->
                 WallpaperCard(
                     wallpaper = wallpaper,
                     isFavorite = true,

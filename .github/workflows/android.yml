@@ -30,12 +30,12 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
 
       - name: Build and test
-        run: ./gradlew --no-daemon assembleDebug testDebugUnitTest
+        run: ./gradlew --no-daemon assembleRelease testDebugUnitTest
 
       - uses: actions/upload-artifact@v4
         with:
-          name: DannX-debug
-          path: app/build/outputs/apk/debug/app-debug.apk
+          name: DannX
+          path: app/build/outputs/apk/release/app-release.apk
           if-no-files-found: error
           retention-days: 30
 
@@ -44,7 +44,8 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create "$GITHUB_REF_NAME" app/build/outputs/apk/debug/app-debug.apk \
+          cp app/build/outputs/apk/release/app-release.apk DannX.apk
+          gh release create "$GITHUB_REF_NAME" DannX.apk \
             --title "DannX $GITHUB_REF_NAME" \
-            --notes "APK de prueba generado por GitHub Actions." \
-          || gh release upload "$GITHUB_REF_NAME" app/build/outputs/apk/debug/app-debug.apk --clobber
+            --notes "Nueva versión de DannX." \
+          || gh release upload "$GITHUB_REF_NAME" DannX.apk --clobber

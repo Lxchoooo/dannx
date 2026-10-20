@@ -60,6 +60,7 @@ object DemoWallpapers {
         title = title,
         category = category,
         imageUrl = "https://picsum.photos/seed/dannx-$number/1080/1920",
+        thumbUrl = "https://picsum.photos/seed/dannx-$number/540/960",
         author = "DannX Studio",
         width = 1080,
         height = 1920,
