@@ -1,4 +1,13 @@
--- DannX backend setup. Run once in the Supabase SQL Editor.
+-- DannX backend setup. Idempotent: safe to run again after updates.
+--
+-- Setup checklist:
+--   1. Create a free project at supabase.com and open the SQL Editor.
+--   2. Paste this file and run it.
+--   3. Authentication > Users: create the admin account.
+--   4. Authentication > Providers > Email: turn off "Allow new users to sign up".
+--   5. Project Settings > API: copy the Project URL and anon public key into
+--      the repository variables SUPABASE_URL and SUPABASE_ANON_KEY.
+--
 
 create extension if not exists "pgcrypto";
 
