@@ -55,7 +55,7 @@ Variables** y crea:
 | `SUPABASE_ANON_KEY` | Tu anon public key |
 
 Cada vez que se suba un cambio a `main`, GitHub Actions compila y publica el
-APK en la sección **Actions > último run > Artifacts** como `DannX`.
+APK en la sección **Actions > último run > Artifacts** como `DannX-debug`.
 
 Para lanzar una versión con enlace de descarga fijo, crea un tag:
 
@@ -68,7 +68,7 @@ El APK queda adjunto en **Releases**.
 
 ## 3. Instalar la app
 
-1. Descarga `DannX.apk` desde Actions o Releases.
+1. Descarga `app-debug.apk` desde Actions o Releases.
 2. Ábrelo en el teléfono y acepta "instalar apps de origen desconocido".
 3. Listo. Sin Supabase funciona con un feed de ejemplo; con Supabase carga
    los fondos reales.
