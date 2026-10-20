@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -13,11 +14,10 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.staggeredgrid.LazyVerticalStaggeredGrid
-import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridCells
-import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridItemSpan
-import androidx.compose.foundation.lazy.staggeredgrid.items
-import androidx.compose.foundation.lazy.staggeredgrid.itemsIndexed
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.GridItemSpan
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.ArrowBack
@@ -63,16 +63,16 @@ fun CollectionDetailScreen(
     val canEdit = state.canEdit(collection)
     var confirmDelete by rememberSaveable { mutableStateOf(false) }
 
-    LazyVerticalStaggeredGrid(
-        columns = StaggeredGridCells.Fixed(2),
+    LazyVerticalGrid(
+        columns = GridCells.Fixed(2),
         modifier = Modifier
             .fillMaxSize()
             .statusBarsPadding(),
         contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 10.dp, bottom = 28.dp),
         horizontalArrangement = Arrangement.spacedBy(12.dp),
-        verticalItemSpacing = 12.dp,
+        verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        item(span = StaggeredGridItemSpan.FullLine) {
+        item(span = { GridItemSpan(2) }) {
             Column(Modifier.fillMaxWidth()) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     FilledTonalIconButton(onClick = onBack) {
@@ -123,7 +123,7 @@ fun CollectionDetailScreen(
         }
 
         if (items.isEmpty()) {
-            item(span = StaggeredGridItemSpan.FullLine) {
+            item(span = { GridItemSpan(2) }) {
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -156,7 +156,7 @@ fun CollectionDetailScreen(
                 items = items,
                 key = { _, wallpaper -> wallpaper.id },
                 contentType = { _, _ -> "wall" },
-            ) { index, wallpaper ->
+            ) { _, wallpaper ->
                 Box {
                     WallpaperCard(
                         wallpaper = wallpaper,
@@ -165,7 +165,7 @@ fun CollectionDetailScreen(
                         onToggleFavorite = { onToggleFavorite(wallpaper.id) },
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(if (index % 3 == 0) 278.dp else 218.dp),
+                            .aspectRatio(9f / 16f),
                     )
                     if (canEdit) {
                         FilledTonalIconButton(

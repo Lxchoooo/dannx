@@ -12,15 +12,15 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.staggeredgrid.LazyVerticalStaggeredGrid
-import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridCells
-import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridItemSpan
-import androidx.compose.foundation.lazy.staggeredgrid.items
-import androidx.compose.foundation.lazy.staggeredgrid.itemsIndexed
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.GridItemSpan
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
@@ -50,13 +50,15 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.util.lerp
 import coil.imageLoader
-import coil.request.ImageRequest
+import coil.request.Priority
 import com.dannx.walls.UiState
 import com.dannx.walls.data.DefaultCategories
 import com.dannx.walls.data.Wallpaper
 import com.dannx.walls.ui.components.FeaturedCard
 import com.dannx.walls.ui.components.WallpaperCard
+import com.dannx.walls.ui.components.wallpaperThumbRequest
 import kotlin.math.absoluteValue
+import kotlinx.coroutines.delay
 
 @Composable
 fun HomeScreen(
@@ -75,11 +77,10 @@ fun HomeScreen(
     val availableTags = remember(state.wallpapers) { state.availableTags }
     val context = LocalContext.current
     LaunchedEffect(state.wallpapers) {
-        state.wallpapers.take(30).forEach { wallpaper ->
+        delay(300)
+        state.wallpapers.take(12).forEach { wallpaper ->
             context.imageLoader.enqueue(
-                ImageRequest.Builder(context)
-                    .data(wallpaper.thumbnailUrl)
-                    .build(),
+                wallpaperThumbRequest(context, wallpaper, Priority.LOW),
             )
         }
     }
@@ -91,16 +92,16 @@ fun HomeScreen(
     }
     val pagerState = rememberPagerState(pageCount = { featured.size })
 
-    LazyVerticalStaggeredGrid(
-        columns = StaggeredGridCells.Fixed(2),
+    LazyVerticalGrid(
+        columns = GridCells.Fixed(2),
         modifier = Modifier
             .fillMaxSize()
             .statusBarsPadding(),
         contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 10.dp, bottom = 28.dp),
         horizontalArrangement = Arrangement.spacedBy(12.dp),
-        verticalItemSpacing = 12.dp,
+        verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        item(span = StaggeredGridItemSpan.FullLine) {
+        item(span = { GridItemSpan(2) }) {
             Column(Modifier.fillMaxWidth()) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Column(Modifier.weight(1f)) {
@@ -141,7 +142,7 @@ fun HomeScreen(
             }
         }
 
-        item(span = StaggeredGridItemSpan.FullLine) {
+        item(span = { GridItemSpan(2) }) {
             LazyRow(
                 contentPadding = PaddingValues(end = 20.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -161,7 +162,7 @@ fun HomeScreen(
         }
 
         if (availableTags.isNotEmpty()) {
-            item(span = StaggeredGridItemSpan.FullLine) {
+            item(span = { GridItemSpan(2) }) {
                 Column {
                     Text(
                         text = "Etiquetas",
@@ -197,7 +198,7 @@ fun HomeScreen(
         }
 
         if (state.isDemo) {
-            item(span = StaggeredGridItemSpan.FullLine) {
+            item(span = { GridItemSpan(2) }) {
                 Surface(
                     shape = MaterialTheme.shapes.large,
                     color = MaterialTheme.colorScheme.secondaryContainer,
@@ -214,7 +215,7 @@ fun HomeScreen(
         }
 
         if (showHero) {
-            item(span = StaggeredGridItemSpan.FullLine) {
+            item(span = { GridItemSpan(2) }) {
                 Column {
                     Spacer(Modifier.height(6.dp))
                     HorizontalPager(
@@ -272,7 +273,7 @@ fun HomeScreen(
             }
         }
 
-        item(span = StaggeredGridItemSpan.FullLine) {
+        item(span = { GridItemSpan(2) }) {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -294,7 +295,7 @@ fun HomeScreen(
 
         when {
             state.loading && state.wallpapers.isEmpty() -> {
-                item(span = StaggeredGridItemSpan.FullLine) {
+                item(span = { GridItemSpan(2) }) {
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -307,7 +308,7 @@ fun HomeScreen(
             }
 
             state.loadError != null && state.wallpapers.isEmpty() -> {
-                item(span = StaggeredGridItemSpan.FullLine) {
+                item(span = { GridItemSpan(2) }) {
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -335,7 +336,7 @@ fun HomeScreen(
             }
 
             state.filtered.isEmpty() -> {
-                item(span = StaggeredGridItemSpan.FullLine) {
+                item(span = { GridItemSpan(2) }) {
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -378,7 +379,7 @@ fun HomeScreen(
                     items = filtered,
                     key = { _, wallpaper -> wallpaper.id },
                     contentType = { _, _ -> "wall" },
-                ) { index, wallpaper ->
+                ) { _, wallpaper ->
                     WallpaperCard(
                         wallpaper = wallpaper,
                         isFavorite = wallpaper.id in state.favorites,
@@ -386,7 +387,7 @@ fun HomeScreen(
                         onToggleFavorite = { onToggleFavorite(wallpaper.id) },
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(if (index % 3 == 0) 278.dp else 218.dp),
+                            .aspectRatio(9f / 16f),
                     )
                 }
             }

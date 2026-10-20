@@ -37,6 +37,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.dannx.walls.MainViewModel
+import com.dannx.walls.ui.components.DebugFpsOverlay
 import com.dannx.walls.ui.screens.CollectionDetailScreen
 import com.dannx.walls.ui.screens.CollectionsScreen
 import com.dannx.walls.ui.screens.DetailScreen
@@ -111,11 +112,12 @@ fun AppRoot(viewModel: MainViewModel, startTab: String = "home") {
             }
         },
     ) { innerPadding ->
-        NavHost(
-            navController = navController,
-            startDestination = startDestination,
-            modifier = Modifier.padding(innerPadding),
-        ) {
+        Box {
+            NavHost(
+                navController = navController,
+                startDestination = startDestination,
+                modifier = Modifier.padding(innerPadding),
+            ) {
             composable("home") {
                 HomeScreen(
                     state = state,
@@ -218,6 +220,8 @@ fun AppRoot(viewModel: MainViewModel, startTab: String = "home") {
                     )
                 }
             }
+        }
+            DebugFpsOverlay(Modifier.fillMaxSize())
         }
     }
 }

@@ -1,12 +1,16 @@
 package com.dannx.walls.ui.components
 
+import android.content.Context
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -15,8 +19,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Favorite
 import androidx.compose.material.icons.rounded.FavoriteBorder
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButtonDefaults
@@ -24,6 +26,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -39,8 +42,23 @@ import androidx.compose.ui.unit.dp
 import coil.imageLoader
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
+import coil.request.Priority
 import coil.size.Size
 import com.dannx.walls.data.Wallpaper
+
+internal const val ThumbWidth = 540
+internal const val ThumbHeight = 960
+
+internal fun wallpaperThumbRequest(
+    context: Context,
+    wallpaper: Wallpaper,
+    priority: Priority = Priority.NORMAL,
+): ImageRequest =
+    ImageRequest.Builder(context)
+        .data(wallpaper.thumbnailUrl)
+        .size(ThumbWidth, ThumbHeight)
+        .priority(priority)
+        .build()
 
 @Composable
 fun WallpaperCard(
@@ -50,12 +68,13 @@ fun WallpaperCard(
     onToggleFavorite: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val shape = MaterialTheme.shapes.extraLarge
     val context = LocalContext.current
-    Card(
+    val interactionSource = remember { MutableInteractionSource() }
+    Box(
         modifier = modifier
-            .clip(shape)
-            .clickable {
+            .clip(MaterialTheme.shapes.extraLarge)
+            .background(MaterialTheme.colorScheme.surfaceVariant)
+            .clickable(interactionSource = interactionSource, indication = null) {
                 context.imageLoader.enqueue(
                     ImageRequest.Builder(context)
                         .data(wallpaper.imageUrl)
@@ -64,16 +83,13 @@ fun WallpaperCard(
                 )
                 onClick()
             },
-        shape = shape,
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant,
-        ),
     ) {
-        Box(Modifier.fillMaxSize()) {
         WallpaperImage(wallpaper, isHero = false)
         Box(
             Modifier
-                .fillMaxSize()
+                .align(Alignment.BottomStart)
+                .fillMaxWidth()
+                .fillMaxHeight(0.42f)
                 .background(
                     Brush.verticalGradient(
                         colors = listOf(
@@ -84,33 +100,32 @@ fun WallpaperCard(
                     ),
                 ),
         )
-            Column(
-                Modifier
-                    .align(Alignment.BottomStart)
-                    .padding(14.dp),
-            ) {
-                Text(
-                    text = wallpaper.category.uppercase(),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = Color.White.copy(alpha = 0.78f),
-                    fontWeight = FontWeight.Bold,
-                )
-                Text(
-                    text = wallpaper.title,
-                    style = MaterialTheme.typography.titleMedium,
-                    color = Color.White,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-            }
-            FavoriteButton(
-                isFavorite = isFavorite,
-                onClick = onToggleFavorite,
-                modifier = Modifier
-                    .align(Alignment.TopEnd)
-                    .padding(10.dp),
+        Column(
+            Modifier
+                .align(Alignment.BottomStart)
+                .padding(12.dp),
+        ) {
+            Text(
+                text = wallpaper.category.uppercase(),
+                style = MaterialTheme.typography.labelSmall,
+                color = Color.White.copy(alpha = 0.78f),
+                fontWeight = FontWeight.Bold,
+            )
+            Text(
+                text = wallpaper.title,
+                style = MaterialTheme.typography.titleMedium,
+                color = Color.White,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
             )
         }
+        FavoriteButton(
+            isFavorite = isFavorite,
+            onClick = onToggleFavorite,
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .padding(10.dp),
+        )
     }
 }
 
@@ -122,12 +137,13 @@ fun FeaturedCard(
     onToggleFavorite: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val shape = MaterialTheme.shapes.extraLarge
     val context = LocalContext.current
+    val interactionSource = remember { MutableInteractionSource() }
     Box(
         modifier = modifier
-            .clip(shape)
-            .clickable {
+            .clip(MaterialTheme.shapes.extraLarge)
+            .background(MaterialTheme.colorScheme.surfaceVariant)
+            .clickable(interactionSource = interactionSource, indication = null) {
                 context.imageLoader.enqueue(
                     ImageRequest.Builder(context)
                         .data(wallpaper.imageUrl)
@@ -140,12 +156,14 @@ fun FeaturedCard(
         WallpaperImage(wallpaper, isHero = true)
         Box(
             Modifier
-                .fillMaxSize()
+                .align(Alignment.BottomStart)
+                .fillMaxWidth()
+                .fillMaxHeight(0.5f)
                 .background(
                     Brush.verticalGradient(
                         colors = listOf(
-                            Color.Black.copy(alpha = 0.08f),
                             Color.Transparent,
+                            Color.Black.copy(alpha = 0.12f),
                             Color.Black.copy(alpha = 0.82f),
                         ),
                     ),
@@ -217,11 +235,17 @@ fun FeaturedCard(
 
 @Composable
 private fun WallpaperImage(wallpaper: Wallpaper, isHero: Boolean) {
+    val context = LocalContext.current
+    val model = if (isHero) {
+        ImageRequest.Builder(context)
+            .data(wallpaper.imageUrl)
+            .crossfade(150)
+            .build()
+    } else {
+        wallpaperThumbRequest(context, wallpaper)
+    }
     AsyncImage(
-        model = ImageRequest.Builder(LocalContext.current)
-            .data(if (isHero) wallpaper.imageUrl else wallpaper.thumbnailUrl)
-            .crossfade(if (isHero) 150 else 120)
-            .build(),
+        model = model,
         contentDescription = wallpaper.title,
         contentScale = ContentScale.Crop,
         modifier = Modifier

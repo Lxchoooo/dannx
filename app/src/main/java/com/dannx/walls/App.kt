@@ -8,6 +8,6 @@ class App : Application(), ImageLoaderFactory {
     override fun newImageLoader(): ImageLoader =
         ImageLoader.Builder(this)
             .crossfade(false)
-            .bitmapFactoryMaxParallelism(4)
+            .bitmapFactoryMaxParallelism(2)
             .build()
 }
