@@ -39,14 +39,18 @@ import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.util.lerp
+import coil.imageLoader
+import coil.request.ImageRequest
 import com.dannx.walls.UiState
 import com.dannx.walls.data.DefaultCategories
 import com.dannx.walls.data.Wallpaper
@@ -69,6 +73,16 @@ fun HomeScreen(
         state.filtered
     }
     val availableTags = remember(state.wallpapers) { state.availableTags }
+    val context = LocalContext.current
+    LaunchedEffect(state.wallpapers) {
+        state.wallpapers.take(30).forEach { wallpaper ->
+            context.imageLoader.enqueue(
+                ImageRequest.Builder(context)
+                    .data(wallpaper.thumbnailUrl)
+                    .build(),
+            )
+        }
+    }
     val showHero = state.query.isBlank() && state.category == null && state.tag == null &&
         featured.isNotEmpty()
     val categories = remember(state.wallpapers) {
