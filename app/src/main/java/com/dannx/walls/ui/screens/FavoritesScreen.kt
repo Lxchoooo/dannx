@@ -97,7 +97,11 @@ fun FavoritesScreen(
                 }
             }
         } else {
-            itemsIndexed(items = items, key = { _, wallpaper -> wallpaper.id }) { index, wallpaper ->
+            itemsIndexed(
+                items = items,
+                key = { _, wallpaper -> wallpaper.id },
+                contentType = { _, _ -> "wall" },
+            ) { index, wallpaper ->
                 WallpaperCard(
                     wallpaper = wallpaper,
                     isFavorite = true,

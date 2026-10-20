@@ -377,6 +377,7 @@ fun HomeScreen(
                 itemsIndexed(
                     items = filtered,
                     key = { _, wallpaper -> wallpaper.id },
+                    contentType = { _, _ -> "wall" },
                 ) { index, wallpaper ->
                     WallpaperCard(
                         wallpaper = wallpaper,

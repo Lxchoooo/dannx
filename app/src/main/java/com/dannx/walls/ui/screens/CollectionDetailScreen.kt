@@ -152,7 +152,11 @@ fun CollectionDetailScreen(
                 }
             }
         } else {
-            itemsIndexed(items = items, key = { _, wallpaper -> wallpaper.id }) { index, wallpaper ->
+            itemsIndexed(
+                items = items,
+                key = { _, wallpaper -> wallpaper.id },
+                contentType = { _, _ -> "wall" },
+            ) { index, wallpaper ->
                 Box {
                     WallpaperCard(
                         wallpaper = wallpaper,
