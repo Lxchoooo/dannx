@@ -54,7 +54,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalHapticFeedback
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextAlign
@@ -137,56 +136,16 @@ private fun SetupCard(onRefresh: () -> Unit) {
             )
             Spacer(Modifier.height(6.dp))
             Text(
-                text = "El feed ya funciona en modo demo. Para que tu amigo publique de verdad, conecta Supabase una sola vez.",
+                text = "La nube todavía no está conectada. Podés seguir creando colecciones y guardando tus fondos favoritos.",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             Spacer(Modifier.height(18.dp))
-            SetupStep("1", "Crea un proyecto gratis en supabase.com.")
-            SetupStep("2", "Abre el SQL Editor y ejecuta el archivo supabase/setup.sql del proyecto.")
-            SetupStep("3", "En Authentication, crea el usuario administrador de tu amigo.")
-            SetupStep("4", "Guarda SUPABASE_URL y SUPABASE_ANON_KEY como variables del repositorio en GitHub.")
-            Spacer(Modifier.height(18.dp))
             Button(onClick = onRefresh, shape = CircleShape) {
-                Text("Ya está configurado, actualizar")
+                Text("Reintentar conexión")
             }
             Spacer(Modifier.height(8.dp))
-            Text(
-                text = "La guía completa está en el README del repositorio.",
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
         }
-    }
-}
-
-@Composable
-private fun SetupStep(number: String, text: String) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 5.dp),
-        verticalAlignment = Alignment.Top,
-    ) {
-        Box(
-            modifier = Modifier
-                .size(26.dp)
-                .background(MaterialTheme.colorScheme.primaryContainer, CircleShape),
-            contentAlignment = Alignment.Center,
-        ) {
-            Text(
-                text = number,
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onPrimaryContainer,
-                fontWeight = FontWeight.Bold,
-            )
-        }
-        Spacer(Modifier.width(10.dp))
-        Text(
-            text = text,
-            style = MaterialTheme.typography.bodyMedium,
-            modifier = Modifier.weight(1f),
-        )
     }
 }
 
@@ -220,7 +179,7 @@ private fun LoginCard(
             }
             Spacer(Modifier.height(6.dp))
             Text(
-                text = "Entra con el usuario que creaste en Supabase para subir wallpapers.",
+                text = "Iniciá sesión con tu cuenta de creador para publicar fondos.",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -496,7 +455,7 @@ private fun UploadCard(
             }
             Spacer(Modifier.height(10.dp))
             Text(
-                text = "La imagen se guarda en Supabase, aparece en el feed y, si elegiste una, en tu colección.",
+                text = "Tu fondo se publica en el feed y, si elegiste una, entra también a tu colección.",
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Start,
