@@ -220,7 +220,6 @@ private fun WallpaperImage(wallpaper: Wallpaper, isHero: Boolean) {
     AsyncImage(
         model = ImageRequest.Builder(LocalContext.current)
             .data(if (isHero) wallpaper.imageUrl else wallpaper.thumbnailUrl)
-            .size(if (isHero) 1080 else 600)
             .crossfade(if (isHero) 150 else 0)
             .build(),
         contentDescription = wallpaper.title,

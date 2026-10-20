@@ -184,7 +184,6 @@ private fun CollectionCard(
                 AsyncImage(
                     model = ImageRequest.Builder(LocalContext.current)
                         .data(cover.thumbnailUrl)
-                        .size(720)
                         .build(),
                     contentDescription = collection.name,
                     contentScale = ContentScale.Crop,
