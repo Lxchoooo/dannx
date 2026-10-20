@@ -58,12 +58,13 @@ private val tabs = listOf(
 )
 
 @Composable
-fun AppRoot(viewModel: MainViewModel) {
+fun AppRoot(viewModel: MainViewModel, startTab: String = "home") {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val navController = rememberNavController()
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = backStackEntry?.destination?.route
     val showBar = currentRoute in tabs.map { it.route }
+    val startDestination = if (startTab in tabs.map { it.route }) startTab else "home"
     val snackbarHostState = remember { SnackbarHostState() }
 
     LaunchedEffect(state.message) {
@@ -112,7 +113,7 @@ fun AppRoot(viewModel: MainViewModel) {
     ) { innerPadding ->
         NavHost(
             navController = navController,
-            startDestination = "home",
+            startDestination = startDestination,
             modifier = Modifier.padding(innerPadding),
         ) {
             composable("home") {

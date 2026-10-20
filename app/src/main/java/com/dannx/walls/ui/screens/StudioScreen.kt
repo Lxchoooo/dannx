@@ -51,7 +51,9 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -283,6 +285,7 @@ private fun UploadCard(
     var category by rememberSaveable { mutableStateOf("Abstracto") }
     var tagsText by rememberSaveable { mutableStateOf("") }
     var selectedCollectionId by rememberSaveable { mutableStateOf("") }
+    val haptics = LocalHapticFeedback.current
 
     val picker = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.PickVisualMedia(),
@@ -463,6 +466,7 @@ private fun UploadCard(
             Button(
                 onClick = {
                     selectedUri?.let { uri ->
+                        haptics.performHapticFeedback(HapticFeedbackType.LongPress)
                         onUpload(
                             uri,
                             title,

@@ -6,4 +6,11 @@
         <item name="android:navigationBarColor">@android:color/transparent</item>
         <item name="android:windowLightStatusBar">true</item>
     </style>
+
+    <style name="Theme.DannX.Splash" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/dannx_background</item>
+        <item name="windowSplashScreenAnimatedIcon">@mipmap/ic_launcher</item>
+        <item name="windowSplashScreenAnimationDuration">400</item>
+        <item name="postSplashScreenTheme">@style/Theme.DannX</item>
+    </style>
 </resources>

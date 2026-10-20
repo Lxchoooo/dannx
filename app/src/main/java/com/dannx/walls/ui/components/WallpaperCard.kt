@@ -29,8 +29,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -214,8 +216,12 @@ private fun FavoriteButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val haptics = LocalHapticFeedback.current
     FilledIconButton(
-        onClick = onClick,
+        onClick = {
+            haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+            onClick()
+        },
         modifier = modifier.size(42.dp),
         colors = IconButtonDefaults.filledIconButtonColors(
             containerColor = Color.Black.copy(alpha = 0.32f),

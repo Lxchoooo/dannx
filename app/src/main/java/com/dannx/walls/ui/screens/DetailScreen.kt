@@ -60,7 +60,9 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.core.view.WindowCompat
@@ -88,6 +90,7 @@ fun DetailScreen(
     var offset by remember { mutableStateOf(Offset.Zero) }
     var showCollections by rememberSaveable { mutableStateOf(false) }
     var showCreateCollection by rememberSaveable { mutableStateOf(false) }
+    val haptics = LocalHapticFeedback.current
     val transformState = rememberTransformableState { zoomChange, panChange, _ ->
         scale = (scale * zoomChange).coerceIn(1f, 4f)
         offset = if (scale <= 1f) Offset.Zero else offset + panChange
@@ -242,7 +245,10 @@ fun DetailScreen(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Button(
-                    onClick = onDownload,
+                    onClick = {
+                        haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                        onDownload()
+                    },
                     modifier = Modifier.weight(1f),
                     shape = CircleShape,
                     contentPadding = PaddingValues(horizontal = 14.dp, vertical = 14.dp),
@@ -252,7 +258,10 @@ fun DetailScreen(
                     Text("Descargar")
                 }
                 FilledTonalButton(
-                    onClick = onSetWallpaper,
+                    onClick = {
+                        haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                        onSetWallpaper()
+                    },
                     modifier = Modifier.weight(1f),
                     shape = CircleShape,
                     contentPadding = PaddingValues(horizontal = 14.dp, vertical = 14.dp),
@@ -281,6 +290,7 @@ fun DetailScreen(
             busy = collectionBusy,
             onDismiss = { showCollections = false },
             onPick = { collectionId ->
+                haptics.performHapticFeedback(HapticFeedbackType.LongPress)
                 showCollections = false
                 onAddToCollection(collectionId)
             },
