@@ -25,6 +25,16 @@ android {
     namespace = "com.dannx.walls"
     compileSdk = 36
 
+    signingConfigs {
+        getByName("debug") {
+            storeFile = rootProject.file("debug.keystore")
+            storePassword = "android"
+            storeType = "PKCS12"
+            keyAlias = "androiddebugkey"
+            keyPassword = "android"
+        }
+    }
+
     defaultConfig {
         applicationId = "com.dannx.walls"
         minSdk = 29
