@@ -1,0 +1,4 @@
+# Copy to local.properties only for local builds.
+# On GitHub Actions these values come from repository variables.
+SUPABASE_URL=
+SUPABASE_ANON_KEY=
