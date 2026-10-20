@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.CloudUpload
+import androidx.compose.material.icons.rounded.CollectionsBookmark
 import androidx.compose.material.icons.rounded.Explore
 import androidx.compose.material.icons.rounded.FavoriteBorder
 import androidx.compose.material3.Icon
@@ -36,6 +37,8 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.dannx.walls.MainViewModel
+import com.dannx.walls.ui.screens.CollectionDetailScreen
+import com.dannx.walls.ui.screens.CollectionsScreen
 import com.dannx.walls.ui.screens.DetailScreen
 import com.dannx.walls.ui.screens.FavoritesScreen
 import com.dannx.walls.ui.screens.HomeScreen
@@ -49,6 +52,7 @@ private data class TopLevelTab(
 
 private val tabs = listOf(
     TopLevelTab("home", "Explorar", Icons.Rounded.Explore),
+    TopLevelTab("collections", "Colecciones", Icons.Rounded.CollectionsBookmark),
     TopLevelTab("favorites", "Favoritos", Icons.Rounded.FavoriteBorder),
     TopLevelTab("studio", "Estudio", Icons.Rounded.CloudUpload),
 )
@@ -116,6 +120,7 @@ fun AppRoot(viewModel: MainViewModel) {
                     state = state,
                     onQueryChange = viewModel::setQuery,
                     onCategoryChange = viewModel::setCategory,
+                    onTagChange = viewModel::setTag,
                     onRefresh = viewModel::refresh,
                     onOpenWallpaper = { wallpaper ->
                         navController.navigate("detail/${wallpaper.id}")
@@ -132,6 +137,44 @@ fun AppRoot(viewModel: MainViewModel) {
                     onToggleFavorite = viewModel::toggleFavorite,
                     onExplore = { navController.navigateTopLevel("home") },
                 )
+            }
+            composable("collections") {
+                CollectionsScreen(
+                    state = state,
+                    onOpenCollection = { collection ->
+                        navController.navigate("collection/${collection.id}")
+                    },
+                    onCreateCollection = viewModel::createCollection,
+                )
+            }
+            composable(
+                route = "collection/{id}",
+                arguments = listOf(
+                    navArgument("id") { type = NavType.StringType },
+                ),
+            ) { entry ->
+                val id = entry.arguments?.getString("id")
+                val collection = state.collections.firstOrNull { it.id == id }
+                if (collection == null) {
+                    LaunchedEffect(id) {
+                        navController.popBackStack()
+                    }
+                    Box(Modifier.fillMaxSize())
+                } else {
+                    CollectionDetailScreen(
+                        state = state,
+                        collection = collection,
+                        onBack = { navController.popBackStack() },
+                        onOpenWallpaper = { wallpaper ->
+                            navController.navigate("detail/${wallpaper.id}")
+                        },
+                        onToggleFavorite = viewModel::toggleFavorite,
+                        onRemove = { wallpaperId ->
+                            viewModel.removeFromCollection(collection.id, wallpaperId)
+                        },
+                        onDelete = { viewModel.deleteCollection(collection.id) },
+                    )
+                }
             }
             composable("studio") {
                 StudioScreen(
@@ -159,11 +202,18 @@ fun AppRoot(viewModel: MainViewModel) {
                     DetailScreen(
                         wallpaper = wallpaper,
                         isFavorite = wallpaper.id in state.favorites,
+                        collections = state.myCollections,
+                        canManageCollections = state.isDemo || state.session != null,
+                        collectionBusy = state.collectionBusy,
                         onBack = { navController.popBackStack() },
                         onToggleFavorite = { viewModel.toggleFavorite(wallpaper.id) },
                         onDownload = { viewModel.download(wallpaper) },
                         onSetWallpaper = { viewModel.setWallpaper(wallpaper) },
                         onShare = { viewModel.share(wallpaper) },
+                        onAddToCollection = { collectionId ->
+                            viewModel.addToCollection(collectionId, wallpaper)
+                        },
+                        onCreateCollection = viewModel::createCollection,
                     )
                 }
             }

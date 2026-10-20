@@ -60,12 +60,14 @@ fun HomeScreen(
     state: UiState,
     onQueryChange: (String) -> Unit,
     onCategoryChange: (String?) -> Unit,
+    onTagChange: (String?) -> Unit,
     onRefresh: () -> Unit,
     onOpenWallpaper: (Wallpaper) -> Unit,
     onToggleFavorite: (String) -> Unit,
 ) {
     val featured = state.featured
-    val showHero = state.query.isBlank() && state.category == null && featured.isNotEmpty()
+    val showHero = state.query.isBlank() && state.category == null && state.tag == null &&
+        featured.isNotEmpty()
     val categories = remember(state.wallpapers) {
         listOf("Todos", "Destacados") +
             (DefaultCategories + state.wallpapers.map { it.category }).distinct().sorted()
@@ -120,7 +122,7 @@ fun HomeScreen(
                     value = state.query,
                     onValueChange = onQueryChange,
                     modifier = Modifier.fillMaxWidth(),
-                    placeholder = { Text("Buscar fondos") },
+                    placeholder = { Text("Buscar fondos o tags") },
                     leadingIcon = {
                         Icon(Icons.Rounded.Search, contentDescription = null)
                     },
@@ -152,6 +154,42 @@ fun HomeScreen(
                         label = { Text(label) },
                         shape = CircleShape,
                     )
+                }
+            }
+        }
+
+        if (state.availableTags.isNotEmpty()) {
+            item(span = StaggeredGridItemSpan.FullLine) {
+                Column {
+                    Text(
+                        text = "Etiquetas",
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Spacer(Modifier.height(4.dp))
+                    LazyRow(
+                        contentPadding = PaddingValues(end = 20.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        item(key = "all-tags") {
+                            FilterChip(
+                                selected = state.tag == null,
+                                onClick = { onTagChange(null) },
+                                label = { Text("Todas") },
+                                shape = CircleShape,
+                            )
+                        }
+                        items(state.availableTags, key = { "tag-$it" }) { tag ->
+                            FilterChip(
+                                selected = state.tag == tag,
+                                onClick = {
+                                    onTagChange(if (state.tag == tag) null else tag)
+                                },
+                                label = { Text("#$tag") },
+                                shape = CircleShape,
+                            )
+                        }
+                    }
                 }
             }
         }
@@ -334,6 +372,7 @@ fun HomeScreen(
                             onClick = {
                                 onQueryChange("")
                                 onCategoryChange(null)
+                                onTagChange(null)
                             },
                         ) {
                             Text("Limpiar filtros")

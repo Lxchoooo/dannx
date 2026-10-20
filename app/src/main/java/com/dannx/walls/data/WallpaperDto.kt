@@ -14,6 +14,7 @@ data class WallpaperDto(
     val height: Int = 0,
     val featured: Boolean = false,
     @SerialName("created_at") val createdAt: String = "",
+    val tags: List<String> = emptyList(),
 )
 
 @Serializable
@@ -24,6 +25,40 @@ data class NewWallpaper(
     val author: String,
     val width: Int,
     val height: Int,
+    val tags: List<String> = emptyList(),
+)
+
+@Serializable
+data class CollectionDto(
+    val id: String,
+    val name: String = "",
+    val description: String = "",
+    @SerialName("owner_id") val ownerId: String = "",
+    @SerialName("owner_name") val ownerName: String = "",
+    @SerialName("is_public") val isPublic: Boolean = true,
+    @SerialName("created_at") val createdAt: String = "",
+)
+
+@Serializable
+data class CollectionItemDto(
+    @SerialName("collection_id") val collectionId: String,
+    @SerialName("wallpaper_id") val wallpaperId: String,
+    val position: Int = 0,
+)
+
+@Serializable
+data class NewCollection(
+    val name: String,
+    val description: String = "",
+    @SerialName("owner_name") val ownerName: String,
+    @SerialName("is_public") val isPublic: Boolean = true,
+)
+
+@Serializable
+data class NewCollectionItem(
+    @SerialName("collection_id") val collectionId: String,
+    @SerialName("wallpaper_id") val wallpaperId: String,
+    val position: Int = 0,
 )
 
 @Serializable
@@ -66,4 +101,19 @@ fun WallpaperDto.toWallpaper(baseUrl: String): Wallpaper = Wallpaper(
     height = height,
     featured = featured,
     createdAt = createdAt,
+    tags = tags.map { it.trim() }.filter { it.isNotEmpty() },
 )
+
+fun CollectionDto.toCollection(items: List<CollectionItemDto>): WallpaperCollection =
+    WallpaperCollection(
+        id = id,
+        name = name.ifBlank { "Sin título" },
+        description = description,
+        ownerId = ownerId,
+        ownerName = ownerName.ifBlank { "DannX" },
+        isPublic = isPublic,
+        createdAt = createdAt,
+        wallpaperIds = items
+            .sortedBy { it.position }
+            .map { it.wallpaperId },
+    )

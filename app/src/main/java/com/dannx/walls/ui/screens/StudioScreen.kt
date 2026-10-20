@@ -61,13 +61,14 @@ import androidx.compose.foundation.text.KeyboardOptions
 import coil.compose.AsyncImage
 import com.dannx.walls.UiState
 import com.dannx.walls.data.DefaultCategories
+import com.dannx.walls.data.parseTags
 
 @Composable
 fun StudioScreen(
     state: UiState,
     onSignIn: (String, String) -> Unit,
     onSignOut: () -> Unit,
-    onUpload: (Uri, String, String) -> Unit,
+    onUpload: (Uri, String, String, List<String>, String?) -> Unit,
     onRefresh: () -> Unit,
 ) {
     val configured = !state.isDemo
@@ -275,11 +276,13 @@ private fun LoginCard(
 private fun UploadCard(
     state: UiState,
     onSignOut: () -> Unit,
-    onUpload: (Uri, String, String) -> Unit,
+    onUpload: (Uri, String, String, List<String>, String?) -> Unit,
 ) {
     var selectedUri by remember { mutableStateOf<Uri?>(null) }
     var title by rememberSaveable { mutableStateOf("") }
     var category by rememberSaveable { mutableStateOf("Abstracto") }
+    var tagsText by rememberSaveable { mutableStateOf("") }
+    var selectedCollectionId by rememberSaveable { mutableStateOf("") }
 
     val picker = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.PickVisualMedia(),
@@ -293,6 +296,7 @@ private fun UploadCard(
         if (state.uploadSuccessCount > 0) {
             selectedUri = null
             title = ""
+            tagsText = ""
         }
     }
 
@@ -407,10 +411,66 @@ private fun UploadCard(
                     )
                 }
             }
+            Spacer(Modifier.height(14.dp))
+            OutlinedTextField(
+                value = tagsText,
+                onValueChange = { tagsText = it },
+                modifier = Modifier.fillMaxWidth(),
+                label = { Text("Tags") },
+                placeholder = { Text("anime, noche, flores") },
+                supportingText = {
+                    Text("Sepáralos con comas. Tú decides cómo clasificar tu arte.")
+                },
+                singleLine = true,
+                shape = MaterialTheme.shapes.medium,
+            )
+            Spacer(Modifier.height(14.dp))
+            Text(
+                text = "Colección (opcional)",
+                style = MaterialTheme.typography.labelLarge,
+            )
+            Spacer(Modifier.height(6.dp))
+            if (state.myCollections.isEmpty()) {
+                Text(
+                    text = "Crea una colección desde la pestaña Colecciones para agrupar este fondo.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            } else {
+                LazyRow(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    contentPadding = PaddingValues(end = 12.dp),
+                ) {
+                    item(key = "no-collection") {
+                        FilterChip(
+                            selected = selectedCollectionId.isBlank(),
+                            onClick = { selectedCollectionId = "" },
+                            label = { Text("Sin colección") },
+                            shape = CircleShape,
+                        )
+                    }
+                    items(state.myCollections, key = { it.id }) { collection ->
+                        FilterChip(
+                            selected = selectedCollectionId == collection.id,
+                            onClick = { selectedCollectionId = collection.id },
+                            label = { Text(collection.name) },
+                            shape = CircleShape,
+                        )
+                    }
+                }
+            }
             Spacer(Modifier.height(18.dp))
             Button(
                 onClick = {
-                    selectedUri?.let { uri -> onUpload(uri, title, category) }
+                    selectedUri?.let { uri ->
+                        onUpload(
+                            uri,
+                            title,
+                            category,
+                            parseTags(tagsText),
+                            selectedCollectionId.ifBlank { null },
+                        )
+                    }
                 },
                 modifier = Modifier.fillMaxWidth(),
                 shape = CircleShape,
@@ -432,7 +492,7 @@ private fun UploadCard(
             }
             Spacer(Modifier.height(10.dp))
             Text(
-                text = "La imagen se guarda en tu bucket de Supabase y aparece al inicio del feed.",
+                text = "La imagen se guarda en Supabase, aparece en el feed y, si elegiste una, en tu colección.",
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Start,

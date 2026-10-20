@@ -15,6 +15,9 @@ create table if not exists public.wallpapers (
     created_at timestamptz not null default now()
 );
 
+alter table public.wallpapers
+    add column if not exists tags text[] not null default '{}';
+
 alter table public.wallpapers enable row level security;
 
 drop policy if exists "wallpapers_public_read" on public.wallpapers;
@@ -76,6 +79,109 @@ create policy "wallpapers_storage_delete"
     for delete
     to authenticated
     using (bucket_id = 'wallpapers');
+
+create table if not exists public.collections (
+    id uuid primary key default gen_random_uuid(),
+    owner_id uuid not null default auth.uid() references auth.users(id) on delete cascade,
+    owner_name text not null default 'DannX',
+    name text not null,
+    description text not null default '',
+    is_public boolean not null default true,
+    created_at timestamptz not null default now()
+);
+
+create table if not exists public.collection_items (
+    collection_id uuid not null references public.collections(id) on delete cascade,
+    wallpaper_id uuid not null references public.wallpapers(id) on delete cascade,
+    position int not null default 0,
+    created_at timestamptz not null default now(),
+    primary key (collection_id, wallpaper_id)
+);
+
+create index if not exists collections_owner_idx
+    on public.collections(owner_id);
+
+create index if not exists collection_items_wallpaper_idx
+    on public.collection_items(wallpaper_id);
+
+alter table public.collections enable row level security;
+alter table public.collection_items enable row level security;
+
+drop policy if exists "collections_public_read" on public.collections;
+create policy "collections_public_read"
+    on public.collections
+    for select
+    using (is_public or owner_id = auth.uid());
+
+drop policy if exists "collections_owner_insert" on public.collections;
+create policy "collections_owner_insert"
+    on public.collections
+    for insert
+    to authenticated
+    with check (owner_id = auth.uid());
+
+drop policy if exists "collections_owner_update" on public.collections;
+create policy "collections_owner_update"
+    on public.collections
+    for update
+    to authenticated
+    using (owner_id = auth.uid())
+    with check (owner_id = auth.uid());
+
+drop policy if exists "collections_owner_delete" on public.collections;
+create policy "collections_owner_delete"
+    on public.collections
+    for delete
+    to authenticated
+    using (owner_id = auth.uid());
+
+drop policy if exists "collection_items_public_read" on public.collection_items;
+create policy "collection_items_public_read"
+    on public.collection_items
+    for select
+    using (
+        exists (
+            select 1
+            from public.collections c
+            where c.id = collection_id
+              and (c.is_public or c.owner_id = auth.uid())
+        )
+    );
+
+drop policy if exists "collection_items_owner_insert" on public.collection_items;
+create policy "collection_items_owner_insert"
+    on public.collection_items
+    for insert
+    to authenticated
+    with check (
+        exists (
+            select 1
+            from public.collections c
+            where c.id = collection_id
+              and c.owner_id = auth.uid()
+        )
+    );
+
+drop policy if exists "collection_items_owner_delete" on public.collection_items;
+create policy "collection_items_owner_delete"
+    on public.collection_items
+    for delete
+    to authenticated
+    using (
+        exists (
+            select 1
+            from public.collections c
+            where c.id = collection_id
+              and c.owner_id = auth.uid()
+        )
+    );
+
+grant select on public.collections to anon, authenticated;
+grant insert, update, delete on public.collections to authenticated;
+grant select on public.collection_items to anon, authenticated;
+grant insert, delete on public.collection_items to authenticated;
+
+notify pgrst, 'reload schema';
 
 create or replace function public.increment_downloads(target uuid)
 returns void

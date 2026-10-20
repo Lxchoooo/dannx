@@ -6,11 +6,12 @@ verlos, descargarlos y aplicarlos como fondo de pantalla.
 
 ## Estado
 
-- Feed con destacados, búsqueda y categorías.
-- Detalle con zoom, descargar, aplicar fondo y compartir.
+- Feed con destacados, búsqueda, categorías y tags.
+- Colecciones propias tipo carpeta/edición: Immortal Edition, Flowers, etc.
+- Detalle con zoom, descargar, aplicar fondo, compartir y guardar en colección.
 - Favoritos guardados en el teléfono.
 - Panel de administrador con inicio de sesión y subida a Supabase.
-- Modo demo con fondos de ejemplo cuando Supabase todavía no está conectado.
+- Modo demo con fondos y colecciones de ejemplo cuando Supabase no está conectado.
 - El APK se compila en GitHub Actions, no en el teléfono.
 
 ## Estructura
@@ -30,7 +31,8 @@ supabase/setup.sql         Base de datos, permisos y bucket
 
 1. Crea una cuenta y un proyecto gratis en https://supabase.com.
 2. En el proyecto, abre **SQL Editor**, pega el contenido de
-   `supabase/setup.sql` y ejecútalo.
+   `supabase/setup.sql` y ejecútalo. Si ya tenías el proyecto creado, vuelve
+   a ejecutarlo: agrega tags y las tablas de colecciones sin borrar nada.
 3. Ve a **Authentication > Users** y crea el usuario de tu amigo
    (correo y contraseña). Ese será el único administrador.
 4. En **Authentication > Providers > Email**, desactiva
@@ -75,12 +77,27 @@ Es un APK de depuración, suficiente para compartir con amigos y familia.
 Para publicar en Play Store más adelante habría que firmar una versión
 `release`.
 
-## 4. Cómo publica tu amigo
+## 4. Colecciones y tags
+
+La idea es combinar lo visual de Wallcraft con la libertad de Zedge:
+
+- En **Colecciones** puedes crear carpetas con el nombre que quieras
+  (`Immortal Edition`, `Flowers`, `Naruto`, etc.) y elegir si son públicas.
+- Desde el detalle de cualquier fondo, el botón de colecciones permite
+  guardarlo en una carpeta existente o crear una nueva al vuelo.
+- Los tags son libres: se escriben separados por comas al publicar y se
+  pueden buscar desde el feed. No hay moderación automática que borre un
+  fondo por usar un tag.
+- En modo demo, las colecciones se guardan en el teléfono para probar la
+  experiencia sin Supabase.
+
+## 5. Cómo publica tu amigo
 
 1. Abre la pestaña **Estudio**.
 2. Entra con el correo y la contraseña creados en Supabase.
-3. Elige la imagen, ponle título y categoría, y toca **Publicar wallpaper**.
-4. El fondo aparece al inicio del feed para todos.
+3. Elige la imagen, ponle título, categoría, tags y, si quiere, una colección.
+4. Toca **Publicar wallpaper**. El fondo aparece al inicio del feed y en la
+   colección elegida.
 
 ## Probar en la computadora
 

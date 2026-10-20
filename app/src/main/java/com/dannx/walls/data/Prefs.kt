@@ -1,9 +1,13 @@
 package com.dannx.walls.data
 
 import android.content.Context
+import kotlinx.serialization.decodeFromString
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 
 class Prefs(context: Context) {
     private val prefs = context.getSharedPreferences("dannx", Context.MODE_PRIVATE)
+    private val json = Json { ignoreUnknownKeys = true }
 
     fun favorites(): Set<String> =
         prefs.getStringSet(KEY_FAVORITES, emptySet())?.toSet() ?: emptySet()
@@ -29,16 +33,26 @@ class Prefs(context: Context) {
         get() = prefs.getString(KEY_ADMIN_EMAIL, null)
         set(value) = prefs.edit().putString(KEY_ADMIN_EMAIL, value).apply()
 
+    var userId: String?
+        get() = prefs.getString(KEY_USER_ID, null)
+        set(value) = prefs.edit().putString(KEY_USER_ID, value).apply()
+
     fun session(): AdminSession? {
         val email = adminEmail ?: return null
         val token = accessToken ?: return null
-        return AdminSession(email, token)
+        return AdminSession(email, token, userId.orEmpty())
     }
 
-    fun saveSession(email: String, access: String?, refresh: String?) {
+    fun saveSession(
+        email: String,
+        access: String?,
+        refresh: String?,
+        id: String? = null,
+    ) {
         adminEmail = email
         accessToken = access
         refreshToken = refresh
+        userId = id
     }
 
     fun clearSession() {
@@ -46,6 +60,21 @@ class Prefs(context: Context) {
             .remove(KEY_ACCESS_TOKEN)
             .remove(KEY_REFRESH_TOKEN)
             .remove(KEY_ADMIN_EMAIL)
+            .remove(KEY_USER_ID)
+            .apply()
+    }
+
+    fun localCollections(): List<WallpaperCollection> {
+        val raw = prefs.getString(KEY_LOCAL_COLLECTIONS, null)
+            ?: return DemoWallpapers.collections
+        return runCatching {
+            json.decodeFromString<List<WallpaperCollection>>(raw)
+        }.getOrElse { DemoWallpapers.collections }
+    }
+
+    fun saveLocalCollections(items: List<WallpaperCollection>) {
+        prefs.edit()
+            .putString(KEY_LOCAL_COLLECTIONS, json.encodeToString(items))
             .apply()
     }
 
@@ -54,5 +83,7 @@ class Prefs(context: Context) {
         const val KEY_ACCESS_TOKEN = "access_token"
         const val KEY_REFRESH_TOKEN = "refresh_token"
         const val KEY_ADMIN_EMAIL = "admin_email"
+        const val KEY_USER_ID = "user_id"
+        const val KEY_LOCAL_COLLECTIONS = "local_collections"
     }
 }

@@ -42,20 +42,27 @@ class WallsApi(
         if (!isConfigured) {
             return@withContext DemoWallpapers.items
         }
-        val request = Request.Builder()
-            .url("$baseUrl/rest/v1/wallpapers?select=*&order=created_at.desc")
-            .header("apikey", anonKey)
-            .header("Authorization", "Bearer $anonKey")
-            .header("Accept", "application/json")
-            .build()
-        client.newCall(request).execute().use { response ->
-            val body = response.body?.string().orEmpty()
-            if (!response.isSuccessful) {
-                throw IOException(serverError(response.code, body))
-            }
-            json.decodeFromString<List<WallpaperDto>>(body)
-                .filter { it.storagePath.isNotBlank() }
-                .map { it.toWallpaper(baseUrl) }
+        getList<WallpaperDto>("wallpapers?select=*&order=created_at.desc")
+            .filter { it.storagePath.isNotBlank() }
+            .map { it.toWallpaper(baseUrl) }
+    }
+
+    suspend fun loadCollections(): List<WallpaperCollection> = withContext(Dispatchers.IO) {
+        if (!isConfigured) {
+            return@withContext prefs.localCollections()
+        }
+        val collections = getList<CollectionDto>(
+            "collections?select=*&order=created_at.desc",
+        )
+        if (collections.isEmpty()) {
+            return@withContext emptyList()
+        }
+        val items = getList<CollectionItemDto>(
+            "collection_items?select=*&order=position.asc,created_at.asc",
+        )
+        val byCollection = items.groupBy { it.collectionId }
+        collections.map { collection ->
+            collection.toCollection(byCollection[collection.id].orEmpty())
         }
     }
 
@@ -67,8 +74,13 @@ class WallsApi(
                 payload = json.encodeToString(LoginRequest(email.trim(), password)),
             )
             val resolved = auth.user?.email ?: email.trim()
-            prefs.saveSession(resolved, auth.accessToken, auth.refreshToken)
-            AdminSession(resolved, auth.accessToken)
+            prefs.saveSession(
+                email = resolved,
+                access = auth.accessToken,
+                refresh = auth.refreshToken,
+                id = auth.user?.id,
+            )
+            AdminSession(resolved, auth.accessToken, auth.user?.id.orEmpty())
         }
 
     suspend fun refreshSession(): AdminSession? {
@@ -81,8 +93,9 @@ class WallsApi(
                     payload = json.encodeToString(RefreshRequest(refresh)),
                 )
                 val email = auth.user?.email ?: prefs.adminEmail ?: ""
-                prefs.saveSession(email, auth.accessToken, auth.refreshToken)
-                AdminSession(email, auth.accessToken)
+                val id = auth.user?.id ?: prefs.userId.orEmpty()
+                prefs.saveSession(email, auth.accessToken, auth.refreshToken, id)
+                AdminSession(email, auth.accessToken, id)
             }.getOrNull()
         }
     }
@@ -91,10 +104,11 @@ class WallsApi(
         uri: Uri,
         title: String,
         category: String,
+        tags: List<String>,
+        collectionId: String?,
     ): Wallpaper = withContext(Dispatchers.IO) {
         ensureConfigured()
-        val token = prefs.accessToken
-            ?: throw IOException("Tu sesión expiró. Vuelve a entrar.")
+        val token = requireToken()
         val resolver = context.contentResolver
         val mime = resolver.getType(uri)
             ?.takeIf { it.startsWith("image/") }
@@ -124,9 +138,92 @@ class WallsApi(
                 author = author,
                 width = options.outWidth.coerceAtLeast(0),
                 height = options.outHeight.coerceAtLeast(0),
+                tags = tags,
             ),
         )
+        if (collectionId != null) {
+            runCatching { insertCollectionItem(token, collectionId, created.id) }
+        }
         created.toWallpaper(baseUrl)
+    }
+
+    suspend fun createCollection(
+        name: String,
+        description: String,
+        isPublic: Boolean,
+    ): WallpaperCollection = withContext(Dispatchers.IO) {
+        ensureConfigured()
+        val token = requireToken()
+        val payload = NewCollection(
+            name = name.trim(),
+            description = description.trim(),
+            ownerName = prefs.adminEmail?.substringBefore('@') ?: "DannX",
+            isPublic = isPublic,
+        )
+        val request = Request.Builder()
+            .url("$baseUrl/rest/v1/collections")
+            .header("apikey", anonKey)
+            .header("Authorization", "Bearer $token")
+            .header("Prefer", "return=representation")
+            .post(json.encodeToString(payload).toRequestBody(JSON_MEDIA))
+            .build()
+        client.newCall(request).execute().use { response ->
+            val body = response.body?.string().orEmpty()
+            if (!response.isSuccessful) {
+                throw IOException(serverError(response.code, body))
+            }
+            json.decodeFromString<List<CollectionDto>>(body).firstOrNull()
+                ?.toCollection(emptyList())
+                ?: throw IOException("Supabase no devolvió la colección creada.")
+        }
+    }
+
+    suspend fun addToCollection(collectionId: String, wallpaperId: String) {
+        if (!isConfigured) return
+        withContext(Dispatchers.IO) {
+            insertCollectionItem(requireToken(), collectionId, wallpaperId)
+        }
+    }
+
+    suspend fun removeFromCollection(collectionId: String, wallpaperId: String) {
+        if (!isConfigured) return
+        withContext(Dispatchers.IO) {
+            val token = requireToken()
+            val request = Request.Builder()
+                .url(
+                    "$baseUrl/rest/v1/collection_items" +
+                        "?collection_id=eq.$collectionId&wallpaper_id=eq.$wallpaperId",
+                )
+                .header("apikey", anonKey)
+                .header("Authorization", "Bearer $token")
+                .delete()
+                .build()
+            client.newCall(request).execute().use { response ->
+                if (!response.isSuccessful) {
+                    val body = response.body?.string().orEmpty()
+                    throw IOException(serverError(response.code, body))
+                }
+            }
+        }
+    }
+
+    suspend fun deleteCollection(id: String) {
+        if (!isConfigured) return
+        withContext(Dispatchers.IO) {
+            val token = requireToken()
+            val request = Request.Builder()
+                .url("$baseUrl/rest/v1/collections?id=eq.$id")
+                .header("apikey", anonKey)
+                .header("Authorization", "Bearer $token")
+                .delete()
+                .build()
+            client.newCall(request).execute().use { response ->
+                if (!response.isSuccessful) {
+                    val body = response.body?.string().orEmpty()
+                    throw IOException(serverError(response.code, body))
+                }
+            }
+        }
     }
 
     suspend fun incrementDownloads(id: String) {
@@ -144,6 +241,22 @@ class WallsApi(
                     .build()
                 client.newCall(request).execute().use { it.close() }
             }
+        }
+    }
+
+    private inline fun <reified T> getList(path: String): List<T> {
+        val request = Request.Builder()
+            .url("$baseUrl/rest/v1/$path")
+            .header("apikey", anonKey)
+            .header("Authorization", "Bearer $anonKey")
+            .header("Accept", "application/json")
+            .build()
+        return client.newCall(request).execute().use { response ->
+            val body = response.body?.string().orEmpty()
+            if (!response.isSuccessful) {
+                throw IOException(serverError(response.code, body))
+            }
+            json.decodeFromString<List<T>>(body)
         }
     }
 
@@ -208,6 +321,33 @@ class WallsApi(
                 ?: throw IOException("Supabase no devolvió el wallpaper creado.")
         }
     }
+
+    private fun insertCollectionItem(
+        token: String,
+        collectionId: String,
+        wallpaperId: String,
+    ) {
+        val payload = NewCollectionItem(
+            collectionId = collectionId,
+            wallpaperId = wallpaperId,
+        )
+        val request = Request.Builder()
+            .url("$baseUrl/rest/v1/collection_items")
+            .header("apikey", anonKey)
+            .header("Authorization", "Bearer $token")
+            .header("Prefer", "resolution=ignore-duplicates,return=minimal")
+            .post(json.encodeToString(payload).toRequestBody(JSON_MEDIA))
+            .build()
+        client.newCall(request).execute().use { response ->
+            if (!response.isSuccessful && response.code != 409) {
+                val body = response.body?.string().orEmpty()
+                throw IOException(serverError(response.code, body))
+            }
+        }
+    }
+
+    private fun requireToken(): String =
+        prefs.accessToken ?: throw IOException("Tu sesión expiró. Vuelve a entrar.")
 
     private fun ensureConfigured() {
         if (!isConfigured) {
