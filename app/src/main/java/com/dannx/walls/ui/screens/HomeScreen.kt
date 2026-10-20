@@ -50,7 +50,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.util.lerp
 import coil.imageLoader
-import coil.request.Priority
 import com.dannx.walls.UiState
 import com.dannx.walls.data.DefaultCategories
 import com.dannx.walls.data.Wallpaper
@@ -80,7 +79,7 @@ fun HomeScreen(
         delay(300)
         state.wallpapers.take(12).forEach { wallpaper ->
             context.imageLoader.enqueue(
-                wallpaperThumbRequest(context, wallpaper, Priority.LOW),
+                wallpaperThumbRequest(context, wallpaper),
             )
         }
     }

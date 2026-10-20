@@ -42,22 +42,16 @@ import androidx.compose.ui.unit.dp
 import coil.imageLoader
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
-import coil.request.Priority
 import coil.size.Size
 import com.dannx.walls.data.Wallpaper
 
 internal const val ThumbWidth = 540
 internal const val ThumbHeight = 960
 
-internal fun wallpaperThumbRequest(
-    context: Context,
-    wallpaper: Wallpaper,
-    priority: Priority = Priority.NORMAL,
-): ImageRequest =
+internal fun wallpaperThumbRequest(context: Context, wallpaper: Wallpaper): ImageRequest =
     ImageRequest.Builder(context)
         .data(wallpaper.thumbnailUrl)
         .size(ThumbWidth, ThumbHeight)
-        .priority(priority)
         .build()
 
 @Composable
