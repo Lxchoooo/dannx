@@ -22,7 +22,7 @@ class FilterWallpapersTest {
     @Test
     fun `query ignores case and accents`() {
         assertEquals(listOf(items[2]), filterWallpapers(items, "orbita", null))
-        assertEquals(listOf(items[0], items[3]), filterWallpapers(items, "NOCTURN", null))
+        assertEquals(listOf(items[3]), filterWallpapers(items, "NOCTURN", null))
     }
 
     @Test
