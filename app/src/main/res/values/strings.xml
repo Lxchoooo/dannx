@@ -4,4 +4,15 @@
     <string name="shortcut_collections">Colecciones</string>
     <string name="shortcut_favorites">Favoritos</string>
     <string name="shortcut_studio">Estudio</string>
+
+    <string name="apply_sheet_title">Aplicar como</string>
+    <string name="apply_system">Pantalla de inicio</string>
+    <string name="apply_system_hint">Iconos y widgets</string>
+    <string name="apply_lock">Pantalla de bloqueo</string>
+    <string name="apply_lock_hint">Al desbloquear el teléfono</string>
+    <string name="apply_both">Ambas pantallas</string>
+    <string name="apply_both_hint">Inicio y bloqueo</string>
+    <string name="apply_in_progress">Aplicando el fondo…</string>
+    <string name="apply_in_progress_hint">Puede tardar un momento con imágenes grandes.</string>
+    <string name="action_cancel">Cancelar</string>
 </resources>

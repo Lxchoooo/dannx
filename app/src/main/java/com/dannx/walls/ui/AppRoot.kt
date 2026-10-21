@@ -208,15 +208,20 @@ fun AppRoot(viewModel: MainViewModel, startTab: String = "home") {
                         collections = state.myCollections,
                         canManageCollections = state.isDemo || state.session != null,
                         collectionBusy = state.collectionBusy,
+                        activeAction = state.activeAction,
+                        actionProgress = state.actionProgress,
                         onBack = { navController.popBackStack() },
                         onToggleFavorite = { viewModel.toggleFavorite(wallpaper.id) },
                         onDownload = { viewModel.download(wallpaper) },
-                        onSetWallpaper = { viewModel.setWallpaper(wallpaper) },
+                        onSetWallpaper = { target -> viewModel.setWallpaper(wallpaper, target) },
                         onShare = { viewModel.share(wallpaper) },
+                        onCancelAction = { viewModel.cancelAction() },
                         onAddToCollection = { collectionId ->
                             viewModel.addToCollection(collectionId, wallpaper)
                         },
-                        onCreateCollection = viewModel::createCollection,
+                        onCreateCollection = { name, description, isPublic ->
+                            viewModel.createCollection(name, description, isPublic)
+                        },
                     )
                 }
             }

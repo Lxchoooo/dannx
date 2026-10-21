@@ -12,12 +12,26 @@ import com.dannx.walls.data.WallsApi
 import com.dannx.walls.data.collectTags
 import com.dannx.walls.data.filterWallpapers
 import com.dannx.walls.util.WallpaperFiles
+import com.dannx.walls.util.WallpaperTarget
 import java.util.UUID
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+
+enum class UiAction {
+    DOWNLOAD,
+    APPLY,
+    SHARE,
+}
+
+data class MessageAction(
+    val label: String,
+    val uri: Uri,
+)
 
 data class UiState(
     val loading: Boolean = true,
@@ -35,6 +49,9 @@ data class UiState(
     val uploadSuccessCount: Int = 0,
     val authBusy: Boolean = false,
     val message: String? = null,
+    val messageAction: MessageAction? = null,
+    val activeAction: UiAction? = null,
+    val actionProgress: Int? = null,
 ) {
     val filtered: List<Wallpaper>
         get() = filterWallpapers(wallpapers, query, category, tag)
@@ -66,6 +83,7 @@ data class UiState(
 class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val prefs = Prefs(application)
     private val api = WallsApi(application, prefs)
+    private var actionJob: Job? = null
     private val _state = MutableStateFlow(
         UiState(
             favorites = prefs.favorites(),
@@ -394,11 +412,42 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    fun setWallpaper(wallpaper: Wallpaper) {
-        runAction("Listo, tu fondo de pantalla cambió.") {
-            WallpaperFiles.setAsWallpaper(getApplication(), wallpaper)
-            api.incrementDownloads(wallpaper.id)
+    fun setWallpaper(wallpaper: Wallpaper, target: WallpaperTarget) {
+        actionJob?.cancel()
+        actionJob = viewModelScope.launch {
+            _state.update { it.copy(activeAction = UiAction.APPLY, actionProgress = null) }
+            try {
+                val applied = WallpaperFiles.setAsWallpaper(getApplication(), wallpaper, target)
+                api.incrementDownloads(wallpaper.id)
+                _state.update {
+                    it.copy(
+                        activeAction = null,
+                        actionProgress = null,
+                        message = when (applied) {
+                            WallpaperTarget.SYSTEM -> "Listo, tu fondo de pantalla cambió."
+                            WallpaperTarget.LOCK -> "Listo, cambiaste el fondo del bloqueo."
+                            WallpaperTarget.BOTH -> "Listo, cambiaste el fondo de inicio y del bloqueo."
+                        },
+                    )
+                }
+            } catch (error: CancellationException) {
+                _state.update { it.copy(activeAction = null, actionProgress = null) }
+            } catch (error: Exception) {
+                _state.update {
+                    it.copy(
+                        activeAction = null,
+                        actionProgress = null,
+                        message = "No se pudo aplicar el fondo. Probá de nuevo.",
+                    )
+                }
+            }
         }
+    }
+
+    fun cancelAction() {
+        actionJob?.cancel()
+        actionJob = null
+        _state.update { it.copy(activeAction = null, actionProgress = null) }
     }
 
     fun share(wallpaper: Wallpaper) {
@@ -409,7 +458,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun clearMessage() {
-        _state.update { it.copy(message = null) }
+        _state.update { it.copy(message = null, messageAction = null) }
     }
 
     private fun restoreSession() {

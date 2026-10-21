@@ -30,16 +30,20 @@ import androidx.compose.material.icons.rounded.CollectionsBookmark
 import androidx.compose.material.icons.rounded.Download
 import androidx.compose.material.icons.rounded.Favorite
 import androidx.compose.material.icons.rounded.FavoriteBorder
+import androidx.compose.material.icons.rounded.Lock
 import androidx.compose.material.icons.rounded.Share
+import androidx.compose.material.icons.rounded.Smartphone
 import androidx.compose.material.icons.rounded.Wallpaper
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
@@ -65,11 +69,15 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.res.stringResource
 import androidx.core.view.WindowCompat
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
+import com.dannx.walls.R
+import com.dannx.walls.UiAction
 import com.dannx.walls.data.Wallpaper
 import com.dannx.walls.data.WallpaperCollection
+import com.dannx.walls.util.WallpaperTarget
 
 @Composable
 fun DetailScreen(
@@ -78,11 +86,14 @@ fun DetailScreen(
     collections: List<WallpaperCollection>,
     canManageCollections: Boolean,
     collectionBusy: Boolean,
+    activeAction: UiAction? = null,
+    actionProgress: Int? = null,
     onBack: () -> Unit,
     onToggleFavorite: () -> Unit,
     onDownload: () -> Unit,
-    onSetWallpaper: () -> Unit,
+    onSetWallpaper: (WallpaperTarget) -> Unit,
     onShare: () -> Unit,
+    onCancelAction: () -> Unit,
     onAddToCollection: (String) -> Unit,
     onCreateCollection: (String, String, Boolean) -> Unit,
 ) {
@@ -90,6 +101,7 @@ fun DetailScreen(
     var offset by remember { mutableStateOf(Offset.Zero) }
     var showCollections by rememberSaveable { mutableStateOf(false) }
     var showCreateCollection by rememberSaveable { mutableStateOf(false) }
+    var showApplySheet by rememberSaveable { mutableStateOf(false) }
     val haptics = LocalHapticFeedback.current
     val transformState = rememberTransformableState { zoomChange, panChange, _ ->
         scale = (scale * zoomChange).coerceIn(1f, 4f)
@@ -252,6 +264,7 @@ fun DetailScreen(
                     modifier = Modifier.weight(1f),
                     shape = CircleShape,
                     contentPadding = PaddingValues(horizontal = 14.dp, vertical = 14.dp),
+                    enabled = activeAction == null,
                 ) {
                     Icon(Icons.Rounded.Download, contentDescription = null)
                     Spacer(Modifier.width(8.dp))
@@ -260,11 +273,12 @@ fun DetailScreen(
                 FilledTonalButton(
                     onClick = {
                         haptics.performHapticFeedback(HapticFeedbackType.LongPress)
-                        onSetWallpaper()
+                        showApplySheet = true
                     },
                     modifier = Modifier.weight(1f),
                     shape = CircleShape,
                     contentPadding = PaddingValues(horizontal = 14.dp, vertical = 14.dp),
+                    enabled = activeAction == null,
                 ) {
                     Icon(Icons.Rounded.Wallpaper, contentDescription = null)
                     Spacer(Modifier.width(8.dp))
@@ -273,6 +287,7 @@ fun DetailScreen(
                 FilledIconButton(
                     onClick = onShare,
                     modifier = Modifier.size(52.dp),
+                    enabled = activeAction == null,
                     colors = IconButtonDefaults.filledIconButtonColors(
                         containerColor = Color.White.copy(alpha = 0.18f),
                         contentColor = Color.White,
@@ -281,7 +296,43 @@ fun DetailScreen(
                     Icon(Icons.Rounded.Share, contentDescription = "Compartir")
                 }
             }
+            if (activeAction == UiAction.APPLY) {
+                Spacer(Modifier.height(12.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(18.dp),
+                        strokeWidth = 2.dp,
+                        color = Color.White,
+                    )
+                    Spacer(Modifier.width(10.dp))
+                    Text(
+                        text = stringResource(R.string.apply_in_progress),
+                        style = MaterialTheme.typography.labelLarge,
+                        color = Color.White.copy(alpha = 0.9f),
+                        modifier = Modifier.weight(1f),
+                    )
+                    TextButton(onClick = onCancelAction) {
+                        Text(
+                            text = stringResource(R.string.action_cancel),
+                            color = Color.White,
+                        )
+                    }
+                }
+            }
         }
+    }
+
+    if (showApplySheet) {
+        ApplyWallpaperSheet(
+            onDismiss = { showApplySheet = false },
+            onPick = { target ->
+                showApplySheet = false
+                onSetWallpaper(target)
+            },
+        )
     }
 
     if (showCollections) {
@@ -310,6 +361,84 @@ fun DetailScreen(
                 showCreateCollection = false
             },
         )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun ApplyWallpaperSheet(
+    onDismiss: () -> Unit,
+    onPick: (WallpaperTarget) -> Unit,
+) {
+    ModalBottomSheet(onDismissRequest = onDismiss) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 20.dp)
+                .padding(bottom = 28.dp),
+        ) {
+            Text(
+                text = stringResource(R.string.apply_sheet_title),
+                style = MaterialTheme.typography.headlineMedium,
+            )
+            Spacer(Modifier.height(12.dp))
+            ApplyOption(
+                icon = Icons.Rounded.Smartphone,
+                title = stringResource(R.string.apply_system),
+                hint = stringResource(R.string.apply_system_hint),
+                onClick = { onPick(WallpaperTarget.SYSTEM) },
+            )
+            Spacer(Modifier.height(8.dp))
+            ApplyOption(
+                icon = Icons.Rounded.Lock,
+                title = stringResource(R.string.apply_lock),
+                hint = stringResource(R.string.apply_lock_hint),
+                onClick = { onPick(WallpaperTarget.LOCK) },
+            )
+            Spacer(Modifier.height(8.dp))
+            ApplyOption(
+                icon = Icons.Rounded.Wallpaper,
+                title = stringResource(R.string.apply_both),
+                hint = stringResource(R.string.apply_both_hint),
+                onClick = { onPick(WallpaperTarget.BOTH) },
+            )
+        }
+    }
+}
+
+@Composable
+private fun ApplyOption(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    title: String,
+    hint: String,
+    onClick: () -> Unit,
+) {
+    Surface(
+        onClick = onClick,
+        shape = MaterialTheme.shapes.large,
+        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 18.dp, vertical = 16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                modifier = Modifier.size(26.dp),
+                tint = MaterialTheme.colorScheme.primary,
+            )
+            Spacer(Modifier.width(16.dp))
+            Column(Modifier.weight(1f)) {
+                Text(text = title, style = MaterialTheme.typography.titleMedium)
+                Text(
+                    text = hint,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
     }
 }
 

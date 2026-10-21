@@ -5,17 +5,31 @@ import android.app.WallpaperManager
 import android.content.ContentValues
 import android.content.Context
 import android.content.Intent
+import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.graphics.BitmapRegionDecoder
+import android.graphics.Rect
 import android.net.Uri
 import android.os.Environment
 import android.provider.MediaStore
+import android.util.DisplayMetrics
+import android.view.WindowManager
 import com.dannx.walls.data.Wallpaper
+import java.io.File
 import java.io.IOException
 import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.Request
+
+enum class WallpaperTarget {
+    SYSTEM,
+    LOCK,
+    BOTH,
+}
 
 object WallpaperFiles {
     private val client = OkHttpClient.Builder()
@@ -23,7 +37,9 @@ object WallpaperFiles {
         .readTimeout(90, TimeUnit.SECONDS)
         .build()
 
-    suspend fun download(wallpaper: Wallpaper): ByteArray = withContext(Dispatchers.IO) {
+    suspend fun download(
+        wallpaper: Wallpaper,
+    ): ByteArray = withContext(Dispatchers.IO) {
         val request = Request.Builder()
             .url(wallpaper.imageUrl)
             .header("User-Agent", "DannX/1.0")
@@ -38,6 +54,55 @@ object WallpaperFiles {
                 throw IOException("La respuesta no es una imagen.")
             }
             body.bytes()
+        }
+    }
+
+    /**
+     * Descarga la imagen a disco escribiendo de a chunks, para no cargar el
+     * archivo entero en memoria. Es cancelable: al cancelar el coroutine se
+     * corta la escritura.
+     */
+    suspend fun downloadToFile(
+        wallpaper: Wallpaper,
+        destination: File,
+        onProgress: (downloaded: Long, total: Long) -> Unit = { _, _ -> },
+    ): File = withContext(Dispatchers.IO) {
+        val request = Request.Builder()
+            .url(wallpaper.imageUrl)
+            .header("User-Agent", "DannX/1.0")
+            .build()
+        client.newCall(request).execute().use { response ->
+            val body = response.body
+            if (!response.isSuccessful || body == null) {
+                throw IOException("No se pudo descargar la imagen (${response.code}).")
+            }
+            val contentType = response.header("Content-Type").orEmpty()
+            if (contentType.isNotBlank() && !contentType.startsWith("image/")) {
+                throw IOException("La respuesta no es una imagen.")
+            }
+            destination.parentFile?.mkdirs()
+            val total = body.contentLength()
+            var downloaded = 0L
+            try {
+                body.byteStream().use { input ->
+                    destination.outputStream().use { output ->
+                        val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
+                        while (true) {
+                            currentCoroutineContext().ensureActive()
+                            val read = input.read(buffer)
+                            if (read < 0) break
+                            output.write(buffer, 0, read)
+                            downloaded += read
+                            onProgress(downloaded, total)
+                        }
+                        output.flush()
+                    }
+                }
+            } catch (error: Exception) {
+                destination.delete()
+                throw error
+            }
+            destination
         }
     }
 
@@ -86,13 +151,73 @@ object WallpaperFiles {
         }
     }
 
-    suspend fun setAsWallpaper(context: Context, wallpaper: Wallpaper) {
-        val bytes = download(wallpaper)
-        withContext(Dispatchers.IO) {
-            val bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
-                ?: throw IOException("La imagen no se pudo decodificar.")
-            val manager = WallpaperManager.getInstance(context)
-            manager.setBitmap(bitmap, null, true, WallpaperManager.FLAG_SYSTEM)
+    /**
+     * Aplica el fondo de pantalla en la pantalla de inicio, en el bloqueo o en
+     * ambas. Devuelve qué destino quedó aplicado realmente (algunos teléfonos no
+     * permiten modificar el bloqueo).
+     */
+    suspend fun setAsWallpaper(
+        context: Context,
+        wallpaper: Wallpaper,
+        target: WallpaperTarget,
+    ): WallpaperTarget = withContext(Dispatchers.IO) {
+        val size = wallpaperTargetSize(context)
+        val folder = File(context.cacheDir, "wallpaper-tmp").apply { mkdirs() }
+        val temp = File(folder, "${wallpaper.id}-${System.currentTimeMillis()}.img")
+        try {
+            downloadToFile(wallpaper, temp)
+            val bitmap = decodeCroppedBitmap(temp, size.x, size.y)
+            try {
+                applyBitmap(context, bitmap, target)
+            } finally {
+                bitmap.recycle()
+            }
+        } finally {
+            temp.delete()
+        }
+    }
+
+    private fun applyBitmap(
+        context: Context,
+        bitmap: Bitmap,
+        target: WallpaperTarget,
+    ): WallpaperTarget {
+        val manager = WallpaperManager.getInstance(context)
+        return when (target) {
+            WallpaperTarget.SYSTEM -> {
+                manager.setBitmap(bitmap, null, true, WallpaperManager.FLAG_SYSTEM)
+                WallpaperTarget.SYSTEM
+            }
+
+            WallpaperTarget.LOCK -> {
+                try {
+                    manager.setBitmap(bitmap, null, true, WallpaperManager.FLAG_LOCK)
+                    WallpaperTarget.LOCK
+                } catch (error: Exception) {
+                    manager.setBitmap(bitmap, null, true, WallpaperManager.FLAG_SYSTEM)
+                    WallpaperTarget.SYSTEM
+                }
+            }
+
+            WallpaperTarget.BOTH -> {
+                try {
+                    manager.setBitmap(
+                        bitmap,
+                        null,
+                        true,
+                        WallpaperManager.FLAG_SYSTEM or WallpaperManager.FLAG_LOCK,
+                    )
+                    WallpaperTarget.BOTH
+                } catch (error: Exception) {
+                    manager.setBitmap(bitmap, null, true, WallpaperManager.FLAG_SYSTEM)
+                    try {
+                        manager.setBitmap(bitmap, null, true, WallpaperManager.FLAG_LOCK)
+                        WallpaperTarget.BOTH
+                    } catch (lockError: Exception) {
+                        WallpaperTarget.SYSTEM
+                    }
+                }
+            }
         }
     }
 
@@ -122,4 +247,86 @@ object WallpaperFiles {
 
         else -> "image/jpeg"
     }
+
+    private companion object {
+        const val DEFAULT_BUFFER_SIZE = 64 * 1024
+    }
+}
+
+/**
+ * Decodifica solo la región central necesaria y con muestreo, para que una
+ * imagen enorme no se cargue completa en memoria.
+ */
+internal fun decodeCroppedBitmap(
+    file: File,
+    targetWidth: Int,
+    targetHeight: Int,
+): Bitmap {
+    val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+    BitmapFactory.decodeFile(file.absolutePath, bounds)
+    val sourceWidth = bounds.outWidth
+    val sourceHeight = bounds.outHeight
+    if (sourceWidth <= 0 || sourceHeight <= 0) {
+        throw IOException("La imagen no se pudo decodificar.")
+    }
+    val crop = centerCropRect(sourceWidth, sourceHeight, targetWidth, targetHeight)
+    val sampleSize = calculateInSampleSize(crop.width, crop.height, targetWidth, targetHeight)
+    val options = BitmapFactory.Options().apply {
+        inSampleSize = sampleSize
+        inPreferredConfig = Bitmap.Config.ARGB_8888
+    }
+    val region = runCatching {
+        val decoder = BitmapRegionDecoder.newInstance(file.absolutePath, false)
+        try {
+            decoder.decodeRegion(Rect(crop.left, crop.top, crop.right, crop.bottom), options)
+        } finally {
+            @Suppress("DEPRECATION")
+            runCatching { decoder.recycle() }
+        }
+    }.getOrNull()
+    val cropped = region ?: decodeAndCropWholeFile(file, crop, sampleSize, options)
+    if (cropped.width == targetWidth && cropped.height == targetHeight) {
+        return cropped
+    }
+    val scaled = Bitmap.createScaledBitmap(cropped, targetWidth, targetHeight, true)
+    if (scaled != cropped) {
+        cropped.recycle()
+    }
+    return scaled
+}
+
+private fun decodeAndCropWholeFile(
+    file: File,
+    crop: CropRect,
+    sampleSize: Int,
+    options: BitmapFactory.Options,
+): Bitmap {
+    val full = BitmapFactory.decodeFile(file.absolutePath, options)
+        ?: throw IOException("La imagen no se pudo decodificar.")
+    val x = (crop.left / sampleSize).coerceIn(0, (full.width - 1).coerceAtLeast(0))
+    val y = (crop.top / sampleSize).coerceIn(0, (full.height - 1).coerceAtLeast(0))
+    val width = (crop.width / sampleSize).coerceIn(1, full.width - x)
+    val height = (crop.height / sampleSize).coerceIn(1, full.height - y)
+    val cropped = Bitmap.createBitmap(full, x, y, width, height)
+    if (cropped != full) {
+        full.recycle()
+    }
+    return cropped
+}
+
+/**
+ * Tamaño real de la pantalla en píxeles, con los valores de WallpaperManager
+ * como respaldo.
+ */
+internal fun wallpaperTargetSize(context: Context): android.graphics.Point {
+    val metrics = DisplayMetrics()
+    runCatching {
+        val windowManager = context.getSystemService(Context.WINDOW_SERVICE) as WindowManager
+        @Suppress("DEPRECATION")
+        windowManager.defaultDisplay.getRealMetrics(metrics)
+    }
+    val manager = WallpaperManager.getInstance(context)
+    val width = if (metrics.widthPixels > 0) metrics.widthPixels else manager.desiredMinimumWidth
+    val height = if (metrics.heightPixels > 0) metrics.heightPixels else manager.desiredMinimumHeight
+    return android.graphics.Point(width.coerceAtLeast(1), height.coerceAtLeast(1))
 }
