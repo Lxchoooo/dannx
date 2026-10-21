@@ -6,6 +6,57 @@ así que todo vive bajo "Sin publicar" hasta el primer tag.
 
 ## Sin publicar
 
+### Fase 3 — Robustez
+
+**Errores y red**
+- Errores de red tipados (`DannXError`): sin conexión, servidor caído, sesión
+  vencida o fallo inesperado, cada uno con su mensaje en español.
+- Reintentos con espera exponencial (400 ms, 800 ms, 1600 ms) solo en fallos
+  transitorios; nunca en errores 4xx ni en sesión vencida.
+- Timeouts ajustados: 15 s de conexión, 45 s de lectura, 120 s de escritura.
+- Ante un 401 se renueva el token una sola vez y se reintenta la petición; si
+  vuelve a fallar, la sesión se cierra limpiamente con aviso.
+- Subida de imágenes en streaming: la imagen se lee del URI en bloques y ya no
+  se cargan hasta 25 MB en memoria.
+
+**Estados de pantalla**
+- `LoadState` sellado (cargando, contenido, vacío, error) reemplaza a los
+  booleanos sueltos de carga y error.
+- Cada pantalla muestra los cuatro estados: skeleton liviano sin animación,
+  contenido, vacío con texto útil y error con botón "Reintentar".
+- Textos nuevos en `strings.xml`.
+
+**Sin conexión y caché**
+- El último feed y las colecciones se guardan en disco (JSON en `cacheDir`).
+- Sin red se muestra lo guardado con un aviso discreto "Sin conexión".
+- Descargar, aplicar y compartir se desactivan sin red; favoritos y
+  colecciones locales siguen funcionando.
+- Al volver a la app se refresca una sola vez y solo si hay red.
+
+**Navegación y estado**
+- `launchSingleTop` en el detalle y en las colecciones: ya no se apilan
+  pantallas con doble toque.
+- Filtros, búsqueda y la imagen seleccionada en Estudio se guardan con
+  `SavedStateHandle`: sobreviven a la rotación y a que el sistema mate la app.
+- El refresh concurrente se cancela: no se apilan requests ni estados.
+
+**Pruebas**
+- El ViewModel ya no depende de Android: se prueba en la JVM con fakes.
+- Tests nuevos: refresh cancelado, error transitorio con reintento, 401 con
+  refresh, caché offline, descarga y duplicados, y el `RetryPolicy`.
+
+### Fase 4 (adelantada) — Rendimiento
+
+- El estado de las acciones (descargar, aplicar, compartir) vive en su propio
+  `StateFlow`: el progreso ya no recompone toda la app.
+- Modelos y `UiState` marcados como inmutables.
+- El carrusel del hero lee su estado solo en la fase de dibujo.
+- Requests de imagen memorizadas; hero y portadas con tamaño explícito.
+- Gradientes memorizados, recorte redundante eliminado y barra inferior sin
+  animación en el cambio de pestaña.
+- Perfil de base con `profileinstaller` y reglas manuales.
+- Overlay de FPS: una actualización por segundo.
+
 ### Fase 2 — Funciones centrales
 
 **Aplicar fondo**
@@ -81,6 +132,11 @@ así que todo vive bajo "Sin publicar" hasta el primer tag.
 - Fase 8: pruebas finales (tests de ViewModel y repositorio, lista manual).
 
 ## Estado actual
+
+- Última CI: run pendiente de confirmación para el commit `bb821b8`. La
+  validación local (`python3 build/validate_dannx.py`) pasa; la compilación y
+  los tests se verifican en CI.
+- Guía para conectar el backend: `CONECTAR-SUPABASE.md`.
 
 - Rama `main` en GitHub, CI verde en cada push (build debug + release con R8 y
   tests unitarios).
