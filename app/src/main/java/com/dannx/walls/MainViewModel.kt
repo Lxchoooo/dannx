@@ -514,9 +514,24 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun share(wallpaper: Wallpaper) {
-        runAction("Elige dónde compartir el fondo.") {
-            val uri = WallpaperFiles.save(getApplication(), wallpaper)
-            WallpaperFiles.share(getApplication(), uri, wallpaper.title)
+        actionJob?.cancel()
+        actionJob = viewModelScope.launch {
+            _state.update { it.copy(activeAction = UiAction.SHARE, actionProgress = 0) }
+            try {
+                val uri = WallpaperFiles.prepareShare(getApplication(), wallpaper)
+                WallpaperFiles.share(getApplication(), uri, wallpaper.title)
+                _state.update { it.copy(activeAction = null, actionProgress = null) }
+            } catch (error: CancellationException) {
+                _state.update { it.copy(activeAction = null, actionProgress = null) }
+            } catch (error: Exception) {
+                _state.update {
+                    it.copy(
+                        activeAction = null,
+                        actionProgress = null,
+                        message = "No se pudo preparar la imagen para compartir.",
+                    )
+                }
+            }
         }
     }
 
@@ -541,17 +556,4 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         fallback: List<WallpaperCollection>,
     ): List<WallpaperCollection> =
         runCatching { api.loadCollections() }.getOrElse { fallback }
-
-    private fun runAction(successMessage: String, block: suspend () -> Unit) {
-        viewModelScope.launch {
-            try {
-                block()
-                _state.update { it.copy(message = successMessage) }
-            } catch (error: Exception) {
-                _state.update {
-                    it.copy(message = error.message ?: "Algo salió mal. Inténtalo de nuevo.")
-                }
-            }
-        }
-    }
 }

@@ -2,6 +2,7 @@ package com.dannx.walls.util
 
 import android.app.Activity
 import android.app.WallpaperManager
+import android.content.ClipData
 import android.content.ContentValues
 import android.content.Context
 import android.content.Intent
@@ -14,6 +15,7 @@ import android.os.Environment
 import android.provider.MediaStore
 import android.util.DisplayMetrics
 import android.view.WindowManager
+import androidx.core.content.FileProvider
 import com.dannx.walls.data.Wallpaper
 import java.io.File
 import java.io.IOException
@@ -33,125 +35,14 @@ enum class WallpaperTarget {
 
 object WallpaperFiles {
     private const val DEFAULT_BUFFER_SIZE = 64 * 1024
+    private const val MAX_SHARED_FILES = 8
+    private const val SHARED_MAX_AGE_MS = 6 * 60 * 60 * 1000L
+    private const val PREFIX_SIZE = 16
 
     private val client = OkHttpClient.Builder()
         .connectTimeout(20, TimeUnit.SECONDS)
         .readTimeout(90, TimeUnit.SECONDS)
         .build()
-
-    suspend fun download(
-        wallpaper: Wallpaper,
-    ): ByteArray = withContext(Dispatchers.IO) {
-        val request = Request.Builder()
-            .url(wallpaper.imageUrl)
-            .header("User-Agent", "DannX/1.0")
-            .build()
-        client.newCall(request).execute().use { response ->
-            val body = response.body
-            if (!response.isSuccessful || body == null) {
-                throw IOException("No se pudo descargar la imagen (${response.code}).")
-            }
-            val contentType = response.header("Content-Type").orEmpty()
-            if (contentType.isNotBlank() && !contentType.startsWith("image/")) {
-                throw IOException("La respuesta no es una imagen.")
-            }
-            body.bytes()
-        }
-    }
-
-    /**
-     * Descarga la imagen a disco escribiendo de a chunks, para no cargar el
-     * archivo entero en memoria. Es cancelable: al cancelar el coroutine se
-     * corta la escritura.
-     */
-    suspend fun downloadToFile(
-        wallpaper: Wallpaper,
-        destination: File,
-        onProgress: (downloaded: Long, total: Long) -> Unit = { _, _ -> },
-    ): File = withContext(Dispatchers.IO) {
-        val request = Request.Builder()
-            .url(wallpaper.imageUrl)
-            .header("User-Agent", "DannX/1.0")
-            .build()
-        client.newCall(request).execute().use { response ->
-            val body = response.body
-            if (!response.isSuccessful || body == null) {
-                throw IOException("No se pudo descargar la imagen (${response.code}).")
-            }
-            val contentType = response.header("Content-Type").orEmpty()
-            if (contentType.isNotBlank() && !contentType.startsWith("image/")) {
-                throw IOException("La respuesta no es una imagen.")
-            }
-            destination.parentFile?.mkdirs()
-            val total = body.contentLength()
-            var downloaded = 0L
-            try {
-                body.byteStream().use { input ->
-                    destination.outputStream().use { output ->
-                        val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
-                        while (true) {
-                            currentCoroutineContext().ensureActive()
-                            val read = input.read(buffer)
-                            if (read < 0) break
-                            output.write(buffer, 0, read)
-                            downloaded += read
-                            onProgress(downloaded, total)
-                        }
-                        output.flush()
-                    }
-                }
-            } catch (error: Exception) {
-                destination.delete()
-                throw error
-            }
-            destination
-        }
-    }
-
-    suspend fun save(context: Context, wallpaper: Wallpaper): Uri {
-        val bytes = download(wallpaper)
-        return withContext(Dispatchers.IO) {
-            val mime = mimeOf(bytes)
-            val extension = when (mime) {
-                "image/png" -> "png"
-                "image/webp" -> "webp"
-                else -> "jpg"
-            }
-            val safeTitle = wallpaper.title
-                .lowercase()
-                .replace(Regex("[^a-z0-9]+"), "-")
-                .trim('-')
-                .ifBlank { "dannx" }
-                .take(40)
-            val values = ContentValues().apply {
-                put(
-                    MediaStore.Images.Media.DISPLAY_NAME,
-                    "dannx-$safeTitle-${System.currentTimeMillis()}.$extension",
-                )
-                put(MediaStore.Images.Media.MIME_TYPE, mime)
-                put(
-                    MediaStore.Images.Media.RELATIVE_PATH,
-                    "${Environment.DIRECTORY_PICTURES}/DannX",
-                )
-                put(MediaStore.Images.Media.IS_PENDING, 1)
-            }
-            val resolver = context.contentResolver
-            val uri = resolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values)
-                ?: throw IOException("No se pudo crear el archivo en Galería.")
-            try {
-                resolver.openOutputStream(uri)?.use { output ->
-                    output.write(bytes)
-                } ?: throw IOException("No se pudo escribir el archivo.")
-                values.clear()
-                values.put(MediaStore.Images.Media.IS_PENDING, 0)
-                resolver.update(uri, values, null, null)
-                uri
-            } catch (error: Exception) {
-                resolver.delete(uri, null, null)
-                throw error
-            }
-        }
-    }
 
     /**
      * Guarda la imagen en la galería escribiendo el archivo directo sobre la
@@ -175,47 +66,57 @@ object WallpaperFiles {
             if (contentType.isNotBlank() && !contentType.startsWith("image/")) {
                 throw IOException("La respuesta no es una imagen.")
             }
-            val mime = mimeFromContentType(contentType)
-            val extension = extensionFor(mime)
-            val values = ContentValues().apply {
-                put(
-                    MediaStore.Images.Media.DISPLAY_NAME,
-                    galleryFileName(wallpaper, extension),
-                )
-                put(MediaStore.Images.Media.MIME_TYPE, mime)
-                put(
-                    MediaStore.Images.Media.RELATIVE_PATH,
-                    "${Environment.DIRECTORY_PICTURES}/DannX",
-                )
-                put(MediaStore.Images.Media.IS_PENDING, 1)
-            }
-            val resolver = context.contentResolver
-            val uri = resolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values)
-                ?: throw IOException("No se pudo crear el archivo en Galería.")
-            try {
-                val total = body.contentLength()
-                var downloaded = 0L
-                resolver.openOutputStream(uri)?.use { output ->
-                    body.byteStream().use { input ->
+            val total = body.contentLength()
+            body.byteStream().use { input ->
+                val prefix = ByteArray(PREFIX_SIZE)
+                var read = 0
+                while (read < PREFIX_SIZE) {
+                    val step = input.read(prefix, read, PREFIX_SIZE - read)
+                    if (step < 0) break
+                    read += step
+                }
+                val format = detectImageFormat(prefix.copyOf(read))
+                    ?: mimeFromContentType(contentType).let { ImageFormat(it, extensionFor(it)) }
+                val values = ContentValues().apply {
+                    put(
+                        MediaStore.Images.Media.DISPLAY_NAME,
+                        galleryFileName(wallpaper, format.extension),
+                    )
+                    put(MediaStore.Images.Media.MIME_TYPE, format.mime)
+                    put(
+                        MediaStore.Images.Media.RELATIVE_PATH,
+                        "${Environment.DIRECTORY_PICTURES}/DannX",
+                    )
+                    put(MediaStore.Images.Media.IS_PENDING, 1)
+                }
+                val resolver = context.contentResolver
+                val uri = resolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values)
+                    ?: throw IOException("No se pudo crear el archivo en Galería.")
+                try {
+                    var downloaded = 0L
+                    resolver.openOutputStream(uri)?.use { output ->
+                        output.write(prefix, 0, read)
+                        downloaded += read
+                        onProgress(downloaded, total)
                         val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
                         while (true) {
                             currentCoroutineContext().ensureActive()
-                            val read = input.read(buffer)
-                            if (read < 0) break
-                            output.write(buffer, 0, read)
-                            downloaded += read
+                            val chunk = input.read(buffer)
+                            if (chunk < 0) break
+                            output.write(buffer, 0, chunk)
+                            downloaded += chunk
                             onProgress(downloaded, total)
                         }
                         output.flush()
-                    }
-                } ?: throw IOException("No se pudo escribir el archivo.")
-                values.clear()
-                values.put(MediaStore.Images.Media.IS_PENDING, 0)
-                resolver.update(uri, values, null, null)
-                uri
-            } catch (error: Exception) {
-                resolver.delete(uri, null, null)
-                throw error
+                    } ?: throw IOException("No se pudo escribir el archivo.")
+                    values.clear()
+                    values.put(MediaStore.Images.Media.IS_PENDING, 0)
+                    resolver.update(uri, values, null, null)
+                    uri
+                } catch (error: Exception) {
+                    resolver.delete(uri, null, null)
+                    throw error
+                }
             }
         }
     }
@@ -341,14 +242,40 @@ object WallpaperFiles {
         }
     }
 
+    /**
+     * Prepara la imagen para compartirla: la copia en la carpeta de caché,
+     * borra las copias viejas y devuelve la uri con permisos temporales.
+     * No deja copias en la galería.
+     */
+    suspend fun prepareShare(context: Context, wallpaper: Wallpaper): Uri {
+        val folder = File(context.cacheDir, "shared").apply { mkdirs() }
+        pruneSharedCache(folder)
+        val file = File(folder, "dannx-${wallpaper.id}-${System.currentTimeMillis()}.img")
+        downloadToFile(wallpaper, file)
+        return FileProvider.getUriForFile(
+            context,
+            "${context.packageName}.fileprovider",
+            file,
+        )
+    }
+
+    private fun pruneSharedCache(folder: File) {
+        val files = folder.listFiles()?.sortedBy { it.lastModified() } ?: return
+        files.dropLast(MAX_SHARED_FILES).forEach { it.delete() }
+        val deadline = System.currentTimeMillis() - SHARED_MAX_AGE_MS
+        files.filter { it.lastModified() < deadline }.forEach { it.delete() }
+    }
+
     fun share(context: Context, uri: Uri, title: String) {
         val send = Intent(Intent.ACTION_SEND).apply {
             type = context.contentResolver.getType(uri) ?: "image/*"
             putExtra(Intent.EXTRA_STREAM, uri)
             putExtra(Intent.EXTRA_TITLE, title)
+            clipData = ClipData.newRawUri("DannX", uri)
             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
         }
         val chooser = Intent.createChooser(send, "Compartir fondo").apply {
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
             if (context !is Activity) {
                 addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             }
@@ -356,17 +283,6 @@ object WallpaperFiles {
         context.startActivity(chooser)
     }
 
-    private fun mimeOf(bytes: ByteArray): String = when {
-        bytes.size >= 8 &&
-            bytes[0] == 0x89.toByte() &&
-            bytes[1] == 'P'.code.toByte() &&
-            bytes[2] == 'N'.code.toByte() -> "image/png"
-
-        bytes.size >= 12 &&
-            String(bytes, 8, 4, Charsets.US_ASCII) == "WEBP" -> "image/webp"
-
-        else -> "image/jpeg"
-    }
 }
 
 /**
