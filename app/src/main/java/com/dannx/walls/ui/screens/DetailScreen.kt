@@ -1,7 +1,6 @@
 package com.dannx.walls.ui.screens
 
 import android.app.Activity
-import android.net.Uri
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
@@ -117,7 +116,7 @@ fun DetailScreen(
     onSetWallpaper: (WallpaperTarget) -> Unit,
     onShare: () -> Unit,
     onCancelAction: () -> Unit,
-    onOpenFile: (Uri) -> Unit,
+    onOpenFile: (String) -> Unit,
     onDownloadAgain: (String) -> Unit,
     onDismissDownloadPrompt: () -> Unit,
     onAddToCollection: (String) -> Unit,

@@ -241,7 +241,8 @@ private fun UploadCard(
     onUpload: (Uri, String, String, List<String>, String?) -> Unit,
     onSelectUploadUri: (Uri?) -> Unit,
 ) {
-    val selectedUri = state.selectedUploadUri
+    val selectedUri = state.selectedUploadUri?.let(Uri::parse)
+    val myCollections = state.myCollections
     var title by rememberSaveable { mutableStateOf("") }
     var category by rememberSaveable { mutableStateOf("Abstracto") }
     var tagsText by rememberSaveable { mutableStateOf("") }
@@ -394,7 +395,7 @@ private fun UploadCard(
                 style = MaterialTheme.typography.labelLarge,
             )
             Spacer(Modifier.height(6.dp))
-            if (state.myCollections.isEmpty()) {
+            if (myCollections.isEmpty()) {
                 Text(
                     text = "Crea una colección desde la pestaña Colecciones para agrupar este fondo.",
                     style = MaterialTheme.typography.bodySmall,
@@ -413,7 +414,7 @@ private fun UploadCard(
                             shape = CircleShape,
                         )
                     }
-                    items(state.myCollections, key = { it.id }) { collection ->
+                    items(myCollections, key = { it.id }) { collection ->
                         FilterChip(
                             selected = selectedCollectionId == collection.id,
                             onClick = { selectedCollectionId = collection.id },

@@ -1,6 +1,5 @@
 package com.dannx.walls.data
 
-import android.net.Uri
 import com.dannx.walls.util.SharedImage
 import com.dannx.walls.util.WallpaperTarget
 
@@ -67,10 +66,10 @@ interface WallpaperActions {
     suspend fun saveToGallery(
         wallpaper: Wallpaper,
         onProgress: (downloaded: Long, total: Long) -> Unit,
-    ): Uri
+    ): String
 
     suspend fun setAsWallpaper(wallpaper: Wallpaper, target: WallpaperTarget): WallpaperTarget
     suspend fun prepareShare(wallpaper: Wallpaper): SharedImage
     fun share(image: SharedImage, title: String)
-    fun exists(uri: Uri): Boolean
+    fun exists(uri: String): Boolean
 }

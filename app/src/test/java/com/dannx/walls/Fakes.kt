@@ -128,7 +128,7 @@ class FakeCache : FeedCacheStore {
 }
 
 class FakeActions : WallpaperActions {
-    var savedUri: Uri? = null
+    var savedUri: String? = null
     var appliedTarget: WallpaperTarget? = null
     var shared: Boolean = false
     var failWith: Throwable? = null
@@ -136,11 +136,11 @@ class FakeActions : WallpaperActions {
     override suspend fun saveToGallery(
         wallpaper: Wallpaper,
         onProgress: (downloaded: Long, total: Long) -> Unit,
-    ): Uri {
+    ): String {
         failWith?.let { throw it }
         onProgress(50, 100)
         onProgress(100, 100)
-        return savedUri ?: Uri.parse("content://media/test")
+        return savedUri ?: "content://media/test"
     }
 
     override suspend fun setAsWallpaper(
@@ -153,11 +153,11 @@ class FakeActions : WallpaperActions {
     }
 
     override suspend fun prepareShare(wallpaper: Wallpaper): SharedImage =
-        SharedImage(Uri.parse("content://test/share"), "image/jpeg")
+        SharedImage("content://test/share", "image/jpeg")
 
     override fun share(image: SharedImage, title: String) {
         shared = true
     }
 
-    override fun exists(uri: Uri): Boolean = true
+    override fun exists(uri: String): Boolean = true
 }

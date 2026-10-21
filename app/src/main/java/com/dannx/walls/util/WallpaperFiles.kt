@@ -101,7 +101,7 @@ class WallpaperFiles(private val context: Context) : WallpaperActions {
     override suspend fun saveToGallery(
         wallpaper: Wallpaper,
         onProgress: (downloaded: Long, total: Long) -> Unit,
-    ): Uri = withContext(Dispatchers.IO) {
+    ): String = withContext(Dispatchers.IO) {
         val request = Request.Builder()
             .url(wallpaper.imageUrl)
             .header("User-Agent", "DannX/1.0")
@@ -161,7 +161,7 @@ class WallpaperFiles(private val context: Context) : WallpaperActions {
                     values.clear()
                     values.put(MediaStore.Images.Media.IS_PENDING, 0)
                     resolver.update(uri, values, null, null)
-                    uri
+                    uri.toString()
                 } catch (error: Exception) {
                     resolver.delete(uri, null, null)
                     throw error
@@ -173,9 +173,10 @@ class WallpaperFiles(private val context: Context) : WallpaperActions {
     /**
      * Abre un archivo guardado en la galería con la app de imágenes del sistema.
      */
-    fun open(uri: Uri) {
+    fun open(uri: String) {
+        val parsed = Uri.parse(uri)
         val intent = Intent(Intent.ACTION_VIEW).apply {
-            setDataAndType(uri, context.contentResolver.getType(uri) ?: "image/*")
+            setDataAndType(parsed, context.contentResolver.getType(parsed) ?: "image/*")
             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
         }
         if (context !is Activity) {
@@ -187,8 +188,8 @@ class WallpaperFiles(private val context: Context) : WallpaperActions {
     /**
      * Indica si el archivo guardado sigue existiendo en el dispositivo.
      */
-    override fun exists(uri: Uri): Boolean = runCatching {
-        context.contentResolver.openFileDescriptor(uri, "r")?.use { true } ?: false
+    override fun exists(uri: String): Boolean = runCatching {
+        context.contentResolver.openFileDescriptor(Uri.parse(uri), "r")?.use { true } ?: false
     }.getOrDefault(false)
 
     private fun galleryFileName(wallpaper: Wallpaper, extension: String): String {
@@ -312,7 +313,7 @@ class WallpaperFiles(private val context: Context) : WallpaperActions {
                 "${context.packageName}.fileprovider",
                 file,
             )
-            return SharedImage(uri = uri, mime = format.mime)
+            return SharedImage(uri = uri.toString(), mime = format.mime)
         } catch (error: Exception) {
             temp.delete()
             throw error
@@ -340,11 +341,12 @@ class WallpaperFiles(private val context: Context) : WallpaperActions {
     }
 
     override fun share(image: SharedImage, title: String) {
+        val uri = Uri.parse(image.uri)
         val send = Intent(Intent.ACTION_SEND).apply {
             type = image.mime
-            putExtra(Intent.EXTRA_STREAM, image.uri)
+            putExtra(Intent.EXTRA_STREAM, uri)
             putExtra(Intent.EXTRA_TITLE, title)
-            clipData = ClipData.newRawUri("DannX", image.uri)
+            clipData = ClipData.newRawUri("DannX", uri)
             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
         }
         val chooser = Intent.createChooser(send, "Compartir fondo").apply {

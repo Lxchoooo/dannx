@@ -223,7 +223,7 @@ fun AppRoot(viewModel: MainViewModel, startTab: String = "home") {
                     onSignOut = viewModel::signOut,
                     onUpload = viewModel::uploadWallpaper,
                     onRefresh = viewModel::refresh,
-                    onSelectUploadUri = viewModel::setSelectedUploadUri,
+                    onSelectUploadUri = { uri -> viewModel.setSelectedUploadUri(uri?.toString()) },
                 )
             }
             composable(

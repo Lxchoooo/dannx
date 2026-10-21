@@ -67,7 +67,7 @@ data class ImageFormat(
 )
 
 data class SharedImage(
-    val uri: android.net.Uri,
+    val uri: String,
     val mime: String,
 )
 

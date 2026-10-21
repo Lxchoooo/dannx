@@ -168,8 +168,11 @@ private fun CollectionCard(
     collection: WallpaperCollection,
     onClick: () -> Unit,
 ) {
-    val cover = collection.wallpaperIds.firstNotNullOfOrNull { id ->
-        state.wallpapers.firstOrNull { it.id == id }
+    val wallpapers = state.wallpapers
+    val cover = remember(collection.id, wallpapers) {
+        collection.wallpaperIds.firstNotNullOfOrNull { id ->
+            wallpapers.firstOrNull { it.id == id }
+        }
     }
     val mine = state.canEdit(collection) && !state.isDemo
     Card(

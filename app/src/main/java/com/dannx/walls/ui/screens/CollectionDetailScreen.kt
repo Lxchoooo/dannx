@@ -58,7 +58,9 @@ fun CollectionDetailScreen(
     onDelete: () -> Unit,
 ) {
     val items = remember(state.wallpapers, collection.wallpaperIds) {
-        state.wallpapersIn(collection)
+        collection.wallpaperIds.mapNotNull { id ->
+            state.wallpapers.firstOrNull { it.id == id }
+        }
     }
     val canEdit = state.canEdit(collection)
     var confirmDelete by rememberSaveable { mutableStateOf(false) }

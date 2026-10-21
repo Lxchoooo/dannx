@@ -61,6 +61,19 @@ class MainViewModelTest {
     }
 
     @Test
+    fun `the app starts from the cache when there is no network`() = runTest(dispatcher) {
+        cache.writeWallpapers(listOf(wallpaper("cached")))
+        val model = viewModel(online = false)
+
+        advanceUntilIdle()
+
+        val state = model.state.value
+        assertTrue(state.feed is LoadState.Content)
+        assertTrue(state.offline)
+        assertEquals(1, state.wallpapers.size)
+    }
+
+    @Test
     fun `refresh cancels the previous call instead of stacking them`() = runTest(dispatcher) {
         repository.wallpapers = listOf(wallpaper("1"))
         val model = viewModel()
@@ -126,6 +139,19 @@ class MainViewModelTest {
         advanceUntilIdle()
 
         assertEquals(0, repository.loadCalls)
+    }
+
+    @Test
+    fun `refreshIfOnline refreshes once when the network is back`() = runTest(dispatcher) {
+        repository.wallpapers = listOf(wallpaper("1"))
+        val model = viewModel(online = true)
+        advanceUntilIdle()
+        val before = repository.loadCalls
+
+        model.refreshIfOnline()
+        advanceUntilIdle()
+
+        assertEquals(before + 1, repository.loadCalls)
     }
 
     @Test

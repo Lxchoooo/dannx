@@ -43,12 +43,12 @@ enum class UiAction {
 
 data class MessageAction(
     val label: String,
-    val uri: Uri,
+    val uri: String,
 )
 
 data class DownloadPrompt(
     val wallpaperId: String,
-    val uri: Uri,
+    val uri: String,
 )
 
 /**
@@ -100,7 +100,7 @@ data class UiState(
     val downloadedIds: Set<String> = emptySet(),
     val downloadPrompt: DownloadPrompt? = null,
     val offline: Boolean = false,
-    val selectedUploadUri: Uri? = null,
+    val selectedUploadUri: String? = null,
 ) {
     val filtered: List<Wallpaper>
         get() = filterWallpapers(wallpapers, query, category, tag)
@@ -148,7 +148,7 @@ class MainViewModel(
             query = savedState.get<String>(KEY_QUERY) ?: "",
             category = savedState.get<String>(KEY_CATEGORY),
             tag = savedState.get<String>(KEY_TAG),
-            selectedUploadUri = savedState.get<String>(KEY_UPLOAD_URI)?.let(Uri::parse),
+            selectedUploadUri = savedState.get<String>(KEY_UPLOAD_URI),
         ),
     )
     val state: StateFlow<UiState> = _state.asStateFlow()
@@ -157,7 +157,35 @@ class MainViewModel(
 
     init {
         restoreSession()
-        refresh()
+        if (isOnline()) {
+            refresh()
+        } else {
+            loadFromCache()
+        }
+    }
+
+    /**
+     * Muestra lo guardado en disco cuando no hay red.
+     */
+    private fun loadFromCache() {
+        val cachedWallpapers = cache.readWallpapers()
+        val cachedCollections = cache.readCollections()
+        _state.update {
+            it.copy(
+                feed = if (cachedWallpapers.isEmpty()) {
+                    LoadState.Error(
+                        message = "Sin conexión. Revisá tu internet y probá de nuevo.",
+                        kind = ErrorKind.OFFLINE,
+                    )
+                } else {
+                    LoadState.Content(cachedWallpapers)
+                },
+                collections = LoadState.Content(cachedCollections),
+                wallpapers = cachedWallpapers,
+                collectionItems = cachedCollections,
+                offline = true,
+            )
+        }
     }
 
     /**
@@ -239,8 +267,8 @@ class MainViewModel(
         _state.update { it.copy(tag = value) }
     }
 
-    fun setSelectedUploadUri(uri: Uri?) {
-        savedState[KEY_UPLOAD_URI] = uri?.toString()
+    fun setSelectedUploadUri(uri: String?) {
+        savedState[KEY_UPLOAD_URI] = uri
         _state.update { it.copy(selectedUploadUri = uri) }
     }
 
@@ -516,12 +544,9 @@ class MainViewModel(
 
     fun download(wallpaper: Wallpaper) {
         val known = prefs.downloadedUri(wallpaper.id)
-        if (known != null) {
-            val uri = Uri.parse(known)
-            if (actions.exists(uri)) {
-                _state.update { it.copy(downloadPrompt = DownloadPrompt(wallpaper.id, uri)) }
-                return
-            }
+        if (known != null && actions.exists(known)) {
+            _state.update { it.copy(downloadPrompt = DownloadPrompt(wallpaper.id, known)) }
+            return
         }
         startDownload(wallpaper)
     }
@@ -551,7 +576,7 @@ class MainViewModel(
                     }
                     _actionState.update { it.copy(progress = percent) }
                 }
-                prefs.rememberDownload(wallpaper.id, uri.toString())
+                prefs.rememberDownload(wallpaper.id, uri)
                 api.incrementDownloads(wallpaper.id)
                 _state.update {
                     it.copy(
