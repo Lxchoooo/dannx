@@ -79,3 +79,21 @@ así que todo vive bajo "Sin publicar" hasta el primer tag.
 - Fase 7: distribución por APK (keystore propio, tags, checksum, verificador de
   actualizaciones).
 - Fase 8: pruebas finales (tests de ViewModel y repositorio, lista manual).
+
+## Estado actual
+
+- Rama `main` en GitHub, CI verde en cada push (build debug + release con R8 y
+  tests unitarios).
+- Última CI: run `39535976641` (commit `7550243`). Commits de la Fase 2:
+  `d1aec69` (aplicar fondo), `38cacc4` (descarga), `3cad7bf` (zoom), `f9bf48e`
+  (compartir), `7550243` (fix de compilación), `5b09cac` (este changelog).
+- APKs para instalar en el teléfono: `DannX-debug.apk` (65 MB) y
+  `DannX-release.apk` (3.4 MB) en `Descargas/` del almacenamiento compartido.
+- **Pendiente de prueba manual**: aplicar fondo en las tres pantallas, descarga
+  con progreso/cancelación/duplicado, zoom con doble toque y rotación, y
+  compartir la imagen. Nada de eso está verificado en un dispositivo real.
+- **Pendiente de corrección conocido**: la copia de `cache/shared` que se
+  comparte conserva extensión `.img`; apps muy estrictas podrían no inferir el
+  tipo, aunque el intent usa `image/*`.
+- El APK público sigue firmado con el keystore de debug: no distribuir todavía
+  (Fase 7).
