@@ -133,7 +133,7 @@ class MainViewModel(
             query = savedState.get<String>(KEY_QUERY) ?: "",
             category = savedState.get<String>(KEY_CATEGORY),
             tag = savedState.get<String>(KEY_TAG),
-            selectedUploadUri = savedState[KEY_UPLOAD_URI]?.let(Uri::parse),
+            selectedUploadUri = savedState.get<String>(KEY_UPLOAD_URI)?.let(Uri::parse),
         ),
     )
     val state: StateFlow<UiState> = _state.asStateFlow()
