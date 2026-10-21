@@ -50,10 +50,15 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.util.lerp
 import coil.imageLoader
+import com.dannx.walls.LoadState
 import com.dannx.walls.UiState
 import com.dannx.walls.data.DefaultCategories
 import com.dannx.walls.data.Wallpaper
+import com.dannx.walls.ui.components.EmptyState
+import com.dannx.walls.ui.components.ErrorState
 import com.dannx.walls.ui.components.FeaturedCard
+import com.dannx.walls.ui.components.FeedSkeleton
+import com.dannx.walls.ui.components.OfflineBanner
 import com.dannx.walls.ui.components.WallpaperCard
 import com.dannx.walls.ui.components.wallpaperThumbRequest
 import kotlin.math.absoluteValue
@@ -68,6 +73,11 @@ fun HomeScreen(
     onRefresh: () -> Unit,
     onOpenWallpaper: (Wallpaper) -> Unit,
     onToggleFavorite: (String) -> Unit,
+    onClearFilters: () -> Unit = {
+        onQueryChange("")
+        onCategoryChange(null)
+        onTagChange(null)
+    },
 ) {
     val featured = remember(state.wallpapers) { state.featured }
     val filtered = remember(state.wallpapers, state.query, state.category, state.tag) {
@@ -292,103 +302,63 @@ fun HomeScreen(
             }
         }
 
-        when {
-            state.loading && state.wallpapers.isEmpty() -> {
+        if (state.offline) {
+            item(span = { GridItemSpan(2) }) {
+                OfflineBanner()
+            }
+        }
+
+        when (val feed = state.feed) {
+            is LoadState.Loading -> {
                 item(span = { GridItemSpan(2) }) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(240.dp),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        CircularProgressIndicator()
-                    }
+                    FeedSkeleton()
                 }
             }
 
-            state.loadError != null && state.wallpapers.isEmpty() -> {
+            is LoadState.Error -> {
                 item(span = { GridItemSpan(2) }) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 40.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                    ) {
-                        Text(
-                            text = "No pudimos cargar el feed",
-                            style = MaterialTheme.typography.titleLarge,
-                            textAlign = TextAlign.Center,
-                        )
-                        Spacer(Modifier.height(6.dp))
-                        Text(
-                            text = state.loadError,
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            textAlign = TextAlign.Center,
-                        )
-                        Spacer(Modifier.height(16.dp))
-                        Button(onClick = onRefresh) {
-                            Text("Reintentar")
-                        }
-                    }
+                    ErrorState(message = feed.message, onRetry = onRefresh)
                 }
             }
 
-            state.filtered.isEmpty() -> {
+            is LoadState.Empty -> {
                 item(span = { GridItemSpan(2) }) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 50.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                    ) {
-                        Icon(
-                            imageVector = Icons.Rounded.Wallpaper,
-                            contentDescription = null,
-                            modifier = Modifier.size(42.dp),
-                            tint = MaterialTheme.colorScheme.primary,
-                        )
-                        Spacer(Modifier.height(12.dp))
-                        Text(
-                            text = "Nada por aquí todavía",
-                            style = MaterialTheme.typography.titleLarge,
-                        )
-                        Spacer(Modifier.height(4.dp))
-                        Text(
-                            text = "Prueba con otra búsqueda o categoría.",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                        Spacer(Modifier.height(16.dp))
-                        Button(
-                            onClick = {
-                                onQueryChange("")
-                                onCategoryChange(null)
-                                onTagChange(null)
-                            },
-                        ) {
-                            Text("Limpiar filtros")
-                        }
-                    }
-                }
-            }
-
-            else -> {
-                itemsIndexed(
-                    items = filtered,
-                    key = { _, wallpaper -> wallpaper.id },
-                    contentType = { _, _ -> "wall" },
-                ) { _, wallpaper ->
-                    WallpaperCard(
-                        wallpaper = wallpaper,
-                        isFavorite = wallpaper.id in state.favorites,
-                        onClick = { onOpenWallpaper(wallpaper) },
-                        onToggleFavorite = { onToggleFavorite(wallpaper.id) },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .aspectRatio(9f / 16f),
+                    EmptyState(
+                        title = stringResource(R.string.state_empty_feed_title),
+                        message = stringResource(R.string.state_empty_feed_body),
                     )
                 }
+            }
+
+            is LoadState.Content -> {
+                if (state.filtered.isEmpty()) {
+                    item(span = { GridItemSpan(2) }) {
+                        EmptyState(
+                            title = stringResource(R.string.state_empty_filter_title),
+                            message = stringResource(R.string.state_empty_filter_body),
+                            actionLabel = stringResource(R.string.state_clear_filters),
+                            onAction = onClearFilters,
+                        )
+                    }
+                }
+            }
+        }
+
+        if (state.feed is LoadState.Content && state.filtered.isNotEmpty()) {
+            itemsIndexed(
+                items = filtered,
+                key = { _, wallpaper -> wallpaper.id },
+                contentType = { _, _ -> "wall" },
+            ) { _, wallpaper ->
+                WallpaperCard(
+                    wallpaper = wallpaper,
+                    isFavorite = wallpaper.id in state.favorites,
+                    onClick = { onOpenWallpaper(wallpaper) },
+                    onToggleFavorite = { onToggleFavorite(wallpaper.id) },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .aspectRatio(9f / 16f),
+                )
             }
         }
     }

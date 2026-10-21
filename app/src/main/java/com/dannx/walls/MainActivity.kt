@@ -10,7 +10,9 @@ import com.dannx.walls.ui.AppRoot
 import com.dannx.walls.ui.theme.DannXTheme
 
 class MainActivity : ComponentActivity() {
-    private val viewModel: MainViewModel by viewModels()
+    private val viewModel: MainViewModel by viewModels {
+        MainViewModel.factory(application)
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         installSplashScreen()

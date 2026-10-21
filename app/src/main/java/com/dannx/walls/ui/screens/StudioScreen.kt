@@ -46,7 +46,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -71,6 +70,7 @@ fun StudioScreen(
     onSignOut: () -> Unit,
     onUpload: (Uri, String, String, List<String>, String?) -> Unit,
     onRefresh: () -> Unit,
+    onSelectUploadUri: (Uri?) -> Unit = {},
 ) {
     val configured = !state.isDemo
     val session = state.session
@@ -107,6 +107,7 @@ fun StudioScreen(
                 state = state,
                 onSignOut = onSignOut,
                 onUpload = onUpload,
+                onSelectUploadUri = onSelectUploadUri,
             )
         }
         Spacer(Modifier.height(28.dp))
@@ -238,8 +239,9 @@ private fun UploadCard(
     state: UiState,
     onSignOut: () -> Unit,
     onUpload: (Uri, String, String, List<String>, String?) -> Unit,
+    onSelectUploadUri: (Uri?) -> Unit,
 ) {
-    var selectedUri by remember { mutableStateOf<Uri?>(null) }
+    val selectedUri = state.selectedUploadUri
     var title by rememberSaveable { mutableStateOf("") }
     var category by rememberSaveable { mutableStateOf("Abstracto") }
     var tagsText by rememberSaveable { mutableStateOf("") }
@@ -250,13 +252,13 @@ private fun UploadCard(
         contract = ActivityResultContracts.PickVisualMedia(),
     ) { uri ->
         if (uri != null) {
-            selectedUri = uri
+            onSelectUploadUri(uri)
         }
     }
 
     LaunchedEffect(state.uploadSuccessCount) {
         if (state.uploadSuccessCount > 0) {
-            selectedUri = null
+            onSelectUploadUri(null)
             title = ""
             tagsText = ""
         }

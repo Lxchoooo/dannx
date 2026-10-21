@@ -133,12 +133,19 @@ fun AppRoot(viewModel: MainViewModel, startTab: String = "home") {
             composable("home") {
                 HomeScreen(
                     state = state,
+                    onClearFilters = {
+                        viewModel.setQuery("")
+                        viewModel.setCategory(null)
+                        viewModel.setTag(null)
+                    },
                     onQueryChange = viewModel::setQuery,
                     onCategoryChange = viewModel::setCategory,
                     onTagChange = viewModel::setTag,
                     onRefresh = viewModel::refresh,
                     onOpenWallpaper = { wallpaper ->
-                        navController.navigate("detail/${wallpaper.id}")
+                        navController.navigate("detail/${wallpaper.id}") {
+                            launchSingleTop = true
+                        }
                     },
                     onToggleFavorite = viewModel::toggleFavorite,
                 )
@@ -146,8 +153,11 @@ fun AppRoot(viewModel: MainViewModel, startTab: String = "home") {
             composable("favorites") {
                 FavoritesScreen(
                     state = state,
+                    onRefresh = viewModel::refresh,
                     onOpenWallpaper = { wallpaper ->
-                        navController.navigate("detail/${wallpaper.id}")
+                        navController.navigate("detail/${wallpaper.id}") {
+                            launchSingleTop = true
+                        }
                     },
                     onToggleFavorite = viewModel::toggleFavorite,
                     onExplore = { navController.navigateTopLevel("home") },
@@ -156,8 +166,11 @@ fun AppRoot(viewModel: MainViewModel, startTab: String = "home") {
             composable("collections") {
                 CollectionsScreen(
                     state = state,
+                    onRefresh = viewModel::refresh,
                     onOpenCollection = { collection ->
-                        navController.navigate("collection/${collection.id}")
+                        navController.navigate("collection/${collection.id}") {
+                            launchSingleTop = true
+                        }
                     },
                     onCreateCollection = viewModel::createCollection,
                 )
@@ -169,7 +182,7 @@ fun AppRoot(viewModel: MainViewModel, startTab: String = "home") {
                 ),
             ) { entry ->
                 val id = entry.arguments?.getString("id")
-                val collection = state.collections.firstOrNull { it.id == id }
+                val collection = state.collectionItems.firstOrNull { it.id == id }
                 if (collection == null) {
                     LaunchedEffect(id) {
                         navController.popBackStack()
@@ -181,7 +194,9 @@ fun AppRoot(viewModel: MainViewModel, startTab: String = "home") {
                         collection = collection,
                         onBack = { navController.popBackStack() },
                         onOpenWallpaper = { wallpaper ->
-                            navController.navigate("detail/${wallpaper.id}")
+                            navController.navigate("detail/${wallpaper.id}") {
+                                launchSingleTop = true
+                            }
                         },
                         onToggleFavorite = viewModel::toggleFavorite,
                         onRemove = { wallpaperId ->
@@ -198,6 +213,7 @@ fun AppRoot(viewModel: MainViewModel, startTab: String = "home") {
                     onSignOut = viewModel::signOut,
                     onUpload = viewModel::uploadWallpaper,
                     onRefresh = viewModel::refresh,
+                    onSelectUploadUri = viewModel::setSelectedUploadUri,
                 )
             }
             composable(

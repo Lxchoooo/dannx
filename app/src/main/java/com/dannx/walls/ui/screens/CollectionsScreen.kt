@@ -48,17 +48,23 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
+import com.dannx.walls.LoadState
 import com.dannx.walls.UiState
 import com.dannx.walls.data.WallpaperCollection
+import com.dannx.walls.ui.components.EmptyState
+import com.dannx.walls.ui.components.ErrorState
+import com.dannx.walls.ui.components.FeedSkeleton
 
 @Composable
 fun CollectionsScreen(
     state: UiState,
     onOpenCollection: (WallpaperCollection) -> Unit,
     onCreateCollection: (String, String, Boolean) -> Unit,
+    onRefresh: () -> Unit = {},
 ) {
     var showCreate by rememberSaveable { mutableStateOf(false) }
     val canCreate = state.isDemo || state.session != null
@@ -104,35 +110,34 @@ fun CollectionsScreen(
             }
         }
 
-        if (state.collections.isEmpty()) {
-            item {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 70.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                ) {
-                    Icon(
-                        imageVector = Icons.Rounded.CollectionsBookmark,
-                        contentDescription = null,
-                        modifier = Modifier.size(48.dp),
-                        tint = MaterialTheme.colorScheme.primary,
-                    )
-                    Spacer(Modifier.height(14.dp))
-                    Text(
-                        text = "Tu primera colección empieza aquí",
-                        style = MaterialTheme.typography.titleLarge,
-                    )
-                    Spacer(Modifier.height(6.dp))
-                    Text(
-                        text = "Crea una carpeta como Immortal Edition o Flowers y ve sumando fondos.",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
+        when (val collections = state.collections) {
+            is LoadState.Loading -> {
+                item {
+                    FeedSkeleton()
                 }
             }
-        } else {
-            items(items = state.collections, key = { it.id }) { collection ->
+
+            is LoadState.Error -> {
+                item {
+                    ErrorState(message = collections.message, onRetry = onRefresh)
+                }
+            }
+
+            else -> {
+                if (collections is LoadState.Content && collections.data.isEmpty()) {
+                    item {
+                        EmptyState(
+                            title = stringResource(R.string.state_empty_collections_title),
+                            message = stringResource(R.string.state_empty_collections_body),
+                            icon = Icons.Rounded.CollectionsBookmark,
+                        )
+                    }
+                }
+            }
+        }
+
+        if (state.collections is LoadState.Content && state.collectionItems.isNotEmpty()) {
+            items(items = state.collectionItems, key = { it.id }) { collection ->
                 CollectionCard(
                     state = state,
                     collection = collection,

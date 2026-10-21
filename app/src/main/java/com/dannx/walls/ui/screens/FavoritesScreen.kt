@@ -26,9 +26,14 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.dannx.walls.LoadState
 import com.dannx.walls.UiState
 import com.dannx.walls.data.Wallpaper
+import com.dannx.walls.ui.components.EmptyState
+import com.dannx.walls.ui.components.ErrorState
+import com.dannx.walls.ui.components.FeedSkeleton
 import com.dannx.walls.ui.components.WallpaperCard
 
 @Composable
@@ -37,6 +42,7 @@ fun FavoritesScreen(
     onOpenWallpaper: (Wallpaper) -> Unit,
     onToggleFavorite: (String) -> Unit,
     onExplore: () -> Unit,
+    onRefresh: () -> Unit = {},
 ) {
     val items = remember(state.wallpapers, state.favorites) { state.favoriteWallpapers }
     LazyVerticalGrid(
@@ -63,38 +69,26 @@ fun FavoritesScreen(
             }
         }
 
-        if (items.isEmpty()) {
+        if (state.feed is LoadState.Loading && items.isEmpty()) {
             item(span = { GridItemSpan(2) }) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 80.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                ) {
-                    Icon(
-                        imageVector = Icons.Rounded.FavoriteBorder,
-                        contentDescription = null,
-                        modifier = Modifier.size(48.dp),
-                        tint = MaterialTheme.colorScheme.primary,
-                    )
-                    Spacer(Modifier.height(14.dp))
-                    Text(
-                        text = "Tu colección empieza aquí",
-                        style = MaterialTheme.typography.titleLarge,
-                        textAlign = TextAlign.Center,
-                    )
-                    Spacer(Modifier.height(6.dp))
-                    Text(
-                        text = "Toca el corazón de cualquier fondo para guardarlo.",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        textAlign = TextAlign.Center,
-                    )
-                    Spacer(Modifier.height(20.dp))
-                    Button(onClick = onExplore) {
-                        Text("Explorar fondos")
-                    }
-                }
+                FeedSkeleton()
+            }
+        } else if (state.feed is LoadState.Error && items.isEmpty()) {
+            item(span = { GridItemSpan(2) }) {
+                ErrorState(
+                    message = (state.feed as LoadState.Error).message,
+                    onRetry = onRefresh,
+                )
+            }
+        } else if (items.isEmpty()) {
+            item(span = { GridItemSpan(2) }) {
+                EmptyState(
+                    title = stringResource(R.string.state_empty_favorites_title),
+                    message = stringResource(R.string.state_empty_favorites_body),
+                    icon = Icons.Rounded.FavoriteBorder,
+                    actionLabel = stringResource(R.string.state_explore),
+                    onAction = onExplore,
+                )
             }
         } else {
             itemsIndexed(

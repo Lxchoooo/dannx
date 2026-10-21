@@ -21,4 +21,18 @@
     <string name="download_duplicate_title">Ya lo tenías descargado</string>
     <string name="download_duplicate_body">Esta imagen ya está en tu galería. Podés abrirla o guardar una copia nueva.</string>
     <string name="download_again">Descargar de nuevo</string>
+
+    <string name="state_error_title">No pudimos cargar</string>
+    <string name="state_retry">Reintentar</string>
+    <string name="state_offline">Sin conexión: mostramos lo que ya tenías guardado.</string>
+    <string name="state_empty_feed_title">Todavía no hay fondos</string>
+    <string name="state_empty_feed_body">Apenas se publiquen, los vas a ver acá.</string>
+    <string name="state_empty_filter_title">Nada por aquí todavía</string>
+    <string name="state_empty_filter_body">Probá con otra búsqueda o categoría.</string>
+    <string name="state_clear_filters">Limpiar filtros</string>
+    <string name="state_empty_favorites_title">Tu colección empieza aquí</string>
+    <string name="state_empty_favorites_body">Toca el corazón de cualquier fondo para guardarlo.</string>
+    <string name="state_explore">Explorar fondos</string>
+    <string name="state_empty_collections_title">Tu primera colección empieza aquí</string>
+    <string name="state_empty_collections_body">Crea una carpeta como Immortal Edition o Flowers y ve sumando fondos.</string>
 </resources>
