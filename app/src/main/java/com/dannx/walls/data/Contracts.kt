@@ -1,5 +1,7 @@
 package com.dannx.walls.data
 
+import android.net.Uri
+
 import com.dannx.walls.util.SharedImage
 import com.dannx.walls.util.WallpaperTarget
 
