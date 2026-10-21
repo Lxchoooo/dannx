@@ -15,4 +15,10 @@
     <string name="apply_in_progress">Aplicando el fondo…</string>
     <string name="apply_in_progress_hint">Puede tardar un momento con imágenes grandes.</string>
     <string name="action_cancel">Cancelar</string>
+    <string name="action_open">Abrir</string>
+    <string name="download_in_progress">Guardando… %1$d%%</string>
+    <string name="download_action">Descargar</string>
+    <string name="download_duplicate_title">Ya lo tenías descargado</string>
+    <string name="download_duplicate_body">Esta imagen ya está en tu galería. Podés abrirla o guardar una copia nueva.</string>
+    <string name="download_again">Descargar de nuevo</string>
 </resources>

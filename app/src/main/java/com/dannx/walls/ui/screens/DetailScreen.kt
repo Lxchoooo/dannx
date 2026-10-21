@@ -1,6 +1,7 @@
 package com.dannx.walls.ui.screens
 
 import android.app.Activity
+import android.net.Uri
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.rememberTransformableState
 import androidx.compose.foundation.gestures.transformable
@@ -74,6 +75,7 @@ import androidx.core.view.WindowCompat
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.dannx.walls.R
+import com.dannx.walls.DownloadPrompt
 import com.dannx.walls.UiAction
 import com.dannx.walls.data.Wallpaper
 import com.dannx.walls.data.WallpaperCollection
@@ -88,12 +90,17 @@ fun DetailScreen(
     collectionBusy: Boolean,
     activeAction: UiAction? = null,
     actionProgress: Int? = null,
+    downloadPrompt: DownloadPrompt? = null,
+    alreadyDownloaded: Boolean = false,
     onBack: () -> Unit,
     onToggleFavorite: () -> Unit,
     onDownload: () -> Unit,
     onSetWallpaper: (WallpaperTarget) -> Unit,
     onShare: () -> Unit,
     onCancelAction: () -> Unit,
+    onOpenFile: (Uri) -> Unit,
+    onDownloadAgain: (String) -> Unit,
+    onDismissDownloadPrompt: () -> Unit,
     onAddToCollection: (String) -> Unit,
     onCreateCollection: (String, String, Boolean) -> Unit,
 ) {
@@ -268,7 +275,13 @@ fun DetailScreen(
                 ) {
                     Icon(Icons.Rounded.Download, contentDescription = null)
                     Spacer(Modifier.width(8.dp))
-                    Text("Descargar")
+                    Text(
+                        text = if (alreadyDownloaded) {
+                            stringResource(R.string.download_again)
+                        } else {
+                            stringResource(R.string.download_action)
+                        },
+                    )
                 }
                 FilledTonalButton(
                     onClick = {
@@ -322,6 +335,35 @@ fun DetailScreen(
                     }
                 }
             }
+            if (activeAction == UiAction.DOWNLOAD) {
+                Spacer(Modifier.height(12.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(18.dp),
+                        strokeWidth = 2.dp,
+                        color = Color.White,
+                    )
+                    Spacer(Modifier.width(10.dp))
+                    Text(
+                        text = stringResource(
+                            R.string.download_in_progress,
+                            actionProgress ?: 0,
+                        ),
+                        style = MaterialTheme.typography.labelLarge,
+                        color = Color.White.copy(alpha = 0.9f),
+                        modifier = Modifier.weight(1f),
+                    )
+                    TextButton(onClick = onCancelAction) {
+                        Text(
+                            text = stringResource(R.string.action_cancel),
+                            color = Color.White,
+                        )
+                    }
+                }
+            }
         }
     }
 
@@ -331,6 +373,29 @@ fun DetailScreen(
             onPick = { target ->
                 showApplySheet = false
                 onSetWallpaper(target)
+            },
+        )
+    }
+
+    if (downloadPrompt != null) {
+        AlertDialog(
+            onDismissRequest = onDismissDownloadPrompt,
+            title = { Text(stringResource(R.string.download_duplicate_title)) },
+            text = { Text(stringResource(R.string.download_duplicate_body)) },
+            confirmButton = {
+                TextButton(onClick = { onDownloadAgain(downloadPrompt.wallpaperId) }) {
+                    Text(stringResource(R.string.download_again))
+                }
+            },
+            dismissButton = {
+                Row {
+                    TextButton(onClick = { onOpenFile(downloadPrompt.uri) }) {
+                        Text(stringResource(R.string.action_open))
+                    }
+                    TextButton(onClick = onDismissDownloadPrompt) {
+                        Text(stringResource(R.string.action_cancel))
+                    }
+                }
             },
         )
     }

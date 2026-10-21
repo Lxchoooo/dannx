@@ -78,6 +78,26 @@ class Prefs(context: Context) {
             .apply()
     }
 
+    fun downloadedUri(wallpaperId: String): String? =
+        runCatching { downloads()[wallpaperId] }.getOrNull()
+
+    fun downloadedIds(): Set<String> =
+        runCatching { downloads().keys.toSet() }.getOrDefault(emptySet())
+
+    fun rememberDownload(wallpaperId: String, uri: String) {
+        val updated = downloads().toMutableMap().apply { put(wallpaperId, uri) }
+        prefs.edit()
+            .putString(KEY_DOWNLOADS, json.encodeToString(updated))
+            .apply()
+    }
+
+    private fun downloads(): Map<String, String> {
+        val raw = prefs.getString(KEY_DOWNLOADS, null) ?: return emptyMap()
+        return runCatching {
+            json.decodeFromString<Map<String, String>>(raw)
+        }.getOrDefault(emptyMap())
+    }
+
     private companion object {
         const val KEY_FAVORITES = "favorites"
         const val KEY_ACCESS_TOKEN = "access_token"
@@ -85,5 +105,6 @@ class Prefs(context: Context) {
         const val KEY_ADMIN_EMAIL = "admin_email"
         const val KEY_USER_ID = "user_id"
         const val KEY_LOCAL_COLLECTIONS = "local_collections"
+        const val KEY_DOWNLOADS = "downloads"
     }
 }

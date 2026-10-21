@@ -33,6 +33,11 @@ data class MessageAction(
     val uri: Uri,
 )
 
+data class DownloadPrompt(
+    val wallpaperId: String,
+    val uri: Uri,
+)
+
 data class UiState(
     val loading: Boolean = true,
     val loadError: String? = null,
@@ -52,6 +57,8 @@ data class UiState(
     val messageAction: MessageAction? = null,
     val activeAction: UiAction? = null,
     val actionProgress: Int? = null,
+    val downloadedIds: Set<String> = emptySet(),
+    val downloadPrompt: DownloadPrompt? = null,
 ) {
     val filtered: List<Wallpaper>
         get() = filterWallpapers(wallpapers, query, category, tag)
@@ -89,6 +96,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             favorites = prefs.favorites(),
             session = prefs.session(),
             isDemo = !api.isConfigured,
+            downloadedIds = prefs.downloadedIds(),
         ),
     )
     val state: StateFlow<UiState> = _state.asStateFlow()
@@ -406,9 +414,64 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun download(wallpaper: Wallpaper) {
-        runAction("Guardado en Galería, carpeta Pictures/DannX.") {
-            WallpaperFiles.save(getApplication(), wallpaper)
-            api.incrementDownloads(wallpaper.id)
+        val known = prefs.downloadedUri(wallpaper.id)
+        if (known != null) {
+            val uri = Uri.parse(known)
+            if (WallpaperFiles.exists(getApplication(), uri)) {
+                _state.update { it.copy(downloadPrompt = DownloadPrompt(wallpaper.id, uri)) }
+                return
+            }
+        }
+        startDownload(wallpaper)
+    }
+
+    fun dismissDownloadPrompt() {
+        _state.update { it.copy(downloadPrompt = null) }
+    }
+
+    fun downloadAgain(wallpaperId: String) {
+        val wallpaper = _state.value.wallpapers.firstOrNull { it.id == wallpaperId }
+        _state.update { it.copy(downloadPrompt = null) }
+        if (wallpaper != null) {
+            startDownload(wallpaper)
+        }
+    }
+
+    private fun startDownload(wallpaper: Wallpaper) {
+        actionJob?.cancel()
+        actionJob = viewModelScope.launch {
+            _state.update { it.copy(activeAction = UiAction.DOWNLOAD, actionProgress = 0) }
+            try {
+                val uri = WallpaperFiles.saveToGallery(getApplication(), wallpaper) { done, total ->
+                    val percent = if (total > 0) {
+                        ((done * 100) / total).toInt().coerceIn(0, 100)
+                    } else {
+                        0
+                    }
+                    _state.update { it.copy(actionProgress = percent) }
+                }
+                prefs.rememberDownload(wallpaper.id, uri.toString())
+                api.incrementDownloads(wallpaper.id)
+                _state.update {
+                    it.copy(
+                        activeAction = null,
+                        actionProgress = null,
+                        downloadedIds = it.downloadedIds + wallpaper.id,
+                        message = "Guardado en Galería, carpeta Pictures/DannX.",
+                        messageAction = MessageAction(label = "Abrir", uri = uri),
+                    )
+                }
+            } catch (error: CancellationException) {
+                _state.update { it.copy(activeAction = null, actionProgress = null) }
+            } catch (error: Exception) {
+                _state.update {
+                    it.copy(
+                        activeAction = null,
+                        actionProgress = null,
+                        message = "No se pudo guardar la imagen. Revisá tu conexión.",
+                    )
+                }
+            }
         }
     }
 

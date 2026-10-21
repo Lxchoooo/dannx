@@ -32,6 +32,8 @@ enum class WallpaperTarget {
 }
 
 object WallpaperFiles {
+    private const val DEFAULT_BUFFER_SIZE = 64 * 1024
+
     private val client = OkHttpClient.Builder()
         .connectTimeout(20, TimeUnit.SECONDS)
         .readTimeout(90, TimeUnit.SECONDS)
@@ -152,6 +154,124 @@ object WallpaperFiles {
     }
 
     /**
+     * Guarda la imagen en la galería escribiendo el archivo directo sobre la
+     * fila de MediaStore, sin cargar el archivo entero en memoria.
+     */
+    suspend fun saveToGallery(
+        context: Context,
+        wallpaper: Wallpaper,
+        onProgress: (downloaded: Long, total: Long) -> Unit = { _, _ -> },
+    ): Uri = withContext(Dispatchers.IO) {
+        val request = Request.Builder()
+            .url(wallpaper.imageUrl)
+            .header("User-Agent", "DannX/1.0")
+            .build()
+        client.newCall(request).execute().use { response ->
+            val body = response.body
+            if (!response.isSuccessful || body == null) {
+                throw IOException("No se pudo descargar la imagen (${response.code}).")
+            }
+            val contentType = response.header("Content-Type").orEmpty()
+            if (contentType.isNotBlank() && !contentType.startsWith("image/")) {
+                throw IOException("La respuesta no es una imagen.")
+            }
+            val mime = mimeFromContentType(contentType)
+            val extension = extensionFor(mime)
+            val values = ContentValues().apply {
+                put(
+                    MediaStore.Images.Media.DISPLAY_NAME,
+                    galleryFileName(wallpaper, extension),
+                )
+                put(MediaStore.Images.Media.MIME_TYPE, mime)
+                put(
+                    MediaStore.Images.Media.RELATIVE_PATH,
+                    "${Environment.DIRECTORY_PICTURES}/DannX",
+                )
+                put(MediaStore.Images.Media.IS_PENDING, 1)
+            }
+            val resolver = context.contentResolver
+            val uri = resolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values)
+                ?: throw IOException("No se pudo crear el archivo en Galería.")
+            try {
+                val total = body.contentLength()
+                var downloaded = 0L
+                resolver.openOutputStream(uri)?.use { output ->
+                    body.byteStream().use { input ->
+                        val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
+                        while (true) {
+                            currentCoroutineContext().ensureActive()
+                            val read = input.read(buffer)
+                            if (read < 0) break
+                            output.write(buffer, 0, read)
+                            downloaded += read
+                            onProgress(downloaded, total)
+                        }
+                        output.flush()
+                    }
+                } ?: throw IOException("No se pudo escribir el archivo.")
+                values.clear()
+                values.put(MediaStore.Images.Media.IS_PENDING, 0)
+                resolver.update(uri, values, null, null)
+                uri
+            } catch (error: Exception) {
+                resolver.delete(uri, null, null)
+                throw error
+            }
+        }
+    }
+
+    /**
+     * Abre un archivo guardado en la galería con la app de imágenes del sistema.
+     */
+    fun open(context: Context, uri: Uri) {
+        val intent = Intent(Intent.ACTION_VIEW).apply {
+            setDataAndType(uri, context.contentResolver.getType(uri) ?: "image/*")
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        }
+        if (context !is Activity) {
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+        context.startActivity(intent)
+    }
+
+    /**
+     * Indica si el archivo guardado sigue existiendo en el dispositivo.
+     */
+    fun exists(context: Context, uri: Uri): Boolean = runCatching {
+        context.contentResolver.openFileDescriptor(uri, "r")?.use { true } ?: false
+    }.getOrDefault(false)
+
+    private fun galleryFileName(wallpaper: Wallpaper, extension: String): String {
+        val slug = wallpaper.id
+            .lowercase()
+            .replace(Regex("[^a-z0-9]+"), "-")
+            .trim('-')
+            .take(40)
+            .ifBlank { "dannx" }
+        return "dannx-$slug-${System.currentTimeMillis()}.$extension"
+    }
+
+    private fun mimeFromContentType(contentType: String): String = when {
+        contentType.contains("png", ignoreCase = true) -> "image/png"
+        contentType.contains("webp", ignoreCase = true) -> "image/webp"
+        contentType.contains("gif", ignoreCase = true) -> "image/gif"
+        contentType.contains("heic", ignoreCase = true) -> "image/heic"
+        contentType.contains("heif", ignoreCase = true) -> "image/heif"
+        contentType.contains("jpeg", ignoreCase = true) ||
+            contentType.contains("jpg", ignoreCase = true) -> "image/jpeg"
+        else -> "image/jpeg"
+    }
+
+    private fun extensionFor(mime: String): String = when (mime) {
+        "image/png" -> "png"
+        "image/webp" -> "webp"
+        "image/gif" -> "gif"
+        "image/heic" -> "heic"
+        "image/heif" -> "heif"
+        else -> "jpg"
+    }
+
+    /**
      * Aplica el fondo de pantalla en la pantalla de inicio, en el bloqueo o en
      * ambas. Devuelve qué destino quedó aplicado realmente (algunos teléfonos no
      * permiten modificar el bloqueo).
@@ -246,10 +366,6 @@ object WallpaperFiles {
             String(bytes, 8, 4, Charsets.US_ASCII) == "WEBP" -> "image/webp"
 
         else -> "image/jpeg"
-    }
-
-    private companion object {
-        const val DEFAULT_BUFFER_SIZE = 64 * 1024
     }
 }
 
