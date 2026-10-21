@@ -188,10 +188,11 @@ private fun CollectionCard(
                 .background(MaterialTheme.colorScheme.surfaceVariant),
         ) {
             if (cover != null) {
-                val coverRequest = remember(cover.id, cover.thumbnailUrl) {
+                val coverSize = screenImageSize(190.dp)
+                val coverRequest = remember(cover.id, cover.thumbnailUrl, coverSize) {
                     ImageRequest.Builder(LocalContext.current)
                         .data(cover.thumbnailUrl)
-                        .size(screenImageSize(190.dp).width, screenImageSize(190.dp).height)
+                        .size(coverSize.width, coverSize.height)
                         .build()
                 }
                 AsyncImage(

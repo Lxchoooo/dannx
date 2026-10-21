@@ -106,7 +106,7 @@ fun HomeScreen(
             (DefaultCategories + state.wallpapers.map { it.category }).distinct().sorted()
     }
     val pagerState = rememberPagerState(pageCount = { featured.size })
-    val currentPage by remember { derivedStateOf { pagerState.currentPage } }
+    val currentPage = remember { derivedStateOf { pagerState.currentPage } }
 
     LazyVerticalGrid(
         columns = GridCells.Fixed(2),
@@ -268,7 +268,7 @@ fun HomeScreen(
                         horizontalArrangement = Arrangement.Center,
                     ) {
                         repeat(featured.size) { index ->
-                            val selected = index == currentPage
+                            val selected = index == currentPage.value
                             Box(
                                 Modifier
                                     .padding(horizontal = 3.dp)

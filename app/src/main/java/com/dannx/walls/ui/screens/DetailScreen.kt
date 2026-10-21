@@ -173,8 +173,9 @@ fun DetailScreen(
             .background(Color.Black)
             .onSizeChanged { containerSize = it },
     ) {
+        val context = LocalContext.current
         val imageRequest = remember(wallpaper.id, wallpaper.imageUrl) {
-            ImageRequest.Builder(LocalContext.current)
+            ImageRequest.Builder(context)
                 .data(wallpaper.imageUrl)
                 .build()
         }
@@ -372,7 +373,7 @@ fun DetailScreen(
                     modifier = Modifier.weight(1f),
                     shape = CircleShape,
                     contentPadding = PaddingValues(horizontal = 14.dp, vertical = 14.dp),
-                    enabled = activeAction == null && !offline,
+                    enabled = actionState.active == null && !offline,
                 ) {
                     Icon(Icons.Rounded.Wallpaper, contentDescription = null)
                     Spacer(Modifier.width(8.dp))
@@ -381,7 +382,7 @@ fun DetailScreen(
                 FilledIconButton(
                     onClick = onShare,
                     modifier = Modifier.size(52.dp),
-                    enabled = activeAction == null && !offline,
+                    enabled = actionState.active == null && !offline,
                     colors = IconButtonDefaults.filledIconButtonColors(
                         containerColor = Color.White.copy(alpha = 0.18f),
                         contentColor = Color.White,
