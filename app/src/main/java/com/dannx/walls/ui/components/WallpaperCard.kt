@@ -69,10 +69,26 @@ internal fun screenImageSize(height: androidx.compose.ui.unit.Dp): IntSize {
     return IntSize(widthPx.toInt(), heightPx.toInt())
 }
 
+/**
+ * RGB_565 usa la mitad de memoria (2 bytes por pixel) y decodifica mas rapido,
+ * a costa de perder precision de color: se ven bandas en degradados y
+ * degradaciones de color en cielos y piel.
+ *
+ * En una pantalla de 720 px las miniaturas se ven bien, pero en el hero y en
+ * las fotos con degradados se nota. Por eso queda como opcion y no se aplica
+ * por defecto: se puede activar con USE_RGB565_FOR_THUMBS.
+ */
+private const val USE_RGB565_FOR_THUMBS = false
+
 internal fun wallpaperThumbRequest(context: Context, wallpaper: Wallpaper): ImageRequest =
     ImageRequest.Builder(context)
         .data(wallpaper.thumbnailUrl)
         .size(ThumbWidth, ThumbHeight)
+        .apply {
+            if (USE_RGB565_FOR_THUMBS) {
+                allowRgb565(true)
+            }
+        }
         .build()
 
 @Composable

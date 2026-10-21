@@ -3,6 +3,7 @@ package com.dannx.walls
 import android.app.Application
 import android.net.Uri
 import androidx.compose.runtime.Immutable
+import androidx.compose.runtime.Stable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.createSavedStateHandle
@@ -129,6 +130,11 @@ data class UiState(
         collection.wallpaperIds.mapNotNull { id -> wallpapers.firstOrNull { it.id == id } }
 }
 
+/**
+ * El estado se expone por StateFlow, asi que la instancia es estable: marcarla
+ * evita que Compose recomponga la app entera cuando cambia un dato.
+ */
+@Stable
 class MainViewModel(
     private val savedState: SavedStateHandle,
     private val prefs: LocalStore,

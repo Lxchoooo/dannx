@@ -41,7 +41,11 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -90,13 +94,18 @@ fun HomeScreen(
     }
     val availableTags = remember(state.wallpapers) { state.availableTags }
     val context = LocalContext.current
+    // Solo se precargan las miniaturas una vez por carga del feed: al volver a
+    // la pestaña no se relanza, para no competir con las imagenes visibles.
+    var precached by rememberSaveable(state.wallpapers) { mutableStateOf(false) }
     LaunchedEffect(state.wallpapers) {
+        if (precached) return@LaunchedEffect
         delay(300)
         state.wallpapers.take(12).forEach { wallpaper ->
             context.imageLoader.enqueue(
                 wallpaperThumbRequest(context, wallpaper),
             )
         }
+        precached = true
     }
 
     val showHero = state.query.isBlank() && state.category == null && state.tag == null &&
