@@ -518,8 +518,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         actionJob = viewModelScope.launch {
             _state.update { it.copy(activeAction = UiAction.SHARE, actionProgress = 0) }
             try {
-                val uri = WallpaperFiles.prepareShare(getApplication(), wallpaper)
-                WallpaperFiles.share(getApplication(), uri, wallpaper.title)
+                val image = WallpaperFiles.prepareShare(getApplication(), wallpaper)
+                WallpaperFiles.share(getApplication(), image, wallpaper.title)
                 _state.update { it.copy(activeAction = null, actionProgress = null) }
             } catch (error: CancellationException) {
                 _state.update { it.copy(activeAction = null, actionProgress = null) }

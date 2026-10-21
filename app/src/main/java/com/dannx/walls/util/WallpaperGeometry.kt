@@ -66,6 +66,11 @@ data class ImageFormat(
     val extension: String,
 )
 
+data class SharedImage(
+    val uri: android.net.Uri,
+    val mime: String,
+)
+
 /**
  * Detecta el formato real de una imagen mirando los primeros bytes, para no
  * confiar solo en la cabecera HTTP.

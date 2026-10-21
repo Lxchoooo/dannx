@@ -292,20 +292,46 @@ object WallpaperFiles {
     }
 
     /**
-     * Prepara la imagen para compartirla: la copia en la carpeta de caché,
-     * borra las copias viejas y devuelve la uri con permisos temporales.
-     * No deja copias en la galería.
+     * Prepara la imagen para compartirla: la copia en la carpeta de caché con la
+     * extensión real, borra las copias viejas y devuelve la uri con permisos
+     * temporales. No deja copias en la galería.
      */
-    suspend fun prepareShare(context: Context, wallpaper: Wallpaper): Uri {
+    suspend fun prepareShare(context: Context, wallpaper: Wallpaper): SharedImage {
         val folder = File(context.cacheDir, "shared").apply { mkdirs() }
         pruneSharedCache(folder)
-        val file = File(folder, "dannx-${wallpaper.id}-${System.currentTimeMillis()}.img")
-        downloadToFile(wallpaper, file)
-        return FileProvider.getUriForFile(
-            context,
-            "${context.packageName}.fileprovider",
-            file,
-        )
+        val temp = File(folder, "dannx-${wallpaper.id}-${System.currentTimeMillis()}.part")
+        try {
+            downloadToFile(wallpaper, temp)
+            val format = detectImageFormat(temp.readHeader(PREFIX_SIZE))
+                ?: ImageFormat("image/jpeg", "jpg")
+            val file = File(folder, "dannx-${wallpaper.id}-${System.currentTimeMillis()}.${format.extension}")
+            if (!temp.renameTo(file)) {
+                temp.copyTo(file, overwrite = true)
+                temp.delete()
+            }
+            val uri = FileProvider.getUriForFile(
+                context,
+                "${context.packageName}.fileprovider",
+                file,
+            )
+            return SharedImage(uri = uri, mime = format.mime)
+        } catch (error: Exception) {
+            temp.delete()
+            throw error
+        }
+    }
+
+    private fun File.readHeader(size: Int): ByteArray {
+        val header = ByteArray(size)
+        var read = 0
+        inputStream().use { input ->
+            while (read < size) {
+                val step = input.read(header, read, size - read)
+                if (step < 0) break
+                read += step
+            }
+        }
+        return header.copyOf(read)
     }
 
     private fun pruneSharedCache(folder: File) {
@@ -315,12 +341,12 @@ object WallpaperFiles {
         files.filter { it.lastModified() < deadline }.forEach { it.delete() }
     }
 
-    fun share(context: Context, uri: Uri, title: String) {
+    fun share(context: Context, image: SharedImage, title: String) {
         val send = Intent(Intent.ACTION_SEND).apply {
-            type = context.contentResolver.getType(uri) ?: "image/*"
-            putExtra(Intent.EXTRA_STREAM, uri)
+            type = image.mime
+            putExtra(Intent.EXTRA_STREAM, image.uri)
             putExtra(Intent.EXTRA_TITLE, title)
-            clipData = ClipData.newRawUri("DannX", uri)
+            clipData = ClipData.newRawUri("DannX", image.uri)
             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
         }
         val chooser = Intent.createChooser(send, "Compartir fondo").apply {
