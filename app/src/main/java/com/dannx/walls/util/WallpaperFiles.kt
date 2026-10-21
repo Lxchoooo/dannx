@@ -45,6 +45,55 @@ object WallpaperFiles {
         .build()
 
     /**
+     * Descarga la imagen a disco escribiendo de a chunks, para no cargar el
+     * archivo entero en memoria. Es cancelable: al cancelar el coroutine se
+     * corta la escritura.
+     */
+    suspend fun downloadToFile(
+        wallpaper: Wallpaper,
+        destination: File,
+        onProgress: (downloaded: Long, total: Long) -> Unit = { _, _ -> },
+    ): File = withContext(Dispatchers.IO) {
+        val request = Request.Builder()
+            .url(wallpaper.imageUrl)
+            .header("User-Agent", "DannX/1.0")
+            .build()
+        client.newCall(request).execute().use { response ->
+            val body = response.body
+            if (!response.isSuccessful || body == null) {
+                throw IOException("No se pudo descargar la imagen (${response.code}).")
+            }
+            val contentType = response.header("Content-Type").orEmpty()
+            if (contentType.isNotBlank() && !contentType.startsWith("image/")) {
+                throw IOException("La respuesta no es una imagen.")
+            }
+            destination.parentFile?.mkdirs()
+            val total = body.contentLength()
+            var downloaded = 0L
+            try {
+                body.byteStream().use { input ->
+                    destination.outputStream().use { output ->
+                        val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
+                        while (true) {
+                            currentCoroutineContext().ensureActive()
+                            val read = input.read(buffer)
+                            if (read < 0) break
+                            output.write(buffer, 0, read)
+                            downloaded += read
+                            onProgress(downloaded, total)
+                        }
+                        output.flush()
+                    }
+                }
+            } catch (error: Exception) {
+                destination.delete()
+                throw error
+            }
+            destination
+        }
+    }
+
+    /**
      * Guarda la imagen en la galería escribiendo el archivo directo sobre la
      * fila de MediaStore, sin cargar el archivo entero en memoria.
      */

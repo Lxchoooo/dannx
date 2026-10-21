@@ -199,21 +199,22 @@ fun DetailScreen(
                                 scaleAnimation.animateTo(
                                     targetValue = target,
                                     animationSpec = tween(durationMillis = 220),
-                                ) { value, _ ->
+                                ) {
+                                    val current = value
                                     val progress = if (target == start.scale) {
                                         1f
                                     } else {
-                                        ((value - start.scale) / (target - start.scale)).coerceIn(0f, 1f)
+                                        ((current - start.scale) / (target - start.scale)).coerceIn(0f, 1f)
                                     }
                                     val offset = PanOffset(
                                         x = start.offset.x * (1f - progress),
                                         y = start.offset.y * (1f - progress),
                                     )
                                     zoom = ZoomState(
-                                        scale = value,
+                                        scale = current,
                                         offset = clampPan(
                                             offset = offset,
-                                            scale = value,
+                                            scale = current,
                                             containerWidth = containerSize.width.toFloat(),
                                             containerHeight = containerSize.height.toFloat(),
                                         ),
