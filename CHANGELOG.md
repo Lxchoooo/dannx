@@ -56,6 +56,13 @@ así que todo vive bajo "Sin publicar" hasta el primer tag.
   animación en el cambio de pestaña.
 - Perfil de base con `profileinstaller` y reglas manuales.
 - Overlay de FPS: una actualización por segundo.
+- Reportes del compilador de Compose publicados en cada CI (artifact
+  `compose-reports`): con ellos se confirmó que `MainViewModel` era inestable y
+  eso invalidaba el skip de la app entera.
+- `MainViewModel` marcado como estable y precarga de miniaturas una sola vez
+  por carga del feed (no se relanza al volver a la pestaña).
+- RGB_565 para miniaturas queda como opción documentada, apagada por defecto:
+  ahorra memoria y decode, pero mete bandas en degradados.
 
 ### Fase 2 — Funciones centrales
 
@@ -133,10 +140,13 @@ así que todo vive bajo "Sin publicar" hasta el primer tag.
 
 ## Estado actual
 
-- Última CI: run pendiente de confirmación para el commit `bb821b8`. La
-  validación local (`python3 build/validate_dannx.py`) pasa; la compilación y
-  los tests se verifican en CI.
-- Guía para conectar el backend: `CONECTAR-SUPABASE.md`.
+- Última CI verde: run `39628290733` (commit `218d413`): compila debug y
+  release (R8) y pasan los 39 tests unitarios.
+- APKs para el teléfono en `Descargas/`: `DannX-debug.apk` (65 MB, con el
+  contador de FPS) y `DannX-release.apk` (3.4 MB, el de uso diario).
+- Guía para conectar el backend y publicar wallpapers: `CONECTAR-SUPABASE.md`.
+- **Pendiente de prueba en dispositivo**: modo avión, proceso matado, token
+  vencido, duplicados y el jank del scroll con las nuevas optimizaciones.
 
 - Rama `main` en GitHub, CI verde en cada push (build debug + release con R8 y
   tests unitarios).
