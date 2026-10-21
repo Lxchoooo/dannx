@@ -40,6 +40,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -82,6 +83,7 @@ fun HomeScreen(
         onTagChange(null)
     },
 ) {
+    val favorites = state.favorites
     val featured = remember(state.wallpapers) { state.featured }
     val filtered = remember(state.wallpapers, state.query, state.category, state.tag) {
         state.filtered
@@ -96,6 +98,7 @@ fun HomeScreen(
             )
         }
     }
+
     val showHero = state.query.isBlank() && state.category == null && state.tag == null &&
         featured.isNotEmpty()
     val categories = remember(state.wallpapers) {
@@ -103,6 +106,7 @@ fun HomeScreen(
             (DefaultCategories + state.wallpapers.map { it.category }).distinct().sorted()
     }
     val pagerState = rememberPagerState(pageCount = { featured.size })
+    val currentPage by remember { derivedStateOf { pagerState.currentPage } }
 
     LazyVerticalGrid(
         columns = GridCells.Fixed(2),
@@ -237,18 +241,19 @@ fun HomeScreen(
                             .height(HeroHeight),
                         pageSpacing = 12.dp,
                     ) { page ->
-                        val offset = (
-                            (pagerState.currentPage - page) +
-                                pagerState.currentPageOffsetFraction
-                            ).absoluteValue.coerceIn(0f, 1f)
+                        val wallpaper = featured[page]
                         FeaturedCard(
-                            wallpaper = featured[page],
-                            isFavorite = featured[page].id in state.favorites,
-                            onClick = { onOpenWallpaper(featured[page]) },
-                            onToggleFavorite = { onToggleFavorite(featured[page].id) },
+                            wallpaper = wallpaper,
+                            isFavorite = wallpaper.id in favorites,
+                            onClick = { onOpenWallpaper(wallpaper) },
+                            onToggleFavorite = { onToggleFavorite(wallpaper.id) },
                             modifier = Modifier
                                 .fillMaxSize()
                                 .graphicsLayer {
+                                    val offset = (
+                                        (pagerState.currentPage - page) +
+                                            pagerState.currentPageOffsetFraction
+                                        ).absoluteValue.coerceIn(0f, 1f)
                                     val scale = lerp(0.92f, 1f, 1f - offset)
                                     scaleX = scale
                                     scaleY = scale
@@ -263,16 +268,17 @@ fun HomeScreen(
                         horizontalArrangement = Arrangement.Center,
                     ) {
                         repeat(featured.size) { index ->
+                            val selected = index == currentPage
                             Box(
                                 Modifier
                                     .padding(horizontal = 3.dp)
                                     .size(
-                                        width = if (index == pagerState.currentPage) 22.dp else 7.dp,
+                                        width = if (selected) 22.dp else 7.dp,
                                         height = 7.dp,
                                     )
                                     .clip(CircleShape)
                                     .background(
-                                        if (index == pagerState.currentPage) {
+                                        if (selected) {
                                             MaterialTheme.colorScheme.primary
                                         } else {
                                             MaterialTheme.colorScheme.outlineVariant
@@ -334,7 +340,7 @@ fun HomeScreen(
             }
 
             is LoadState.Content -> {
-                if (state.filtered.isEmpty()) {
+                if (filtered.isEmpty()) {
                     item(span = { GridItemSpan(2) }) {
                         EmptyState(
                             title = stringResource(R.string.state_empty_filter_title),
@@ -347,7 +353,7 @@ fun HomeScreen(
             }
         }
 
-        if (state.feed is LoadState.Content && state.filtered.isNotEmpty()) {
+        if (state.feed is LoadState.Content && filtered.isNotEmpty()) {
             itemsIndexed(
                 items = filtered,
                 key = { _, wallpaper -> wallpaper.id },

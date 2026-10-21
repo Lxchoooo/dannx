@@ -35,6 +35,7 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -174,7 +175,6 @@ private fun CollectionCard(
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(MaterialTheme.shapes.extraLarge)
             .clickable(onClick = onClick),
         shape = MaterialTheme.shapes.extraLarge,
         colors = CardDefaults.cardColors(
@@ -188,11 +188,14 @@ private fun CollectionCard(
                 .background(MaterialTheme.colorScheme.surfaceVariant),
         ) {
             if (cover != null) {
-                AsyncImage(
-                    model = ImageRequest.Builder(LocalContext.current)
+                val coverRequest = remember(cover.id, cover.thumbnailUrl) {
+                    ImageRequest.Builder(LocalContext.current)
                         .data(cover.thumbnailUrl)
-                        .size(screenImageSize(190.dp))
-                        .build(),
+                        .size(screenImageSize(190.dp).width, screenImageSize(190.dp).height)
+                        .build()
+                }
+                AsyncImage(
+                    model = coverRequest,
                     contentDescription = collection.name,
                     contentScale = ContentScale.Crop,
                     modifier = Modifier.fillMaxSize(),

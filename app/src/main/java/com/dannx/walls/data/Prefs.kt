@@ -47,7 +47,7 @@ class Prefs(context: Context) : LocalStore {
         email: String,
         access: String?,
         refresh: String?,
-        id: String? = null,
+        id: String?,
     ) {
         adminEmail = email
         accessToken = access

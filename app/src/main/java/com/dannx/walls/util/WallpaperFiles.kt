@@ -35,10 +35,10 @@ enum class WallpaperTarget {
 }
 
 class WallpaperFiles(private val context: Context) : WallpaperActions {
-    private const val DEFAULT_BUFFER_SIZE = 64 * 1024
-    private const val MAX_SHARED_FILES = 8
-    private const val SHARED_MAX_AGE_MS = 6 * 60 * 60 * 1000L
-    private const val PREFIX_SIZE = 16
+    private val defaultBufferSize = 64 * 1024
+    private val maxSharedFiles = 8
+    private val sharedMaxAgeMs = 6 * 60 * 60 * 1000L
+    private val prefixSize = 16
 
     private val client = OkHttpClient.Builder()
         .connectTimeout(20, TimeUnit.SECONDS)
@@ -74,7 +74,7 @@ class WallpaperFiles(private val context: Context) : WallpaperActions {
             try {
                 body.byteStream().use { input ->
                     destination.outputStream().use { output ->
-                        val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
+                        val buffer = ByteArray(defaultBufferSize)
                         while (true) {
                             currentCoroutineContext().ensureActive()
                             val read = input.read(buffer)
@@ -117,10 +117,10 @@ class WallpaperFiles(private val context: Context) : WallpaperActions {
             }
             val total = body.contentLength()
             body.byteStream().use { input ->
-                val prefix = ByteArray(PREFIX_SIZE)
+                val prefix = ByteArray(prefixSize)
                 var read = 0
-                while (read < PREFIX_SIZE) {
-                    val step = input.read(prefix, read, PREFIX_SIZE - read)
+                while (read < prefixSize) {
+                    val step = input.read(prefix, read, prefixSize - read)
                     if (step < 0) break
                     read += step
                 }
@@ -147,7 +147,7 @@ class WallpaperFiles(private val context: Context) : WallpaperActions {
                         output.write(prefix, 0, read)
                         downloaded += read
                         onProgress(downloaded, total)
-                        val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
+                        val buffer = ByteArray(defaultBufferSize)
                         while (true) {
                             currentCoroutineContext().ensureActive()
                             val chunk = input.read(buffer)
@@ -300,7 +300,7 @@ class WallpaperFiles(private val context: Context) : WallpaperActions {
         val temp = File(folder, "dannx-${wallpaper.id}-${System.currentTimeMillis()}.part")
         try {
             downloadToFile(wallpaper, temp)
-            val format = detectImageFormat(temp.readHeader(PREFIX_SIZE))
+            val format = detectImageFormat(temp.readHeader(prefixSize))
                 ?: ImageFormat("image/jpeg", "jpg")
             val file = File(folder, "dannx-${wallpaper.id}-${System.currentTimeMillis()}.${format.extension}")
             if (!temp.renameTo(file)) {
@@ -334,8 +334,8 @@ class WallpaperFiles(private val context: Context) : WallpaperActions {
 
     private fun pruneSharedCache(folder: File) {
         val files = folder.listFiles()?.sortedBy { it.lastModified() } ?: return
-        files.dropLast(MAX_SHARED_FILES).forEach { it.delete() }
-        val deadline = System.currentTimeMillis() - SHARED_MAX_AGE_MS
+        files.dropLast(maxSharedFiles).forEach { it.delete() }
+        val deadline = System.currentTimeMillis() - sharedMaxAgeMs
         files.filter { it.lastModified() < deadline }.forEach { it.delete() }
     }
 

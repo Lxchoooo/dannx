@@ -1,8 +1,5 @@
 package com.dannx.walls.ui
 
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.slideInVertically
-import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
@@ -68,6 +65,7 @@ private val tabs = listOf(
 @Composable
 fun AppRoot(viewModel: MainViewModel, startTab: String = "home") {
     val state by viewModel.state.collectAsStateWithLifecycle()
+    val actionState by viewModel.actionState.collectAsStateWithLifecycle()
     val navController = rememberNavController()
     val context = LocalContext.current
     val wallpaperFiles = remember(context) { WallpaperFiles(context) }
@@ -110,11 +108,7 @@ fun AppRoot(viewModel: MainViewModel, startTab: String = "home") {
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
         snackbarHost = { SnackbarHost(snackbarHostState) },
         bottomBar = {
-            AnimatedVisibility(
-                visible = showBar,
-                enter = slideInVertically { height -> height },
-                exit = slideOutVertically { height -> height },
-            ) {
+            if (showBar) {
                 NavigationBar(
                     containerColor = MaterialTheme.colorScheme.surfaceContainer,
                     tonalElevation = 0.dp,
@@ -252,8 +246,7 @@ fun AppRoot(viewModel: MainViewModel, startTab: String = "home") {
                         collections = state.myCollections,
                         canManageCollections = state.isDemo || state.session != null,
                         collectionBusy = state.collectionBusy,
-                        activeAction = state.activeAction,
-                        actionProgress = state.actionProgress,
+                        actionState = actionState,
                         downloadPrompt = state.downloadPrompt,
                         alreadyDownloaded = wallpaper.id in state.downloadedIds,
                         offline = state.offline,

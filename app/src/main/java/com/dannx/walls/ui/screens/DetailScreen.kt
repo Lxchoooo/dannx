@@ -82,6 +82,7 @@ import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.dannx.walls.R
 import com.dannx.walls.DownloadPrompt
+import com.dannx.walls.ActionState
 import com.dannx.walls.UiAction
 import com.dannx.walls.data.Wallpaper
 import com.dannx.walls.data.WallpaperCollection
@@ -106,8 +107,7 @@ fun DetailScreen(
     collections: List<WallpaperCollection>,
     canManageCollections: Boolean,
     collectionBusy: Boolean,
-    activeAction: UiAction? = null,
-    actionProgress: Int? = null,
+    actionState: ActionState = ActionState(),
     downloadPrompt: DownloadPrompt? = null,
     alreadyDownloaded: Boolean = false,
     offline: Boolean = false,
@@ -173,11 +173,13 @@ fun DetailScreen(
             .background(Color.Black)
             .onSizeChanged { containerSize = it },
     ) {
-        AsyncImage(
-            model = ImageRequest.Builder(LocalContext.current)
+        val imageRequest = remember(wallpaper.id, wallpaper.imageUrl) {
+            ImageRequest.Builder(LocalContext.current)
                 .data(wallpaper.imageUrl)
-                .crossfade(true)
-                .build(),
+                .build()
+        }
+        AsyncImage(
+            model = imageRequest,
             contentDescription = wallpaper.title,
             contentScale = ContentScale.Crop,
             modifier = Modifier
@@ -350,7 +352,7 @@ fun DetailScreen(
                     modifier = Modifier.weight(1f),
                     shape = CircleShape,
                     contentPadding = PaddingValues(horizontal = 14.dp, vertical = 14.dp),
-                    enabled = activeAction == null && !offline,
+                    enabled = actionState.active == null && !offline,
                 ) {
                     Icon(Icons.Rounded.Download, contentDescription = null)
                     Spacer(Modifier.width(8.dp))
@@ -388,7 +390,7 @@ fun DetailScreen(
                     Icon(Icons.Rounded.Share, contentDescription = "Compartir")
                 }
             }
-            if (activeAction == UiAction.APPLY) {
+            if (actionState.active == UiAction.APPLY) {
                 Spacer(Modifier.height(12.dp))
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -414,7 +416,7 @@ fun DetailScreen(
                     }
                 }
             }
-            if (activeAction == UiAction.DOWNLOAD) {
+            if (actionState.active == UiAction.DOWNLOAD) {
                 Spacer(Modifier.height(12.dp))
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -429,7 +431,7 @@ fun DetailScreen(
                     Text(
                         text = stringResource(
                             R.string.download_in_progress,
-                            actionProgress ?: 0,
+                            actionState.progress ?: 0,
                         ),
                         style = MaterialTheme.typography.labelLarge,
                         color = Color.White.copy(alpha = 0.9f),

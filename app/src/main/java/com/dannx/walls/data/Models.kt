@@ -1,9 +1,11 @@
 package com.dannx.walls.data
 
+import androidx.compose.runtime.Immutable
 import java.text.Normalizer
 import java.util.Locale
 import kotlinx.serialization.Serializable
 
+@Immutable
 data class Wallpaper(
     val id: String,
     val title: String,
@@ -21,12 +23,14 @@ data class Wallpaper(
         get() = thumbUrl.ifBlank { imageUrl }
 }
 
+@Immutable
 data class AdminSession(
     val email: String,
     val token: String,
     val userId: String = "",
 )
 
+@Immutable
 @Serializable
 data class WallpaperCollection(
     val id: String,

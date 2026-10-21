@@ -40,11 +40,11 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import coil.imageLoader
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
-import coil.size.Size
 import com.dannx.walls.data.Wallpaper
 
 internal const val ThumbWidth = 540
@@ -61,12 +61,12 @@ internal val HeroHeight = 400.dp
  * Coil exactamente esa resolución.
  */
 @Composable
-internal fun screenImageSize(height: androidx.compose.ui.unit.Dp): Size {
+internal fun screenImageSize(height: androidx.compose.ui.unit.Dp): IntSize {
     val configuration = LocalConfiguration.current
     val density = LocalDensity.current
     val widthPx = with(density) { configuration.screenWidthDp.dp.toPx() }
     val heightPx = with(density) { height.toPx() }
-    return Size(widthPx, heightPx)
+    return IntSize(widthPx.toInt(), heightPx.toInt())
 }
 
 internal fun wallpaperThumbRequest(context: Context, wallpaper: Wallpaper): ImageRequest =
@@ -90,30 +90,25 @@ fun WallpaperCard(
             .clip(MaterialTheme.shapes.extraLarge)
             .background(MaterialTheme.colorScheme.surfaceVariant)
             .clickable(interactionSource = interactionSource, indication = null) {
-                context.imageLoader.enqueue(
-                    ImageRequest.Builder(context)
-                        .data(wallpaper.imageUrl)
-                        .size(Size.ORIGINAL)
-                        .build(),
-                )
                 onClick()
             },
     ) {
         WallpaperImage(wallpaper, isHero = false)
+        val scrim = remember {
+            Brush.verticalGradient(
+                colors = listOf(
+                    Color.Transparent,
+                    Color.Black.copy(alpha = 0.15f),
+                    Color.Black.copy(alpha = 0.78f),
+                ),
+            )
+        }
         Box(
             Modifier
                 .align(Alignment.BottomStart)
                 .fillMaxWidth()
                 .fillMaxHeight(0.42f)
-                .background(
-                    Brush.verticalGradient(
-                        colors = listOf(
-                            Color.Transparent,
-                            Color.Black.copy(alpha = 0.15f),
-                            Color.Black.copy(alpha = 0.78f),
-                        ),
-                    ),
-                ),
+                .background(scrim),
         )
         Column(
             Modifier
@@ -159,30 +154,25 @@ fun FeaturedCard(
             .clip(MaterialTheme.shapes.extraLarge)
             .background(MaterialTheme.colorScheme.surfaceVariant)
             .clickable(interactionSource = interactionSource, indication = null) {
-                context.imageLoader.enqueue(
-                    ImageRequest.Builder(context)
-                        .data(wallpaper.imageUrl)
-                        .size(Size.ORIGINAL)
-                        .build(),
-                )
                 onClick()
             },
     ) {
         WallpaperImage(wallpaper, isHero = true)
+        val scrim = remember {
+            Brush.verticalGradient(
+                colors = listOf(
+                    Color.Transparent,
+                    Color.Black.copy(alpha = 0.12f),
+                    Color.Black.copy(alpha = 0.82f),
+                ),
+            )
+        }
         Box(
             Modifier
                 .align(Alignment.BottomStart)
                 .fillMaxWidth()
                 .fillMaxHeight(0.5f)
-                .background(
-                    Brush.verticalGradient(
-                        colors = listOf(
-                            Color.Transparent,
-                            Color.Black.copy(alpha = 0.12f),
-                            Color.Black.copy(alpha = 0.82f),
-                        ),
-                    ),
-                ),
+                .background(scrim),
         )
         Surface(
             modifier = Modifier
@@ -251,13 +241,16 @@ fun FeaturedCard(
 @Composable
 private fun WallpaperImage(wallpaper: Wallpaper, isHero: Boolean) {
     val context = LocalContext.current
-    val model = if (isHero) {
-        ImageRequest.Builder(context)
-            .data(wallpaper.imageUrl)
-            .size(screenImageSize(HeroHeight))
-            .build()
-    } else {
-        wallpaperThumbRequest(context, wallpaper)
+    val heroSize = if (isHero) screenImageSize(HeroHeight) else null
+    val model = remember(wallpaper.id, wallpaper.thumbnailUrl, isHero, heroSize) {
+        if (heroSize != null) {
+            ImageRequest.Builder(context)
+                .data(wallpaper.imageUrl)
+                .size(heroSize.width, heroSize.height)
+                .build()
+        } else {
+            wallpaperThumbRequest(context, wallpaper)
+        }
     }
     AsyncImage(
         model = model,

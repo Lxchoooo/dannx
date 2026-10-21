@@ -2,6 +2,7 @@ package com.dannx.walls
 
 import android.app.Application
 import android.net.Uri
+import androidx.compose.runtime.Immutable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.createSavedStateHandle
@@ -68,6 +69,17 @@ enum class ErrorKind {
     UNEXPECTED,
 }
 
+/**
+ * Estado de las acciones en curso (descargar, aplicar, compartir). Vive
+ * aparte del estado general para que el progreso no recomponga toda la app.
+ */
+@Immutable
+data class ActionState(
+    val active: UiAction? = null,
+    val progress: Int? = null,
+)
+
+@Immutable
 data class UiState(
     val feed: LoadState<List<Wallpaper>> = LoadState.Loading,
     val collections: LoadState<List<WallpaperCollection>> = LoadState.Loading,
@@ -85,8 +97,6 @@ data class UiState(
     val authBusy: Boolean = false,
     val message: String? = null,
     val messageAction: MessageAction? = null,
-    val activeAction: UiAction? = null,
-    val actionProgress: Int? = null,
     val downloadedIds: Set<String> = emptySet(),
     val downloadPrompt: DownloadPrompt? = null,
     val offline: Boolean = false,
@@ -142,6 +152,8 @@ class MainViewModel(
         ),
     )
     val state: StateFlow<UiState> = _state.asStateFlow()
+    private val _actionState = MutableStateFlow(ActionState())
+    val actionState: StateFlow<ActionState> = _actionState.asStateFlow()
 
     init {
         restoreSession()
@@ -529,7 +541,7 @@ class MainViewModel(
     private fun startDownload(wallpaper: Wallpaper) {
         actionJob?.cancel()
         actionJob = viewModelScope.launch {
-            _state.update { it.copy(activeAction = UiAction.DOWNLOAD, actionProgress = 0) }
+            _actionState.value = ActionState(active = UiAction.DOWNLOAD, progress = 0)
             try {
                 val uri = actions.saveToGallery(wallpaper) { done, total ->
                     val percent = if (total > 0) {
@@ -537,26 +549,22 @@ class MainViewModel(
                     } else {
                         0
                     }
-                    _state.update { it.copy(actionProgress = percent) }
+                    _actionState.update { it.copy(progress = percent) }
                 }
                 prefs.rememberDownload(wallpaper.id, uri.toString())
                 api.incrementDownloads(wallpaper.id)
                 _state.update {
                     it.copy(
-                        activeAction = null,
-                        actionProgress = null,
                         downloadedIds = it.downloadedIds + wallpaper.id,
                         message = "Guardado en Galería, carpeta Pictures/DannX.",
                         messageAction = MessageAction(label = "Abrir", uri = uri),
                     )
                 }
             } catch (error: CancellationException) {
-                _state.update { it.copy(activeAction = null, actionProgress = null) }
+                _actionState.value = ActionState()
             } catch (error: Exception) {
                 _state.update {
                     it.copy(
-                        activeAction = null,
-                        actionProgress = null,
                         message = error.userMessage(),
                     )
                 }
@@ -567,14 +575,12 @@ class MainViewModel(
     fun setWallpaper(wallpaper: Wallpaper, target: WallpaperTarget) {
         actionJob?.cancel()
         actionJob = viewModelScope.launch {
-            _state.update { it.copy(activeAction = UiAction.APPLY, actionProgress = null) }
+            _actionState.value = ActionState(active = UiAction.APPLY)
             try {
                 val applied = actions.setAsWallpaper(wallpaper, target)
                 api.incrementDownloads(wallpaper.id)
                 _state.update {
                     it.copy(
-                        activeAction = null,
-                        actionProgress = null,
                         message = when (applied) {
                             WallpaperTarget.SYSTEM -> "Listo, tu fondo de pantalla cambió."
                             WallpaperTarget.LOCK -> "Listo, cambiaste el fondo del bloqueo."
@@ -583,12 +589,10 @@ class MainViewModel(
                     )
                 }
             } catch (error: CancellationException) {
-                _state.update { it.copy(activeAction = null, actionProgress = null) }
+                _actionState.value = ActionState()
             } catch (error: Exception) {
                 _state.update {
                     it.copy(
-                        activeAction = null,
-                        actionProgress = null,
                         message = "No se pudo aplicar el fondo. Probá de nuevo.",
                     )
                 }
@@ -599,24 +603,22 @@ class MainViewModel(
     fun cancelAction() {
         actionJob?.cancel()
         actionJob = null
-        _state.update { it.copy(activeAction = null, actionProgress = null) }
+        _actionState.value = ActionState()
     }
 
     fun share(wallpaper: Wallpaper) {
         actionJob?.cancel()
         actionJob = viewModelScope.launch {
-            _state.update { it.copy(activeAction = UiAction.SHARE, actionProgress = 0) }
+            _actionState.value = ActionState(active = UiAction.SHARE, progress = 0)
             try {
                 val image = actions.prepareShare(wallpaper)
                 actions.share(image, wallpaper.title)
-                _state.update { it.copy(activeAction = null, actionProgress = null) }
+                _actionState.value = ActionState()
             } catch (error: CancellationException) {
-                _state.update { it.copy(activeAction = null, actionProgress = null) }
+                _actionState.value = ActionState()
             } catch (error: Exception) {
                 _state.update {
                     it.copy(
-                        activeAction = null,
-                        actionProgress = null,
                         message = "No se pudo preparar la imagen para compartir.",
                     )
                 }
