@@ -27,7 +27,7 @@ class WallsApi(
     private val prefs: Prefs,
     private val client: OkHttpClient = defaultClient(),
     private val retryPolicy: RetryPolicy = RetryPolicy(),
-) {
+) : WallpapersRepository {
     private val baseUrl = BuildConfig.SUPABASE_URL.trim().trimEnd('/')
     private val anonKey = BuildConfig.SUPABASE_ANON_KEY.trim()
     private val json = Json {
@@ -36,10 +36,10 @@ class WallsApi(
         coerceInputValues = true
     }
 
-    val isConfigured: Boolean =
+    override val isConfigured: Boolean =
         baseUrl.startsWith("https://") && anonKey.isNotBlank()
 
-    suspend fun loadWallpapers(): List<Wallpaper> = withContext(Dispatchers.IO) {
+    override suspend fun loadWallpapers(): List<Wallpaper> = withContext(Dispatchers.IO) {
         if (!isConfigured) {
             return@withContext DemoWallpapers.items
         }
@@ -54,7 +54,7 @@ class WallsApi(
         }
     }
 
-    suspend fun loadCollections(): List<WallpaperCollection> = withContext(Dispatchers.IO) {
+    override suspend fun loadCollections(): List<WallpaperCollection> = withContext(Dispatchers.IO) {
         if (!isConfigured) {
             return@withContext prefs.localCollections()
         }
@@ -73,7 +73,7 @@ class WallsApi(
         }
     }
 
-    suspend fun signIn(email: String, password: String): AdminSession =
+    override suspend fun signIn(email: String, password: String): AdminSession =
         withContext(Dispatchers.IO) {
             ensureConfigured()
             val auth = authenticate(
@@ -90,7 +90,7 @@ class WallsApi(
             AdminSession(resolved, auth.accessToken, auth.user?.id.orEmpty())
         }
 
-    suspend fun refreshSession(): AdminSession? {
+    override suspend fun refreshSession(): AdminSession? {
         if (!isConfigured) return null
         val refresh = prefs.refreshToken ?: return null
         return withContext(Dispatchers.IO) {
@@ -111,7 +111,7 @@ class WallsApi(
      * Sube una imagen sin cargarla entera en memoria: el cuerpo de la petición
      * lee del URI en bloques.
      */
-    suspend fun uploadWallpaper(
+    override suspend fun uploadWallpaper(
         uri: Uri,
         title: String,
         category: String,
@@ -155,7 +155,7 @@ class WallsApi(
         created.toWallpaper(baseUrl)
     }
 
-    suspend fun createCollection(
+    override suspend fun createCollection(
         name: String,
         description: String,
         isPublic: Boolean,
@@ -184,14 +184,14 @@ class WallsApi(
             ?: throw DannXError.Parse("Supabase no devolvió la colección creada.")
     }
 
-    suspend fun addToCollection(collectionId: String, wallpaperId: String) {
+    override suspend fun addToCollection(collectionId: String, wallpaperId: String) {
         if (!isConfigured) return
         withContext(Dispatchers.IO) {
             insertCollectionItem(requireToken(), collectionId, wallpaperId)
         }
     }
 
-    suspend fun removeFromCollection(collectionId: String, wallpaperId: String) {
+    override suspend fun removeFromCollection(collectionId: String, wallpaperId: String) {
         if (!isConfigured) return
         withContext(Dispatchers.IO) {
             val token = requireToken()
@@ -211,7 +211,7 @@ class WallsApi(
         }
     }
 
-    suspend fun deleteCollection(id: String) {
+    override suspend fun deleteCollection(id: String) {
         if (!isConfigured) return
         withContext(Dispatchers.IO) {
             val token = requireToken()
@@ -228,7 +228,7 @@ class WallsApi(
         }
     }
 
-    suspend fun incrementDownloads(id: String) {
+    override suspend fun incrementDownloads(id: String) {
         if (!isConfigured || id.startsWith("demo-")) return
         withContext(Dispatchers.IO) {
             runCatching {

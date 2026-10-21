@@ -72,6 +72,10 @@ android {
         buildConfig = true
     }
 
+    composeCompiler {
+        reportsDestination = layout.buildDirectory.dir("compose-reports")
+    }
+
     packaging {
         resources.excludes += "/META-INF/{AL2.0,LGPL2.1}"
     }
@@ -102,8 +106,10 @@ dependencies {
     debugImplementation(libs.compose.ui.tooling)
 
     implementation(libs.coil.compose)
+    implementation(libs.androidx.profileinstaller)
     implementation(libs.okhttp)
     implementation(libs.kotlinx.serialization.json)
 
     testImplementation(libs.junit)
+    testImplementation(libs.kotlinx.coroutines.test)
 }

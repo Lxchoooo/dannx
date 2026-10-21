@@ -25,6 +25,7 @@
     <string name="state_error_title">No pudimos cargar</string>
     <string name="state_retry">Reintentar</string>
     <string name="state_offline">Sin conexión: mostramos lo que ya tenías guardado.</string>
+    <string name="state_offline_detail">Sin conexión: descargar, aplicar y compartir necesitan internet.</string>
     <string name="state_empty_feed_title">Todavía no hay fondos</string>
     <string name="state_empty_feed_body">Apenas se publiquen, los vas a ver acá.</string>
     <string name="state_empty_filter_title">Nada por aquí todavía</string>

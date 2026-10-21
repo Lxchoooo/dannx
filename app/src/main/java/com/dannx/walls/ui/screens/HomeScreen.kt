@@ -59,6 +59,7 @@ import com.dannx.walls.data.Wallpaper
 import com.dannx.walls.ui.components.EmptyState
 import com.dannx.walls.ui.components.ErrorState
 import com.dannx.walls.ui.components.FeaturedCard
+import com.dannx.walls.ui.components.HeroHeight
 import com.dannx.walls.ui.components.FeedSkeleton
 import com.dannx.walls.ui.components.OfflineBanner
 import com.dannx.walls.ui.components.WallpaperCard
@@ -233,7 +234,7 @@ fun HomeScreen(
                         state = pagerState,
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(400.dp),
+                            .height(HeroHeight),
                         pageSpacing = 12.dp,
                     ) { page ->
                         val offset = (

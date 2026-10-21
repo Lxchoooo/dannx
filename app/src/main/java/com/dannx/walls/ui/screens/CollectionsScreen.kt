@@ -59,6 +59,7 @@ import com.dannx.walls.data.WallpaperCollection
 import com.dannx.walls.ui.components.EmptyState
 import com.dannx.walls.ui.components.ErrorState
 import com.dannx.walls.ui.components.FeedSkeleton
+import com.dannx.walls.ui.components.screenImageSize
 
 @Composable
 fun CollectionsScreen(
@@ -190,6 +191,7 @@ private fun CollectionCard(
                 AsyncImage(
                     model = ImageRequest.Builder(LocalContext.current)
                         .data(cover.thumbnailUrl)
+                        .size(screenImageSize(190.dp))
                         .build(),
                     contentDescription = collection.name,
                     contentScale = ContentScale.Crop,

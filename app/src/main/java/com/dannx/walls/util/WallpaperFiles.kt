@@ -17,6 +17,7 @@ import android.util.DisplayMetrics
 import android.view.WindowManager
 import androidx.core.content.FileProvider
 import com.dannx.walls.data.Wallpaper
+import com.dannx.walls.data.WallpaperActions
 import java.io.File
 import java.io.IOException
 import java.util.concurrent.TimeUnit
@@ -33,7 +34,7 @@ enum class WallpaperTarget {
     BOTH,
 }
 
-object WallpaperFiles {
+class WallpaperFiles(private val context: Context) : WallpaperActions {
     private const val DEFAULT_BUFFER_SIZE = 64 * 1024
     private const val MAX_SHARED_FILES = 8
     private const val SHARED_MAX_AGE_MS = 6 * 60 * 60 * 1000L
@@ -97,10 +98,9 @@ object WallpaperFiles {
      * Guarda la imagen en la galería escribiendo el archivo directo sobre la
      * fila de MediaStore, sin cargar el archivo entero en memoria.
      */
-    suspend fun saveToGallery(
-        context: Context,
+    override suspend fun saveToGallery(
         wallpaper: Wallpaper,
-        onProgress: (downloaded: Long, total: Long) -> Unit = { _, _ -> },
+        onProgress: (downloaded: Long, total: Long) -> Unit,
     ): Uri = withContext(Dispatchers.IO) {
         val request = Request.Builder()
             .url(wallpaper.imageUrl)
@@ -173,7 +173,7 @@ object WallpaperFiles {
     /**
      * Abre un archivo guardado en la galería con la app de imágenes del sistema.
      */
-    fun open(context: Context, uri: Uri) {
+    fun open(uri: Uri) {
         val intent = Intent(Intent.ACTION_VIEW).apply {
             setDataAndType(uri, context.contentResolver.getType(uri) ?: "image/*")
             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
@@ -187,7 +187,7 @@ object WallpaperFiles {
     /**
      * Indica si el archivo guardado sigue existiendo en el dispositivo.
      */
-    fun exists(context: Context, uri: Uri): Boolean = runCatching {
+    override fun exists(uri: Uri): Boolean = runCatching {
         context.contentResolver.openFileDescriptor(uri, "r")?.use { true } ?: false
     }.getOrDefault(false)
 
@@ -226,8 +226,7 @@ object WallpaperFiles {
      * ambas. Devuelve qué destino quedó aplicado realmente (algunos teléfonos no
      * permiten modificar el bloqueo).
      */
-    suspend fun setAsWallpaper(
-        context: Context,
+    override suspend fun setAsWallpaper(
         wallpaper: Wallpaper,
         target: WallpaperTarget,
     ): WallpaperTarget = withContext(Dispatchers.IO) {
@@ -238,7 +237,7 @@ object WallpaperFiles {
             downloadToFile(wallpaper, temp)
             val bitmap = decodeCroppedBitmap(temp, size.x, size.y)
             try {
-                applyBitmap(context, bitmap, target)
+                applyBitmap(bitmap, target)
             } finally {
                 bitmap.recycle()
             }
@@ -248,7 +247,6 @@ object WallpaperFiles {
     }
 
     private fun applyBitmap(
-        context: Context,
         bitmap: Bitmap,
         target: WallpaperTarget,
     ): WallpaperTarget {
@@ -296,7 +294,7 @@ object WallpaperFiles {
      * extensión real, borra las copias viejas y devuelve la uri con permisos
      * temporales. No deja copias en la galería.
      */
-    suspend fun prepareShare(context: Context, wallpaper: Wallpaper): SharedImage {
+    override suspend fun prepareShare(wallpaper: Wallpaper): SharedImage {
         val folder = File(context.cacheDir, "shared").apply { mkdirs() }
         pruneSharedCache(folder)
         val temp = File(folder, "dannx-${wallpaper.id}-${System.currentTimeMillis()}.part")
@@ -341,7 +339,7 @@ object WallpaperFiles {
         files.filter { it.lastModified() < deadline }.forEach { it.delete() }
     }
 
-    fun share(context: Context, image: SharedImage, title: String) {
+    override fun share(image: SharedImage, title: String) {
         val send = Intent(Intent.ACTION_SEND).apply {
             type = image.mime
             putExtra(Intent.EXTRA_STREAM, image.uri)

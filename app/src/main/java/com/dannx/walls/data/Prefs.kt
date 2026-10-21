@@ -5,14 +5,14 @@ import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 
-class Prefs(context: Context) {
+class Prefs(context: Context) : LocalStore {
     private val prefs = context.getSharedPreferences("dannx", Context.MODE_PRIVATE)
     private val json = Json { ignoreUnknownKeys = true }
 
-    fun favorites(): Set<String> =
+    override fun favorites(): Set<String> =
         prefs.getStringSet(KEY_FAVORITES, emptySet())?.toSet() ?: emptySet()
 
-    fun toggleFavorite(id: String): Set<String> {
+    override fun toggleFavorite(id: String): Set<String> {
         val updated = favorites().toMutableSet()
         if (!updated.add(id)) {
             updated.remove(id)
@@ -37,13 +37,13 @@ class Prefs(context: Context) {
         get() = prefs.getString(KEY_USER_ID, null)
         set(value) = prefs.edit().putString(KEY_USER_ID, value).apply()
 
-    fun session(): AdminSession? {
+    override fun session(): AdminSession? {
         val email = adminEmail ?: return null
         val token = accessToken ?: return null
         return AdminSession(email, token, userId.orEmpty())
     }
 
-    fun saveSession(
+    override fun saveSession(
         email: String,
         access: String?,
         refresh: String?,
@@ -55,7 +55,7 @@ class Prefs(context: Context) {
         userId = id
     }
 
-    fun clearSession() {
+    override fun clearSession() {
         prefs.edit()
             .remove(KEY_ACCESS_TOKEN)
             .remove(KEY_REFRESH_TOKEN)
@@ -64,7 +64,7 @@ class Prefs(context: Context) {
             .apply()
     }
 
-    fun localCollections(): List<WallpaperCollection> {
+    override fun localCollections(): List<WallpaperCollection> {
         val raw = prefs.getString(KEY_LOCAL_COLLECTIONS, null)
             ?: return DemoWallpapers.collections
         return runCatching {
@@ -72,19 +72,19 @@ class Prefs(context: Context) {
         }.getOrElse { DemoWallpapers.collections }
     }
 
-    fun saveLocalCollections(items: List<WallpaperCollection>) {
+    override fun saveLocalCollections(items: List<WallpaperCollection>) {
         prefs.edit()
             .putString(KEY_LOCAL_COLLECTIONS, json.encodeToString(items))
             .apply()
     }
 
-    fun downloadedUri(wallpaperId: String): String? =
+    override fun downloadedUri(wallpaperId: String): String? =
         runCatching { downloads()[wallpaperId] }.getOrNull()
 
-    fun downloadedIds(): Set<String> =
+    override fun downloadedIds(): Set<String> =
         runCatching { downloads().keys.toSet() }.getOrDefault(emptySet())
 
-    fun rememberDownload(wallpaperId: String, uri: String) {
+    override fun rememberDownload(wallpaperId: String, uri: String) {
         val updated = downloads().toMutableMap().apply { put(wallpaperId, uri) }
         prefs.edit()
             .putString(KEY_DOWNLOADS, json.encodeToString(updated))

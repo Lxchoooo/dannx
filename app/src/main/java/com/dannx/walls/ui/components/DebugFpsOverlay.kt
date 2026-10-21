@@ -48,7 +48,7 @@ fun DebugFpsOverlay(modifier: Modifier = Modifier) {
                 lastNanos = frameTimeNanos
                 frames++
                 val elapsed = frameTimeNanos - windowStartNanos
-                if (elapsed >= 2_000_000_000L) {
+                if (elapsed >= 1_000_000_000L) {
                     fps = (frames.toLong() * 1_000_000_000L / elapsed).toInt()
                     worstMs = worst
                     frames = 0

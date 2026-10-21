@@ -110,6 +110,7 @@ fun DetailScreen(
     actionProgress: Int? = null,
     downloadPrompt: DownloadPrompt? = null,
     alreadyDownloaded: Boolean = false,
+    offline: Boolean = false,
     onBack: () -> Unit,
     onToggleFavorite: () -> Unit,
     onDownload: () -> Unit,
@@ -328,6 +329,14 @@ fun DetailScreen(
                 )
             }
             Spacer(Modifier.height(20.dp))
+            if (offline) {
+                Text(
+                    text = stringResource(R.string.state_offline_detail),
+                    style = MaterialTheme.typography.labelLarge,
+                    color = Color.White.copy(alpha = 0.75f),
+                )
+                Spacer(Modifier.height(10.dp))
+            }
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(10.dp),
@@ -341,7 +350,7 @@ fun DetailScreen(
                     modifier = Modifier.weight(1f),
                     shape = CircleShape,
                     contentPadding = PaddingValues(horizontal = 14.dp, vertical = 14.dp),
-                    enabled = activeAction == null,
+                    enabled = activeAction == null && !offline,
                 ) {
                     Icon(Icons.Rounded.Download, contentDescription = null)
                     Spacer(Modifier.width(8.dp))
@@ -361,7 +370,7 @@ fun DetailScreen(
                     modifier = Modifier.weight(1f),
                     shape = CircleShape,
                     contentPadding = PaddingValues(horizontal = 14.dp, vertical = 14.dp),
-                    enabled = activeAction == null,
+                    enabled = activeAction == null && !offline,
                 ) {
                     Icon(Icons.Rounded.Wallpaper, contentDescription = null)
                     Spacer(Modifier.width(8.dp))
@@ -370,7 +379,7 @@ fun DetailScreen(
                 FilledIconButton(
                     onClick = onShare,
                     modifier = Modifier.size(52.dp),
-                    enabled = activeAction == null,
+                    enabled = activeAction == null && !offline,
                     colors = IconButtonDefaults.filledIconButtonColors(
                         containerColor = Color.White.copy(alpha = 0.18f),
                         contentColor = Color.White,

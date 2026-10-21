@@ -22,6 +22,7 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -29,6 +30,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
@@ -66,11 +70,23 @@ fun AppRoot(viewModel: MainViewModel, startTab: String = "home") {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val navController = rememberNavController()
     val context = LocalContext.current
+    val wallpaperFiles = remember(context) { WallpaperFiles(context) }
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = backStackEntry?.destination?.route
     val showBar = currentRoute in tabs.map { it.route }
     val startDestination = if (startTab in tabs.map { it.route }) startTab else "home"
     val snackbarHostState = remember { SnackbarHostState() }
+
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                viewModel.refreshIfOnline()
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
 
     LaunchedEffect(state.message) {
         val message = state.message
@@ -82,7 +98,7 @@ fun AppRoot(viewModel: MainViewModel, startTab: String = "home") {
                 withDismissAction = action == null,
             )
             if (result == SnackbarResult.ActionPerformed && action != null) {
-                runCatching { WallpaperFiles.open(context, action.uri) }
+                runCatching { wallpaperFiles.open(action.uri) }
             }
             viewModel.clearMessage()
         }
@@ -240,13 +256,14 @@ fun AppRoot(viewModel: MainViewModel, startTab: String = "home") {
                         actionProgress = state.actionProgress,
                         downloadPrompt = state.downloadPrompt,
                         alreadyDownloaded = wallpaper.id in state.downloadedIds,
+                        offline = state.offline,
                         onBack = { navController.popBackStack() },
                         onToggleFavorite = { viewModel.toggleFavorite(wallpaper.id) },
                         onDownload = { viewModel.download(wallpaper) },
                         onSetWallpaper = { target -> viewModel.setWallpaper(wallpaper, target) },
                         onShare = { viewModel.share(wallpaper) },
                         onCancelAction = { viewModel.cancelAction() },
-                        onOpenFile = { uri -> runCatching { WallpaperFiles.open(context, uri) } },
+                        onOpenFile = { uri -> runCatching { wallpaperFiles.open(uri) } },
                         onDownloadAgain = { id -> viewModel.downloadAgain(id) },
                         onDismissDownloadPrompt = { viewModel.dismissDownloadPrompt() },
                         onAddToCollection = { collectionId ->

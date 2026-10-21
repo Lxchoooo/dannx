@@ -9,11 +9,11 @@ import kotlinx.serialization.json.Json
  * Guarda en disco el último feed y las colecciones, para poder mostrar
  * contenido cuando no hay conexión.
  */
-class FeedCache(context: Context) {
+class FeedCache(context: Context) : FeedCacheStore {
     private val folder = context.cacheDir.resolve("feed-cache").apply { mkdirs() }
     private val json = Json { ignoreUnknownKeys = true; encodeDefaults = true }
 
-    fun readWallpapers(): List<Wallpaper> {
+    override fun readWallpapers(): List<Wallpaper> {
         val file = folder.resolve(WALLPAPERS_FILE)
         if (!file.exists()) return emptyList()
         return runCatching {
@@ -22,14 +22,14 @@ class FeedCache(context: Context) {
         }.getOrDefault(emptyList())
     }
 
-    fun writeWallpapers(items: List<Wallpaper>) {
+    override fun writeWallpapers(items: List<Wallpaper>) {
         runCatching {
             val payload = items.map { CachedWallpaper.from(it) }
             folder.resolve(WALLPAPERS_FILE).writeText(json.encodeToString(payload))
         }
     }
 
-    fun readCollections(): List<WallpaperCollection> {
+    override fun readCollections(): List<WallpaperCollection> {
         val file = folder.resolve(COLLECTIONS_FILE)
         if (!file.exists()) return emptyList()
         return runCatching {
@@ -37,7 +37,7 @@ class FeedCache(context: Context) {
         }.getOrDefault(emptyList())
     }
 
-    fun writeCollections(items: List<WallpaperCollection>) {
+    override fun writeCollections(items: List<WallpaperCollection>) {
         runCatching {
             folder.resolve(COLLECTIONS_FILE).writeText(json.encodeToString(items))
         }

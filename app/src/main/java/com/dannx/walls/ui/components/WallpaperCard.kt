@@ -34,7 +34,9 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -47,6 +49,25 @@ import com.dannx.walls.data.Wallpaper
 
 internal const val ThumbWidth = 540
 internal const val ThumbHeight = 960
+
+/**
+ * Altura del hero en el feed. Se comparte con la pantalla que lo dibuja para
+ * pedir la imagen con el tamaño exacto y no decodificar de más.
+ */
+internal val HeroHeight = 400.dp
+
+/**
+ * Calcula el tamaño en píxeles que ocupa una imagen en pantalla, para pedirle a
+ * Coil exactamente esa resolución.
+ */
+@Composable
+internal fun screenImageSize(height: androidx.compose.ui.unit.Dp): Size {
+    val configuration = LocalConfiguration.current
+    val density = LocalDensity.current
+    val widthPx = with(density) { configuration.screenWidthDp.dp.toPx() }
+    val heightPx = with(density) { height.toPx() }
+    return Size(widthPx, heightPx)
+}
 
 internal fun wallpaperThumbRequest(context: Context, wallpaper: Wallpaper): ImageRequest =
     ImageRequest.Builder(context)
@@ -233,7 +254,7 @@ private fun WallpaperImage(wallpaper: Wallpaper, isHero: Boolean) {
     val model = if (isHero) {
         ImageRequest.Builder(context)
             .data(wallpaper.imageUrl)
-            .crossfade(150)
+            .size(screenImageSize(HeroHeight))
             .build()
     } else {
         wallpaperThumbRequest(context, wallpaper)

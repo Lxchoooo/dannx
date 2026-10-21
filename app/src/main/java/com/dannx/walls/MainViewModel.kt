@@ -2,7 +2,7 @@ package com.dannx.walls
 
 import android.app.Application
 import android.net.Uri
-import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.ViewModel
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.createSavedStateHandle
 import androidx.lifecycle.ViewModelProvider
@@ -13,9 +13,13 @@ import com.dannx.walls.data.AdminSession
 import com.dannx.walls.data.Connectivity
 import com.dannx.walls.data.DannXError
 import com.dannx.walls.data.FeedCache
+import com.dannx.walls.data.FeedCacheStore
+import com.dannx.walls.data.LocalStore
 import com.dannx.walls.data.Prefs
 import com.dannx.walls.data.Wallpaper
+import com.dannx.walls.data.WallpaperActions
 import com.dannx.walls.data.WallpaperCollection
+import com.dannx.walls.data.WallpapersRepository
 import com.dannx.walls.data.WallsApi
 import com.dannx.walls.data.collectTags
 import com.dannx.walls.data.filterWallpapers
@@ -116,12 +120,13 @@ data class UiState(
 }
 
 class MainViewModel(
-    application: Application,
     private val savedState: SavedStateHandle,
-    private val prefs: Prefs,
-    private val api: WallsApi,
-    private val cache: FeedCache,
-) : AndroidViewModel(application) {
+    private val prefs: LocalStore,
+    private val api: WallpapersRepository,
+    private val cache: FeedCacheStore,
+    private val actions: WallpaperActions,
+    private val isOnline: () -> Boolean = { true },
+) : ViewModel() {
     private var actionJob: Job? = null
     private var refreshJob: Job? = null
     private val _state = MutableStateFlow(
@@ -202,7 +207,7 @@ class MainViewModel(
      * de segundo plano para no provocar parpadeos.
      */
     fun refreshIfOnline() {
-        if (!Connectivity.isOnline(getApplication())) return
+        if (!isOnline()) return
         if (refreshJob?.isActive == true) return
         refresh()
     }
@@ -501,7 +506,7 @@ class MainViewModel(
         val known = prefs.downloadedUri(wallpaper.id)
         if (known != null) {
             val uri = Uri.parse(known)
-            if (WallpaperFiles.exists(getApplication(), uri)) {
+            if (actions.exists(uri)) {
                 _state.update { it.copy(downloadPrompt = DownloadPrompt(wallpaper.id, uri)) }
                 return
             }
@@ -526,7 +531,7 @@ class MainViewModel(
         actionJob = viewModelScope.launch {
             _state.update { it.copy(activeAction = UiAction.DOWNLOAD, actionProgress = 0) }
             try {
-                val uri = WallpaperFiles.saveToGallery(getApplication(), wallpaper) { done, total ->
+                val uri = actions.saveToGallery(wallpaper) { done, total ->
                     val percent = if (total > 0) {
                         ((done * 100) / total).toInt().coerceIn(0, 100)
                     } else {
@@ -564,7 +569,7 @@ class MainViewModel(
         actionJob = viewModelScope.launch {
             _state.update { it.copy(activeAction = UiAction.APPLY, actionProgress = null) }
             try {
-                val applied = WallpaperFiles.setAsWallpaper(getApplication(), wallpaper, target)
+                val applied = actions.setAsWallpaper(wallpaper, target)
                 api.incrementDownloads(wallpaper.id)
                 _state.update {
                     it.copy(
@@ -602,8 +607,8 @@ class MainViewModel(
         actionJob = viewModelScope.launch {
             _state.update { it.copy(activeAction = UiAction.SHARE, actionProgress = 0) }
             try {
-                val image = WallpaperFiles.prepareShare(getApplication(), wallpaper)
-                WallpaperFiles.share(getApplication(), image, wallpaper.title)
+                val image = actions.prepareShare(wallpaper)
+                actions.share(image, wallpaper.title)
                 _state.update { it.copy(activeAction = null, actionProgress = null) }
             } catch (error: CancellationException) {
                 _state.update { it.copy(activeAction = null, actionProgress = null) }
@@ -646,11 +651,12 @@ class MainViewModel(
             initializer {
                 val prefs = Prefs(application)
                 MainViewModel(
-                    application = application,
                     savedState = createSavedStateHandle(),
                     prefs = prefs,
                     api = WallsApi(application, prefs),
                     cache = FeedCache(application),
+                    actions = WallpaperFiles(application),
+                    isOnline = { Connectivity.isOnline(application) },
                 )
             }
         }

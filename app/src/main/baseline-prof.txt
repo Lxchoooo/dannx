@@ -1,0 +1,65 @@
+# Perfil de base de DannX.
+#
+# Reglas para las rutas criticas: arranque de la app, navegacion, grilla del
+# feed, decode de imagenes y acciones de archivo. Se generan con
+# BaselineProfileGenerator, pero se versionan a mano para que la primera
+# ejecucion en frio ya tenga el codigo caliente.
+#
+# --- App: Activity y ViewModel ---
+HSPLcom/dannx/walls/MainActivity;-><init>()V
+HSPLcom/dannx/walls/MainViewModel;-><init>(Landroid/app/Application;Landroidx/lifecycle/SavedStateHandle;Lcom/dannx/walls/data/LocalStore;Lcom/dannx/walls/data/WallpapersRepository;Lcom/dannx/walls/data/FeedCacheStore;Lcom/dannx/walls/data/WallpaperActions;Lkotlin/jvm/functions/Function0;)V
+HSPLcom/dannx/walls/MainViewModel$Companion;->factory(Landroid/app/Application;)Landroidx/lifecycle/ViewModelProvider$Factory;
+
+# --- App: carga de datos ---
+HSPLcom/dannx/walls/data/WallsApi;-><init>(Landroid/content/Context;Lcom/dannx/walls/data/Prefs;)V
+HSPLcom/dannx/walls/data/WallsApi;->loadWallpapers()Ljava/util/List;
+HSPLcom/dannx/walls/data/WallsApi;->loadCollections()Ljava/util/List;
+HSPLcom/dannx/walls/data/WallsApi;->getList(Ljava/lang/String;)Ljava/util/List;
+HSPLcom/dannx/walls/data/Prefs;->favorites()Ljava/util/Set;
+HSPLcom/dannx/walls/data/Prefs;->session()Lcom/dannx/walls/data/AdminSession;
+HSPLcom/dannx/walls/data/FeedCache;->readWallpapers()Ljava/util/List;
+HSPLcom/dannx/walls/data/FeedCache;->writeWallpapers(Ljava/util/List;)V
+
+# --- App: filtros y formato ---
+HSPLcom/dannx/walls/data/ModelsKt;->filterWallpapers(Ljava/util/List;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)Ljava/util/List;
+HSPLcom/dannx/walls/data/ModelsKt;->collectTags(Ljava/util/List;)Ljava/util/List;
+HSPLcom/dannx/walls/data/ModelsKt;->parseTags(Ljava/lang/String;)Ljava/util/List;
+HSPLcom/dannx/walls/data/ModelsKt;->normalize(Ljava/lang/String;)Ljava/lang/String;
+
+# --- App: archivos ---
+HSPLcom/dannx/walls/util/WallpaperFiles;-><init>(Landroid/content/Context;)V
+HSPLcom/dannx/walls/util/WallpaperFiles;->saveToGallery(Lcom/dannx/walls/data/Wallpaper;Lkotlin/jvm/functions/Function2;)Landroid/net/Uri;
+HSPLcom/dannx/walls/util/WallpaperFiles;->downloadToFile(Lcom/dannx/walls/data/Wallpaper;Ljava/io/File;Lkotlin/jvm/functions/Function2;)Ljava/io/File;
+HSPLcom/dannx/walls/util/WallpaperFiles;->setAsWallpaper(Lcom/dannx/walls/data/Wallpaper;Lcom/dannx/walls/util/WallpaperTarget;)Lcom/dannx/walls/util/WallpaperTarget;
+
+# --- App: interfaz ---
+HSPLcom/dannx/walls/ui/AppRootKt;->AppRoot(Lcom/dannx/walls/MainViewModel;Ljava/lang/String;)V
+HSPLcom/dannx/walls/ui/screens/HomeScreenKt;->HomeScreen(Lcom/dannx/walls/UiState;Lkotlin/jvm/functions/Function1;Lkotlin/jvm/functions/Function1;Lkotlin/jvm/functions/Function1;Lkotlin/jvm/functions/Function0;Lkotlin/jvm/functions/Function1;Lkotlin/jvm/functions/Function1;Lkotlin/jvm/functions/Function0;)V
+HSPLcom/dannx/walls/ui/components/WallpaperCardKt;->WallpaperCard(Lcom/dannx/walls/data/Wallpaper;ZLkotlin/jvm/functions/Function0;Lkotlin/jvm/functions/Function0;Landroidx/compose/ui/Modifier;)V
+HSPLcom/dannx/walls/ui/components/WallpaperCardKt;->WallpaperImage(Lcom/dannx/walls/data/Wallpaper;Z)V
+HSPLcom/dannx/walls/ui/components/WallpaperCardKt;->wallpaperThumbRequest(Landroid/content/Context;Lcom/dannx/walls/data/Wallpaper;)Lcoil/request/ImageRequest;
+HSPLcom/dannx/walls/ui/components/FeaturedCardKt;->FeaturedCard(Lcom/dannx/walls/data/Wallpaper;ZLkotlin/jvm/functions/Function0;Lkotlin/jvm/functions/Function0;Landroidx/compose/ui/Modifier;)V
+HSPLcom/dannx/walls/ui/screens/DetailScreenKt;->DetailScreen(Lcom/dannx/walls/data/Wallpaper;ZLjava/util/List;ZZLcom/dannx/walls/UiAction;Ljava/lang/Integer;Lcom/dannx/walls/DownloadPrompt;ZLkotlin/jvm/functions/Function0;Lkotlin/jvm/functions/Function0;Lkotlin/jvm/functions/Function0;Lkotlin/jvm/functions/Function1;Lkotlin/jvm/functions/Function0;Lkotlin/jvm/functions/Function0;Lkotlin/jvm/functions/Function1;Lkotlin/jvm/functions/Function1;Lkotlin/jvm/functions/Function0;Lkotlin/jvm/functions/Function3;Lkotlin/jvm/functions/Function0;)V
+
+# --- Coil: decodificacion de imagenes ---
+HSPLcoil/ImageLoader;-><init>(Lcoil/ImageLoader$Builder;)V
+HSPLcoil/RealImageLoader;-><init>(Lcoil/ImageLoader$Builder;)V
+HSPLcoil/RealImageLoader;->execute(Lcoil/request/ImageRequest;Lkotlin/coroutines/Continuation;)Lcoil/request/ImageResult;
+HSPLcoil/RealImageLoader;->decodeAndTransform(Lcoil/request/ImageRequest;Lcoil/ImageResult;Lkotlin/coroutines/Continuation;)Lcoil/request/ImageResult;
+HSPLcoil/EngineInterceptor;->intercept(Lcoil/ImageLoader;Lcoil/request/ImageRequest;Lkotlin/coroutines/Continuation;)Lcoil/ImageResult;
+HSPLcoil/ImageDecoder;->decode(Lcoil/ImageDecoder;Lcoil/request/ImageRequest;Lcoil/request/Options;Lcoil/ImageResult;Lcoil/bitmap/BitmapFactory;Lkotlin/coroutines/Continuation;)Lcoil/request/ImageResult;
+HSPLcoil/bitmap/BitmapFactoryDecoder;->decode(Lcoil/ImageDecoder;Lcoil/request/ImageRequest;Lcoil/request/Options;Lcoil/request/ImageResult;Lkotlin/coroutines/Continuation;)Lcoil/request/ImageResult;
+HSPLcoil/RealImageLoader$RealMemoryCache;->get(Ljava/lang/String;Lcoil/request/ImageRequest;Lcoil/request/Options;)Lcoil/memory/MemoryCache$Value;
+HSPLcoil/memory/RealMemoryCache;->get(Ljava/lang/String;Lcoil/request/ImageRequest;Lcoil/request/Options;)Lcoil/memory/MemoryCache$Value;
+
+# --- Compose: runtime y grillas ---
+HSPLandroidx/compose/runtime/Composer;->startRestartGroup(Ljava/lang/String;)I
+HSPLandroidx/compose/runtime/Composer;->endRestartGroup()V
+HSPLandroidx/compose/runtime/Composer;->updateValue(Ljava/lang/Object;)V
+HSPLandroidx/compose/foundation/lazy/LazyListState;->getFirstVisibleItemIndex()I
+HSPLandroidx/compose/foundation/lazy/grid/LazyGridState;->getFirstVisibleItemIndex()I
+HSPLandroidx/compose/foundation/lazy/grid/LazyGridStateImpl;->measure(Landroidx/compose/ui/layout/MeasureScope;Landroidx/compose/ui/unit/Constraints;Landroidx/compose/ui/layout/LayoutDirection;Landroidx/compose/ui/unit/Density;Lkotlin/jvm/functions/Function0;)V
+
+# --- Navigation ---
+HSPLandroidx/navigation/NavController;->navigate(Ljava/lang/String;Landroidx/navigation/NavOptions;Lkotlin/jvm/functions/Function1;)V
+HSPLandroidx/navigation/NavController;->popBackStack()Z
