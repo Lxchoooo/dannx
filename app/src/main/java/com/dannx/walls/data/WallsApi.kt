@@ -1,10 +1,10 @@
 package com.dannx.walls.data
 
 import android.content.Context
-import android.graphics.BitmapFactory
 import android.net.Uri
 import com.dannx.walls.BuildConfig
 import java.io.IOException
+import java.io.InputStream
 import java.util.UUID
 import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.Dispatchers
@@ -12,28 +12,29 @@ import kotlinx.coroutines.withContext
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import okhttp3.MediaType
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.MultipartBody
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import okhttp3.RequestBody
 import okhttp3.RequestBody.Companion.toRequestBody
+import okio.BufferedSink
 
 class WallsApi(
     private val context: Context,
     private val prefs: Prefs,
+    private val client: OkHttpClient = defaultClient(),
+    private val retryPolicy: RetryPolicy = RetryPolicy(),
 ) {
     private val baseUrl = BuildConfig.SUPABASE_URL.trim().trimEnd('/')
     private val anonKey = BuildConfig.SUPABASE_ANON_KEY.trim()
     private val json = Json {
         ignoreUnknownKeys = true
         explicitNulls = false
+        coerceInputValues = true
     }
-    private val client = OkHttpClient.Builder()
-        .connectTimeout(20, TimeUnit.SECONDS)
-        .readTimeout(90, TimeUnit.SECONDS)
-        .writeTimeout(90, TimeUnit.SECONDS)
-        .build()
 
     val isConfigured: Boolean =
         baseUrl.startsWith("https://") && anonKey.isNotBlank()
@@ -42,9 +43,15 @@ class WallsApi(
         if (!isConfigured) {
             return@withContext DemoWallpapers.items
         }
-        getList<WallpaperDto>("wallpapers?select=*&order=created_at.desc")
-            .filter { it.storagePath.isNotBlank() }
-            .map { it.toWallpaper(baseUrl) }
+        retryPolicy.run { attempt ->
+            try {
+                getList<WallpaperDto>("wallpapers?select=*&order=created_at.desc")
+                    .filter { it.storagePath.isNotBlank() }
+                    .map { it.toWallpaper(baseUrl) }
+            } catch (error: Throwable) {
+                throw error.toDannXError()
+            }
+        }
     }
 
     suspend fun loadCollections(): List<WallpaperCollection> = withContext(Dispatchers.IO) {
@@ -100,6 +107,10 @@ class WallsApi(
         }
     }
 
+    /**
+     * Sube una imagen sin cargarla entera en memoria: el cuerpo de la petición
+     * lee del URI en bloques.
+     */
     suspend fun uploadWallpaper(
         uri: Uri,
         title: String,
@@ -113,13 +124,10 @@ class WallsApi(
         val mime = resolver.getType(uri)
             ?.takeIf { it.startsWith("image/") }
             ?: "image/jpeg"
-        val bytes = resolver.openInputStream(uri)?.use { it.readBytes() }
-            ?: throw IOException("No se pudo abrir la imagen.")
-        if (bytes.size > MAX_BYTES) {
-            throw IOException("La imagen supera 25 MB.")
+        val size = resolver.openAssetFileDescriptor(uri, "r")?.use { it.length } ?: 0L
+        if (size > MAX_BYTES) {
+            throw DannXError.Unexpected("La imagen supera 25 MB.")
         }
-        val options = BitmapFactory.Options().apply { inJustDecodeBounds = true }
-        BitmapFactory.decodeByteArray(bytes, 0, bytes.size, options)
         val extension = when (mime) {
             "image/png" -> "png"
             "image/webp" -> "webp"
@@ -127,7 +135,7 @@ class WallsApi(
             else -> "jpg"
         }
         val fileName = "${UUID.randomUUID()}.$extension"
-        uploadObject(token, fileName, bytes, mime)
+        uploadObject(token, fileName, uri, mime)
         val author = prefs.adminEmail?.substringBefore('@') ?: "DannX"
         val created = insertWallpaper(
             token = token,
@@ -136,8 +144,8 @@ class WallsApi(
                 category = category,
                 storagePath = fileName,
                 author = author,
-                width = options.outWidth.coerceAtLeast(0),
-                height = options.outHeight.coerceAtLeast(0),
+                width = readDimension(uri, horizontal = true),
+                height = readDimension(uri, horizontal = false),
                 tags = tags,
             ),
         )
@@ -160,22 +168,20 @@ class WallsApi(
             ownerName = prefs.adminEmail?.substringBefore('@') ?: "DannX",
             isPublic = isPublic,
         )
-        val request = Request.Builder()
-            .url("$baseUrl/rest/v1/collections")
-            .header("apikey", anonKey)
-            .header("Authorization", "Bearer $token")
-            .header("Prefer", "return=representation")
-            .post(json.encodeToString(payload).toRequestBody(JSON_MEDIA))
-            .build()
-        client.newCall(request).execute().use { response ->
-            val body = response.body?.string().orEmpty()
-            if (!response.isSuccessful) {
-                throw IOException(serverError(response.code, body))
-            }
-            json.decodeFromString<List<CollectionDto>>(body).firstOrNull()
-                ?.toCollection(emptyList())
-                ?: throw IOException("Supabase no devolvió la colección creada.")
-        }
+        val body = executeAuthorized(
+            build = { token ->
+                Request.Builder()
+                    .url("$baseUrl/rest/v1/collections")
+                    .header("apikey", anonKey)
+                    .header("Authorization", "Bearer $token")
+                    .header("Prefer", "return=representation")
+                    .post(json.encodeToString(payload).toRequestBody(JSON_MEDIA))
+                    .build()
+            },
+        )
+        json.decodeFromString<List<CollectionDto>>(body).firstOrNull()
+            ?.toCollection(emptyList())
+            ?: throw DannXError.Parse("Supabase no devolvió la colección creada.")
     }
 
     suspend fun addToCollection(collectionId: String, wallpaperId: String) {
@@ -189,21 +195,19 @@ class WallsApi(
         if (!isConfigured) return
         withContext(Dispatchers.IO) {
             val token = requireToken()
-            val request = Request.Builder()
-                .url(
-                    "$baseUrl/rest/v1/collection_items" +
-                        "?collection_id=eq.$collectionId&wallpaper_id=eq.$wallpaperId",
-                )
-                .header("apikey", anonKey)
-                .header("Authorization", "Bearer $token")
-                .delete()
-                .build()
-            client.newCall(request).execute().use { response ->
-                if (!response.isSuccessful) {
-                    val body = response.body?.string().orEmpty()
-                    throw IOException(serverError(response.code, body))
-                }
-            }
+            executeAuthorized(
+                build = { token ->
+                    Request.Builder()
+                        .url(
+                            "$baseUrl/rest/v1/collection_items" +
+                                "?collection_id=eq.$collectionId&wallpaper_id=eq.$wallpaperId",
+                        )
+                        .header("apikey", anonKey)
+                        .header("Authorization", "Bearer $token")
+                        .delete()
+                        .build()
+                },
+            )
         }
     }
 
@@ -211,18 +215,16 @@ class WallsApi(
         if (!isConfigured) return
         withContext(Dispatchers.IO) {
             val token = requireToken()
-            val request = Request.Builder()
-                .url("$baseUrl/rest/v1/collections?id=eq.$id")
-                .header("apikey", anonKey)
-                .header("Authorization", "Bearer $token")
-                .delete()
-                .build()
-            client.newCall(request).execute().use { response ->
-                if (!response.isSuccessful) {
-                    val body = response.body?.string().orEmpty()
-                    throw IOException(serverError(response.code, body))
-                }
-            }
+            executeAuthorized(
+                build = { token ->
+                    Request.Builder()
+                        .url("$baseUrl/rest/v1/collections?id=eq.$id")
+                        .header("apikey", anonKey)
+                        .header("Authorization", "Bearer $token")
+                        .delete()
+                        .build()
+                },
+            )
         }
     }
 
@@ -244,6 +246,9 @@ class WallsApi(
         }
     }
 
+    /**
+     * Petición pública de lectura. No reintenta ante 401 porque no usa sesión.
+     */
     private inline fun <reified T> getList(path: String): List<T> {
         val request = Request.Builder()
             .url("$baseUrl/rest/v1/$path")
@@ -254,9 +259,13 @@ class WallsApi(
         return client.newCall(request).execute().use { response ->
             val body = response.body?.string().orEmpty()
             if (!response.isSuccessful) {
-                throw IOException(serverError(response.code, body))
+                throw errorFor(response.code, body)
             }
-            json.decodeFromString<List<T>>(body)
+            try {
+                json.decodeFromString<List<T>>(body)
+            } catch (error: Throwable) {
+                throw DannXError.Parse(error.message.orEmpty())
+            }
         }
     }
 
@@ -269,16 +278,64 @@ class WallsApi(
         return client.newCall(request).execute().use { response ->
             val body = response.body?.string().orEmpty()
             if (!response.isSuccessful) {
-                throw IOException(serverError(response.code, body))
+                throw errorFor(response.code, body)
             }
-            json.decodeFromString<AuthResponse>(body)
+            try {
+                json.decodeFromString<AuthResponse>(body)
+            } catch (error: Throwable) {
+                throw DannXError.Parse(error.message.orEmpty())
+            }
         }
     }
 
-    private fun uploadObject(
+    /**
+     * Ejecuta una petición autenticada. Si el servidor responde 401, renueva el
+     * token una sola vez y reintenta; si vuelve a fallar, la sesión venció.
+     */
+    private suspend fun executeAuthorized(
+        allowConflict: Boolean = false,
+        build: (String) -> Request,
+    ): String {
+        val currentToken = prefs.accessToken ?: throw DannXError.SessionExpired
+        val first = runRequest(build(currentToken))
+        if (first.code != 401) {
+            return first.readBody(allowConflict)
+        }
+        val renewed = refreshSession()
+        if (renewed == null) {
+            prefs.clearSession()
+            throw DannXError.SessionExpired
+        }
+        val second = runRequest(build(renewed.token))
+        if (second.code == 401) {
+            prefs.clearSession()
+            throw DannXError.SessionExpired
+        }
+        return second.readBody(allowConflict)
+    }
+
+    private fun runRequest(request: Request): HttpResult =
+        client.newCall(request).execute().use { response ->
+            HttpResult(response.code, response.body?.string().orEmpty())
+        }
+
+    private fun HttpResult.readBody(allowConflict: Boolean = false): String {
+        if (code == 401) {
+            throw DannXError.SessionExpired
+        }
+        if (code == 409 && allowConflict) {
+            return body
+        }
+        if (code !in 200..299) {
+            throw errorFor(code, body)
+        }
+        return body
+    }
+
+    private suspend fun uploadObject(
         token: String,
         fileName: String,
-        bytes: ByteArray,
+        uri: Uri,
         mime: String,
     ) {
         val body = MultipartBody.Builder()
@@ -286,43 +343,39 @@ class WallsApi(
             .addFormDataPart(
                 "file",
                 fileName,
-                bytes.toRequestBody(mime.toMediaTypeOrNull()),
+                StreamingRequestBody(context, uri, mime),
             )
             .build()
-        val request = Request.Builder()
-            .url("$baseUrl/storage/v1/object/wallpapers/$fileName")
-            .header("apikey", anonKey)
-            .header("Authorization", "Bearer $token")
-            .header("x-upsert", "false")
-            .post(body)
-            .build()
-        client.newCall(request).execute().use { response ->
-            val bodyText = response.body?.string().orEmpty()
-            if (!response.isSuccessful) {
-                throw IOException(serverError(response.code, bodyText))
-            }
-        }
+        executeAuthorized(
+            build = { token ->
+                Request.Builder()
+                    .url("$baseUrl/storage/v1/object/wallpapers/$fileName")
+                    .header("apikey", anonKey)
+                    .header("Authorization", "Bearer $token")
+                    .header("x-upsert", "false")
+                    .post(body)
+                    .build()
+            },
+        )
     }
 
-    private fun insertWallpaper(token: String, wallpaper: NewWallpaper): WallpaperDto {
-        val request = Request.Builder()
-            .url("$baseUrl/rest/v1/wallpapers")
-            .header("apikey", anonKey)
-            .header("Authorization", "Bearer $token")
-            .header("Prefer", "return=representation")
-            .post(json.encodeToString(wallpaper).toRequestBody(JSON_MEDIA))
-            .build()
-        return client.newCall(request).execute().use { response ->
-            val body = response.body?.string().orEmpty()
-            if (!response.isSuccessful) {
-                throw IOException(serverError(response.code, body))
-            }
-            json.decodeFromString<List<WallpaperDto>>(body).firstOrNull()
-                ?: throw IOException("Supabase no devolvió el wallpaper creado.")
-        }
+    private suspend fun insertWallpaper(token: String, wallpaper: NewWallpaper): WallpaperDto {
+        val body = executeAuthorized(
+            build = { token ->
+                Request.Builder()
+                    .url("$baseUrl/rest/v1/wallpapers")
+                    .header("apikey", anonKey)
+                    .header("Authorization", "Bearer $token")
+                    .header("Prefer", "return=representation")
+                    .post(json.encodeToString(wallpaper).toRequestBody(JSON_MEDIA))
+                    .build()
+            },
+        )
+        return json.decodeFromString<List<WallpaperDto>>(body).firstOrNull()
+            ?: throw DannXError.Parse("Supabase no devolvió el wallpaper creado.")
     }
 
-    private fun insertCollectionItem(
+    private suspend fun insertCollectionItem(
         token: String,
         collectionId: String,
         wallpaperId: String,
@@ -331,37 +384,88 @@ class WallsApi(
             collectionId = collectionId,
             wallpaperId = wallpaperId,
         )
-        val request = Request.Builder()
-            .url("$baseUrl/rest/v1/collection_items")
-            .header("apikey", anonKey)
-            .header("Authorization", "Bearer $token")
-            .header("Prefer", "resolution=ignore-duplicates,return=minimal")
-            .post(json.encodeToString(payload).toRequestBody(JSON_MEDIA))
-            .build()
-        client.newCall(request).execute().use { response ->
-            if (!response.isSuccessful && response.code != 409) {
-                val body = response.body?.string().orEmpty()
-                throw IOException(serverError(response.code, body))
-            }
-        }
+        executeAuthorized(
+            build = { token ->
+                Request.Builder()
+                    .url("$baseUrl/rest/v1/collection_items")
+                    .header("apikey", anonKey)
+                    .header("Authorization", "Bearer $token")
+                    .header("Prefer", "resolution=ignore-duplicates,return=minimal")
+                    .post(json.encodeToString(payload).toRequestBody(JSON_MEDIA))
+                    .build()
+            },
+            allowConflict = true,
+        )
     }
 
     private fun requireToken(): String =
-        prefs.accessToken ?: throw IOException("Tu sesión expiró. Vuelve a entrar.")
+        prefs.accessToken ?: throw DannXError.SessionExpired
 
     private fun ensureConfigured() {
         if (!isConfigured) {
-            throw IOException("Falta conectar Supabase en la configuración del proyecto.")
+            throw DannXError.Unexpected("Falta conectar Supabase en la configuración del proyecto.")
         }
     }
 
-    private fun serverError(code: Int, body: String): String {
-        val detail = body.take(240).ifBlank { "sin detalle" }
-        return "Supabase respondió $code: $detail"
+    private fun errorFor(code: Int, body: String): DannXError = when (code) {
+        401, 403 -> DannXError.SessionExpired
+        in 500..599 -> DannXError.Server(code)
+        else -> DannXError.Unexpected(
+            "El servidor respondió $code${if (body.isBlank()) "" else ": ${body.take(120)}"}",
+        )
     }
 
-    private companion object {
+    private fun readDimension(uri: Uri, horizontal: Boolean): Int {
+        val options = android.graphics.BitmapFactory.Options().apply {
+            inJustDecodeBounds = true
+        }
+        runCatching {
+            context.contentResolver.openInputStream(uri)?.use { stream ->
+                android.graphics.BitmapFactory.decodeStream(stream, null, options)
+            }
+        }
+        return if (horizontal) options.outWidth.coerceAtLeast(0) else options.outHeight.coerceAtLeast(0)
+    }
+
+    private data class HttpResult(val code: Int, val body: String)
+
+    companion object {
         const val MAX_BYTES = 25L * 1024 * 1024
-        val JSON_MEDIA = "application/json".toMediaType()
+        val JSON_MEDIA: MediaType = "application/json".toMediaType()
+
+        fun defaultClient(): OkHttpClient = OkHttpClient.Builder()
+            .connectTimeout(15, TimeUnit.SECONDS)
+            .readTimeout(45, TimeUnit.SECONDS)
+            .writeTimeout(120, TimeUnit.SECONDS)
+            .retryOnConnectionFailure(true)
+            .build()
+    }
+}
+
+/**
+ * Cuerpo de la petición que escribe la imagen desde el URI en bloques, sin
+ * cargarla entera en memoria.
+ */
+private class StreamingRequestBody(
+    private val context: Context,
+    private val uri: Uri,
+    private val mime: String,
+) : RequestBody() {
+    override fun contentType(): MediaType? = mime.toMediaTypeOrNull()
+
+    override fun contentLength(): Long =
+        context.contentResolver.openAssetFileDescriptor(uri, "r")?.use { it.length } ?: -1L
+
+    override fun writeTo(sink: BufferedSink) {
+        val input: InputStream = context.contentResolver.openInputStream(uri)
+            ?: throw IOException("No se pudo abrir la imagen.")
+        input.use { stream ->
+            val buffer = ByteArray(64 * 1024)
+            while (true) {
+                val read = stream.read(buffer)
+                if (read < 0) break
+                sink.write(buffer, 0, read)
+            }
+        }
     }
 }
