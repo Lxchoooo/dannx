@@ -130,9 +130,9 @@ class MainViewModel(
             session = prefs.session(),
             isDemo = !api.isConfigured,
             downloadedIds = prefs.downloadedIds(),
-            query = savedState[KEY_QUERY] ?: "",
-            category = savedState[KEY_CATEGORY],
-            tag = savedState[KEY_TAG],
+            query = savedState.get<String>(KEY_QUERY) ?: "",
+            category = savedState.get<String>(KEY_CATEGORY),
+            tag = savedState.get<String>(KEY_TAG),
             selectedUploadUri = savedState[KEY_UPLOAD_URI]?.let(Uri::parse),
         ),
     )
@@ -623,10 +623,12 @@ class MainViewModel(
         _state.update { it.copy(message = null, messageAction = null) }
     }
 
-    private suspend fun restoreSession() {
+    private fun restoreSession() {
         if (!api.isConfigured) return
-        val session = api.refreshSession() ?: return
-        _state.update { it.copy(session = session) }
+        viewModelScope.launch {
+            val session = api.refreshSession() ?: return@launch
+            _state.update { it.copy(session = session) }
+        }
     }
 
     private suspend fun loadCollectionsOrEmpty(
