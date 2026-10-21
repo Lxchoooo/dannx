@@ -2,7 +2,10 @@ package com.dannx.walls.ui.screens
 
 import android.app.Activity
 import android.net.Uri
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.rememberTransformableState
 import androidx.compose.foundation.gestures.transformable
 import androidx.compose.foundation.clickable
@@ -53,22 +56,25 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.listSaver
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.res.stringResource
 import androidx.core.view.WindowCompat
@@ -79,7 +85,19 @@ import com.dannx.walls.DownloadPrompt
 import com.dannx.walls.UiAction
 import com.dannx.walls.data.Wallpaper
 import com.dannx.walls.data.WallpaperCollection
+import com.dannx.walls.util.DoubleTapZoom
+import com.dannx.walls.util.MinZoom
+import com.dannx.walls.util.PanOffset
 import com.dannx.walls.util.WallpaperTarget
+import com.dannx.walls.util.ZoomState
+import com.dannx.walls.util.clampPan
+import com.dannx.walls.util.clampScale
+import kotlinx.coroutines.launch
+
+private val ZoomStateSaver = listSaver<ZoomState, Float>(
+    save = { listOf(it.scale, it.offset.x, it.offset.y) },
+    restore = { ZoomState(it[0], PanOffset(it[1], it[2])) },
+)
 
 @Composable
 fun DetailScreen(
@@ -104,15 +122,30 @@ fun DetailScreen(
     onAddToCollection: (String) -> Unit,
     onCreateCollection: (String, String, Boolean) -> Unit,
 ) {
-    var scale by remember { mutableFloatStateOf(1f) }
-    var offset by remember { mutableStateOf(Offset.Zero) }
+    var zoom by rememberSaveable(stateSaver = ZoomStateSaver) { mutableStateOf(ZoomState()) }
     var showCollections by rememberSaveable { mutableStateOf(false) }
     var showCreateCollection by rememberSaveable { mutableStateOf(false) }
     var showApplySheet by rememberSaveable { mutableStateOf(false) }
     val haptics = LocalHapticFeedback.current
+    var containerSize by remember { mutableStateOf(IntSize.Zero) }
+    val scope = rememberCoroutineScope()
+    val scaleAnimation = remember { Animatable(1f) }
     val transformState = rememberTransformableState { zoomChange, panChange, _ ->
-        scale = (scale * zoomChange).coerceIn(1f, 4f)
-        offset = if (scale <= 1f) Offset.Zero else offset + panChange
+        val newScale = clampScale(zoom.scale * zoomChange)
+        val newOffset = if (newScale <= MinZoom) {
+            PanOffset(0f, 0f)
+        } else {
+            PanOffset(zoom.offset.x + panChange.x, zoom.offset.y + panChange.y)
+        }
+        zoom = ZoomState(
+            scale = newScale,
+            offset = clampPan(
+                offset = newOffset,
+                scale = newScale,
+                containerWidth = containerSize.width.toFloat(),
+                containerHeight = containerSize.height.toFloat(),
+            ),
+        )
     }
     val activity = LocalContext.current as? Activity
 
@@ -136,7 +169,8 @@ fun DetailScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.Black),
+            .background(Color.Black)
+            .onSizeChanged { containerSize = it },
     ) {
         AsyncImage(
             model = ImageRequest.Builder(LocalContext.current)
@@ -148,12 +182,47 @@ fun DetailScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .graphicsLayer {
-                    scaleX = scale
-                    scaleY = scale
-                    translationX = offset.x
-                    translationY = offset.y
+                    scaleX = zoom.scale
+                    scaleY = zoom.scale
+                    translationX = zoom.offset.x
+                    translationY = zoom.offset.y
                 }
-                .transformable(transformState),
+                .transformable(transformState)
+                .pointerInput(Unit) {
+                    detectTapGestures(
+                        onDoubleTap = {
+                            haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                            val target = if (zoom.scale > MinZoom) MinZoom else DoubleTapZoom
+                            scope.launch {
+                                val start = zoom
+                                scaleAnimation.snapTo(start.scale)
+                                scaleAnimation.animateTo(
+                                    targetValue = target,
+                                    animationSpec = tween(durationMillis = 220),
+                                ) { value, _ ->
+                                    val progress = if (target == start.scale) {
+                                        1f
+                                    } else {
+                                        ((value - start.scale) / (target - start.scale)).coerceIn(0f, 1f)
+                                    }
+                                    val offset = PanOffset(
+                                        x = start.offset.x * (1f - progress),
+                                        y = start.offset.y * (1f - progress),
+                                    )
+                                    zoom = ZoomState(
+                                        scale = value,
+                                        offset = clampPan(
+                                            offset = offset,
+                                            scale = value,
+                                            containerWidth = containerSize.width.toFloat(),
+                                            containerHeight = containerSize.height.toFloat(),
+                                        ),
+                                    )
+                                }
+                            }
+                        },
+                    )
+                },
         )
 
         Box(

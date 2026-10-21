@@ -1,6 +1,55 @@
 package com.dannx.walls.util
 
+import kotlin.math.abs
 import kotlin.math.roundToInt
+
+const val MinZoom = 1f
+const val MaxZoom = 5f
+const val DoubleTapZoom = 2.5f
+
+data class PanOffset(
+    val x: Float,
+    val y: Float,
+)
+
+data class ZoomState(
+    val scale: Float = MinZoom,
+    val offset: PanOffset = PanOffset(0f, 0f),
+)
+
+/**
+ * Mantiene la escala dentro de los límites permitidos.
+ */
+fun clampScale(scale: Float, min: Float = MinZoom, max: Float = MaxZoom): Float =
+    scale.coerceIn(min, max)
+
+/**
+ * Limita el desplazamiento para que la imagen nunca se salga de la vista.
+ * Con escala 1 el desplazamiento siempre es cero.
+ */
+fun clampPan(
+    offset: PanOffset,
+    scale: Float,
+    containerWidth: Float,
+    containerHeight: Float,
+): PanOffset {
+    val safeScale = clampScale(scale)
+    if (safeScale <= MinZoom) {
+        return PanOffset(0f, 0f)
+    }
+    val maxX = (containerWidth * (safeScale - 1f)) / 2f
+    val maxY = (containerHeight * (safeScale - 1f)) / 2f
+    return PanOffset(
+        x = offset.x.coerceIn(-maxX, maxX),
+        y = offset.y.coerceIn(-maxY, maxY),
+    )
+}
+
+/**
+ * Distancia mínima entre dos toques para considerarlos un doble toque.
+ */
+fun isDoubleTapDistance(distance: Float, threshold: Float = 120f): Boolean =
+    abs(distance) <= threshold
 
 data class CropRect(
     val left: Int,
@@ -10,6 +59,45 @@ data class CropRect(
 ) {
     val width: Int get() = right - left
     val height: Int get() = bottom - top
+}
+
+data class ImageFormat(
+    val mime: String,
+    val extension: String,
+)
+
+/**
+ * Detecta el formato real de una imagen mirando los primeros bytes, para no
+ * confiar solo en la cabecera HTTP.
+ */
+fun detectImageFormat(header: ByteArray): ImageFormat? {
+    if (header.size >= 8 &&
+        header[0] == 0x89.toByte() &&
+        header[1] == 'P'.code.toByte() &&
+        header[2] == 'N'.code.toByte() &&
+        header[3] == 'G'.code.toByte()
+    ) {
+        return ImageFormat("image/png", "png")
+    }
+    if (header.size >= 3 &&
+        header[0] == 0xFF.toByte() &&
+        header[1] == 0xD8.toByte() &&
+        header[2] == 0xFF.toByte()
+    ) {
+        return ImageFormat("image/jpeg", "jpg")
+    }
+    if (header.size >= 12 &&
+        String(header, 0, 4, Charsets.US_ASCII) == "RIFF" &&
+        String(header, 8, 4, Charsets.US_ASCII) == "WEBP"
+    ) {
+        return ImageFormat("image/webp", "webp")
+    }
+    if (header.size >= 6 &&
+        String(header, 0, 3, Charsets.US_ASCII) == "GIF"
+    ) {
+        return ImageFormat("image/gif", "gif")
+    }
+    return null
 }
 
 /**
