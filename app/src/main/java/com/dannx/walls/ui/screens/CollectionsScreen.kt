@@ -188,9 +188,10 @@ private fun CollectionCard(
                 .background(MaterialTheme.colorScheme.surfaceVariant),
         ) {
             if (cover != null) {
+                val context = LocalContext.current
                 val coverSize = screenImageSize(190.dp)
                 val coverRequest = remember(cover.id, cover.thumbnailUrl, coverSize) {
-                    ImageRequest.Builder(LocalContext.current)
+                    ImageRequest.Builder(context)
                         .data(cover.thumbnailUrl)
                         .size(coverSize.width, coverSize.height)
                         .build()
