@@ -50,9 +50,9 @@ jobs:
           if-no-files-found: error
           retention-days: 7
 
-  # Modo completo: solo en tag v* o disparado a mano.
+  # Modo completo: en tag v*, en cada merge a main o disparado a mano.
   release:
-    if: github.ref_type == 'tag' || github.event_name == 'workflow_dispatch'
+    if: github.ref_type == 'tag' || github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions:
@@ -126,6 +126,23 @@ jobs:
             --title "DannX $GITHUB_REF_NAME" \
             --notes "Compilado y firmado por GitHub Actions." \
             --verify-tag
+
+      - name: Publish rolling release
+        if: github.ref == 'refs/heads/main'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cp app/build/outputs/apk/release/app-release.apk DannX.apk
+          NOTES="Compilado y firmado por GitHub Actions desde main."
+          if gh release view latest >/dev/null 2>&1; then
+            gh release upload latest DannX.apk --clobber
+            gh release edit latest --title "DannX · última versión" --notes "$NOTES"
+          else
+            gh release create latest DannX.apk \
+              --target "$GITHUB_SHA" \
+              --title "DannX · última versión" \
+              --notes "$NOTES"
+          fi
 
       - name: Remove keystore
         if: always()
