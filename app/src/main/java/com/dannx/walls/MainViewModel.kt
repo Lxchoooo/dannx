@@ -203,10 +203,15 @@ class MainViewModel(
     fun refresh() {
         refreshJob?.cancel()
         refreshJob = viewModelScope.launch {
-            val hasContent = _state.value.wallpapers.isNotEmpty()
+            val state = _state.value
+            val hasContent = state.wallpapers.isNotEmpty() || state.collectionItems.isNotEmpty()
             _state.update {
                 if (hasContent) {
-                    it.copy(refreshing = true)
+                    it.copy(
+                        feed = if (it.wallpapers.isEmpty()) LoadState.Loading else it.feed,
+                        collections = if (it.collectionItems.isEmpty()) LoadState.Loading else it.collections,
+                        refreshing = true,
+                    )
                 } else {
                     it.copy(
                         feed = LoadState.Loading,

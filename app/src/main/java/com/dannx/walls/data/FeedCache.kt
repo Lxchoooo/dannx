@@ -21,6 +21,7 @@ class FeedCache(context: Context) : FeedCacheStore {
         if (!file.exists()) return emptyList()
         return runCatching {
             json.decodeFromString<List<CachedWallpaper>>(file.readText())
+                .filter { it.id.isNotBlank() && it.imageUrl.isNotBlank() }
                 .map { it.toWallpaper() }
         }.getOrDefault(emptyList())
     }
