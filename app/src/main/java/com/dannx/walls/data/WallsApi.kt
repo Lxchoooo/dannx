@@ -3,8 +3,6 @@ package com.dannx.walls.data
 import android.content.Context
 import android.net.Uri
 import com.dannx.walls.BuildConfig
-import java.io.IOException
-import java.io.InputStream
 import java.util.UUID
 import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.Dispatchers
@@ -14,13 +12,11 @@ import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import okhttp3.MediaType
 import okhttp3.MediaType.Companion.toMediaType
-import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.MultipartBody
 import okhttp3.OkHttpClient
 import okhttp3.Request
-import okhttp3.RequestBody
+import okhttp3.RequestBody.Companion.asRequestBody
 import okhttp3.RequestBody.Companion.toRequestBody
-import okio.BufferedSink
 
 class WallsApi(
     private val context: Context,
@@ -108,8 +104,8 @@ class WallsApi(
     }
 
     /**
-     * Sube una imagen sin cargarla entera en memoria: el cuerpo de la petición
-     * lee del URI en bloques.
+     * Sube una imagen normalizada: si el formato no está permitido (por ejemplo
+     * HEIC) o pesa más de 25 MB, se convierte a JPEG antes de enviarla.
      */
     override suspend fun uploadWallpaper(
         uri: Uri,
@@ -120,39 +116,40 @@ class WallsApi(
     ): Wallpaper = withContext(Dispatchers.IO) {
         ensureConfigured()
         val token = requireToken()
-        val resolver = context.contentResolver
-        val mime = resolver.getType(uri)
-            ?.takeIf { it.startsWith("image/") }
-            ?: "image/jpeg"
-        val size = resolver.openAssetFileDescriptor(uri, "r")?.use { it.length } ?: 0L
-        if (size > MAX_BYTES) {
-            throw DannXError.Unexpected("La imagen supera 25 MB.")
+        val prepared = prepareUploadImage(context, uri, MAX_BYTES)
+        val fileName = "${UUID.randomUUID()}.${prepared.extension}"
+        try {
+            uploadObject(token, fileName, prepared)
+            val author = prefs.adminEmail?.substringBefore('@') ?: "DannX"
+            val created = try {
+                insertWallpaper(
+                    token = token,
+                    wallpaper = NewWallpaper(
+                        title = title.trim().ifBlank { "Sin título" }.take(120),
+                        category = category.trim().take(40).ifBlank { "Abstracto" },
+                        storagePath = fileName,
+                        author = author.take(60),
+                        width = prepared.width,
+                        height = prepared.height,
+                        tags = tags.map { it.trim() }
+                            .filter { it.isNotBlank() }
+                            .distinct()
+                            .take(12),
+                    ),
+                )
+            } catch (error: Throwable) {
+                // El archivo ya está arriba pero la ficha falló: se borra para
+                // no dejar basura en el almacenamiento.
+                runCatching { deleteObject(token, fileName) }
+                throw error
+            }
+            if (collectionId != null) {
+                runCatching { insertCollectionItem(token, collectionId, created.id) }
+            }
+            created.toWallpaper(baseUrl)
+        } finally {
+            prepared.file.delete()
         }
-        val extension = when (mime) {
-            "image/png" -> "png"
-            "image/webp" -> "webp"
-            "image/gif" -> "gif"
-            else -> "jpg"
-        }
-        val fileName = "${UUID.randomUUID()}.$extension"
-        uploadObject(token, fileName, uri, mime)
-        val author = prefs.adminEmail?.substringBefore('@') ?: "DannX"
-        val created = insertWallpaper(
-            token = token,
-            wallpaper = NewWallpaper(
-                title = title.trim().ifBlank { "Sin título" },
-                category = category,
-                storagePath = fileName,
-                author = author,
-                width = readDimension(uri, horizontal = true),
-                height = readDimension(uri, horizontal = false),
-                tags = tags,
-            ),
-        )
-        if (collectionId != null) {
-            runCatching { insertCollectionItem(token, collectionId, created.id) }
-        }
-        created.toWallpaper(baseUrl)
     }
 
     override suspend fun createCollection(
@@ -317,28 +314,71 @@ class WallsApi(
     private suspend fun uploadObject(
         token: String,
         fileName: String,
-        uri: Uri,
-        mime: String,
+        prepared: PreparedImage,
     ) {
         val body = MultipartBody.Builder()
             .setType(MultipartBody.FORM)
             .addFormDataPart(
                 "file",
                 fileName,
-                StreamingRequestBody(context, uri, mime),
+                prepared.file.asRequestBody(prepared.mime.toMediaType()),
             )
             .build()
+        try {
+            executeAuthorized(
+                build = { token ->
+                    Request.Builder()
+                        .url("$baseUrl/storage/v1/object/wallpapers/$fileName")
+                        .header("apikey", anonKey)
+                        .header("Authorization", "Bearer $token")
+                        .header("x-upsert", "false")
+                        .post(body)
+                        .build()
+                },
+            )
+        } catch (error: Throwable) {
+            throw error.uploadFriendly()
+        }
+    }
+
+    private suspend fun deleteObject(token: String, fileName: String) {
         executeAuthorized(
             build = { token ->
                 Request.Builder()
                     .url("$baseUrl/storage/v1/object/wallpapers/$fileName")
                     .header("apikey", anonKey)
                     .header("Authorization", "Bearer $token")
-                    .header("x-upsert", "false")
-                    .post(body)
+                    .delete()
                     .build()
             },
         )
+    }
+
+    /**
+     * Traduce los errores más comunes del almacenamiento a algo que se entienda.
+     */
+    private fun Throwable.uploadFriendly(): Throwable {
+        val detail = message.orEmpty()
+        return when {
+            this is DannXError.Forbidden -> DannXError.Unexpected(
+                "Tu cuenta no tiene permiso de administrador para subir archivos.",
+            )
+
+            this is DannXError.Unexpected && detail.contains("mime type", ignoreCase = true) ->
+                DannXError.Unexpected(
+                    "El formato de la imagen no está permitido. Probá con JPG, PNG o WebP.",
+                )
+
+            this is DannXError.Unexpected && detail.contains("maximum", ignoreCase = true) ->
+                DannXError.Unexpected("La imagen supera el límite de 25 MB.")
+
+            this is DannXError.Unexpected && detail.contains("bucket", ignoreCase = true) ->
+                DannXError.Unexpected(
+                    "Falta crear el almacenamiento «wallpapers» en Supabase.",
+                )
+
+            else -> this
+        }
     }
 
     private suspend fun insertWallpaper(token: String, wallpaper: NewWallpaper): WallpaperDto {
@@ -398,18 +438,6 @@ class WallsApi(
         )
     }
 
-    private fun readDimension(uri: Uri, horizontal: Boolean): Int {
-        val options = android.graphics.BitmapFactory.Options().apply {
-            inJustDecodeBounds = true
-        }
-        runCatching {
-            context.contentResolver.openInputStream(uri)?.use { stream ->
-                android.graphics.BitmapFactory.decodeStream(stream, null, options)
-            }
-        }
-        return if (horizontal) options.outWidth.coerceAtLeast(0) else options.outHeight.coerceAtLeast(0)
-    }
-
     private data class HttpResult(val code: Int, val body: String)
 
     companion object {
@@ -422,33 +450,5 @@ class WallsApi(
             .writeTimeout(120, TimeUnit.SECONDS)
             .retryOnConnectionFailure(true)
             .build()
-    }
-}
-
-/**
- * Cuerpo de la petición que escribe la imagen desde el URI en bloques, sin
- * cargarla entera en memoria.
- */
-private class StreamingRequestBody(
-    private val context: Context,
-    private val uri: Uri,
-    private val mime: String,
-) : RequestBody() {
-    override fun contentType(): MediaType? = mime.toMediaTypeOrNull()
-
-    override fun contentLength(): Long =
-        context.contentResolver.openAssetFileDescriptor(uri, "r")?.use { it.length } ?: -1L
-
-    override fun writeTo(sink: BufferedSink) {
-        val input: InputStream = context.contentResolver.openInputStream(uri)
-            ?: throw IOException("No se pudo abrir la imagen.")
-        input.use { stream ->
-            val buffer = ByteArray(64 * 1024)
-            while (true) {
-                val read = stream.read(buffer)
-                if (read < 0) break
-                sink.write(buffer, 0, read)
-            }
-        }
     }
 }
