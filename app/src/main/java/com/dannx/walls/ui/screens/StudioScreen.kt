@@ -26,6 +26,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.AddPhotoAlternate
 import androidx.compose.material.icons.rounded.CloudUpload
 import androidx.compose.material.icons.rounded.Lock
@@ -71,6 +72,7 @@ fun StudioScreen(
     onUpload: (Uri, String, String, List<String>, String?) -> Unit,
     onRefresh: () -> Unit,
     onSelectUploadUri: (Uri?) -> Unit = {},
+    onBack: () -> Unit = {},
 ) {
     val configured = !state.isDemo
     val session = state.session
@@ -82,6 +84,17 @@ fun StudioScreen(
             .verticalScroll(rememberScrollState())
             .padding(horizontal = 20.dp, vertical = 14.dp),
     ) {
+        if (session == null) {
+            TextButton(onClick = onBack) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Rounded.ArrowBack,
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp),
+                )
+                Spacer(Modifier.width(6.dp))
+                Text("Volver", style = MaterialTheme.typography.labelLarge)
+            }
+        }
         Text(
             text = "Estudio",
             style = MaterialTheme.typography.displayMedium,

@@ -1,6 +1,7 @@
 package com.dannx.walls.ui.screens
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -87,6 +88,7 @@ fun HomeScreen(
         onCategoryChange(null)
         onTagChange(null)
     },
+    onOpenStudio: () -> Unit = {},
 ) {
     val favorites = state.favorites
     val featured = remember(state.wallpapers) { state.featured }
@@ -135,6 +137,10 @@ fun HomeScreen(
                             text = "DannX",
                             style = MaterialTheme.typography.displayLarge,
                             color = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.combinedClickable(
+                                onClick = {},
+                                onLongClick = onOpenStudio,
+                            ),
                         )
                         Text(
                             text = "Papeles que se sienten tuyos.",

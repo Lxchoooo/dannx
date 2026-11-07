@@ -95,6 +95,7 @@ data class UiState(
     val session: AdminSession? = null,
     val isDemo: Boolean = true,
     val uploading: Boolean = false,
+    val onboardingDone: Boolean = false,
     val collectionBusy: Boolean = false,
     val uploadSuccessCount: Int = 0,
     val authBusy: Boolean = false,
@@ -152,6 +153,7 @@ class MainViewModel(
             favorites = prefs.favorites(),
             session = prefs.session(),
             isDemo = !api.isConfigured,
+            onboardingDone = prefs.onboardingDone(),
             downloadedIds = prefs.downloadedIds(),
             query = savedState.get<String>(KEY_QUERY) ?: "",
             category = savedState.get<String>(KEY_CATEGORY),
@@ -684,6 +686,14 @@ class MainViewModel(
 
     fun clearMessage() {
         _state.update { it.copy(message = null, messageAction = null) }
+    }
+
+    /**
+     * Marca la bienvenida como vista; [UiState.onboardingDone] abre la app.
+     */
+    fun completeOnboarding() {
+        prefs.completeOnboarding()
+        _state.update { it.copy(onboardingDone = true) }
     }
 
     private fun restoreSession() {

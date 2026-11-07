@@ -46,6 +46,7 @@ import com.dannx.walls.ui.screens.CollectionsScreen
 import com.dannx.walls.ui.screens.DetailScreen
 import com.dannx.walls.ui.screens.FavoritesScreen
 import com.dannx.walls.ui.screens.HomeScreen
+import com.dannx.walls.ui.screens.OnboardingScreen
 import com.dannx.walls.ui.screens.StudioScreen
 import com.dannx.walls.util.WallpaperFiles
 
@@ -62,17 +63,35 @@ private val tabs = listOf(
     TopLevelTab("studio", "Estudio", Icons.Rounded.CloudUpload),
 )
 
+/**
+ * El Estudio solo aparece para la sesión de administrador que haya iniciado.
+ * El resto de las personas ni siquiera ve la pestaña. La forma de entrar a
+ * iniciar sesión es un gesto oculto (mantener presionado el título de
+ * Explorar).
+ */
+@Composable
+private fun visibleTabs(signedIn: Boolean): List<TopLevelTab> = remember(signedIn) {
+    if (signedIn) tabs else tabs.filter { it.route != "studio" }
+}
+
 @Composable
 fun AppRoot(viewModel: MainViewModel, startTab: String = "home") {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val actionState by viewModel.actionState.collectAsStateWithLifecycle()
+
+    if (!state.onboardingDone) {
+        OnboardingScreen(onFinish = viewModel::completeOnboarding)
+        return
+    }
+
     val navController = rememberNavController()
     val context = LocalContext.current
     val wallpaperFiles = remember(context) { WallpaperFiles(context) }
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = backStackEntry?.destination?.route
-    val showBar = currentRoute in tabs.map { it.route }
-    val startDestination = if (startTab in tabs.map { it.route }) startTab else "home"
+    val topTabs = visibleTabs(signedIn = state.session != null)
+    val showBar = currentRoute in topTabs.map { it.route }
+    val startDestination = if (startTab in topTabs.map { it.route }) startTab else "home"
     val snackbarHostState = remember { SnackbarHostState() }
 
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -113,7 +132,7 @@ fun AppRoot(viewModel: MainViewModel, startTab: String = "home") {
                     containerColor = MaterialTheme.colorScheme.surfaceContainer,
                     tonalElevation = 0.dp,
                 ) {
-                    tabs.forEach { tab ->
+                    topTabs.forEach { tab ->
                         val selected = currentRoute == tab.route
                         NavigationBarItem(
                             selected = selected,
@@ -158,6 +177,7 @@ fun AppRoot(viewModel: MainViewModel, startTab: String = "home") {
                         }
                     },
                     onToggleFavorite = viewModel::toggleFavorite,
+                    onOpenStudio = { navController.navigateTopLevel("studio") },
                 )
             }
             composable("favorites") {
@@ -224,6 +244,7 @@ fun AppRoot(viewModel: MainViewModel, startTab: String = "home") {
                     onUpload = viewModel::uploadWallpaper,
                     onRefresh = viewModel::refresh,
                     onSelectUploadUri = { uri -> viewModel.setSelectedUploadUri(uri?.toString()) },
+                    onBack = { navController.popBackStack() },
                 )
             }
             composable(
