@@ -2,6 +2,7 @@ package com.dannx.walls
 
 import android.app.Application
 import android.net.Uri
+import android.util.Log
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.Stable
 import androidx.lifecycle.ViewModel
@@ -372,10 +373,11 @@ class MainViewModel(
                     )
                 }
             } catch (error: Exception) {
+                Log.w("DannX", "No se pudo subir el wallpaper", error)
                 _state.update {
                     it.copy(
                         uploading = false,
-                        message = error.userMessage(),
+                        message = error.uploadMessage(),
                     )
                 }
             }
@@ -751,4 +753,13 @@ fun Throwable.userMessage(): String = when (kind()) {
     ErrorKind.SESSION -> "Tu sesión venció. Volvé a iniciar sesión."
     ErrorKind.PERMISSION -> "No tenés permiso para esta acción."
     ErrorKind.UNEXPECTED -> "Algo salió mal. Intentá de nuevo."
+}
+
+/**
+ * Mensaje de la carga de wallpapers: la usa el administrador, así que conviene
+ * mostrar el motivo real en vez del genérico "algo salió mal".
+ */
+fun Throwable.uploadMessage(): String = when (this) {
+    is DannXError.Unexpected -> "No se pudo subir: ${message ?: "error inesperado"}"
+    else -> userMessage()
 }
