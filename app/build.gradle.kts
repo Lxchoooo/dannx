@@ -28,7 +28,7 @@ val releaseKeyPassword = configValue("ANDROID_KEY_PASSWORD")
 
 android {
     namespace = "com.dannx.walls"
-    compileSdk = 36
+    compileSdk = 37
 
     signingConfigs {
         if (releaseStorePath.isNotBlank() && file(releaseStorePath).exists()) {
@@ -108,6 +108,7 @@ dependencies {
     implementation(libs.compose.ui.graphics)
     implementation(libs.compose.foundation)
     implementation(libs.compose.material3)
+    implementation(libs.androidx.graphics.shapes)
     implementation(libs.compose.material.icons)
     implementation(libs.compose.ui.tooling.preview)
     debugImplementation(libs.compose.ui.tooling)

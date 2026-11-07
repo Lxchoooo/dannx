@@ -12,6 +12,13 @@ Explorar.
 
 ### Fase 5 — Experiencia
 
+- **Librerías actualizadas**: Compose BOM 2026.09.00 (Compose 1.11), Material 3
+  1.5.0-rc01 para el kit Expressive oficial, core 1.19.1, activity 1.13.0,
+  lifecycle 2.11.0, navigation 2.10.2 y graphics-shapes 1.1.0 (las formas
+  "cookie" expresivas).
+- El tema completo usa `MotionScheme.expressive()`, y el onboarding muestra
+  formas de marca (cookie 12 lados) como fondo decorativo.
+
 - El onboarding de bienvenida hace su primera pasada: tres pantallas a página
   completa con pager horizontal, tipografía display y formas de acento, en el
   estilo Expressive de Material 3 (springs elásticos, formas decorativas e

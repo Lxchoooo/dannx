@@ -3,7 +3,9 @@ package com.dannx.walls.ui.theme
 import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.MotionScheme
 import androidx.compose.material3.Shapes
 import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
@@ -19,6 +21,7 @@ internal val DannXShapes = Shapes(
     extraLarge = RoundedCornerShape(38.dp),
 )
 
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun DannXTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
@@ -37,9 +40,10 @@ fun DannXTheme(
         else -> LightColors
     }
     // El estilo Expressive viene dado por la tipografía, las formas y los
-    // springs que usan las pantallas; el esquema de color sigue dinámico.
+    // springs que usan las pantallas, además del esquema de motion oficial.
     MaterialTheme(
         colorScheme = colors,
+        motionScheme = MotionScheme.expressive(),
         typography = DannXTypography,
         shapes = DannXShapes,
         content = content,
