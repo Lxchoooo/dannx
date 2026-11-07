@@ -1,6 +1,9 @@
 package com.dannx.walls.data
 
 import android.content.Context
+import java.io.File
+import java.nio.file.Files
+import java.nio.file.StandardCopyOption
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
@@ -25,7 +28,7 @@ class FeedCache(context: Context) : FeedCacheStore {
     override fun writeWallpapers(items: List<Wallpaper>) {
         runCatching {
             val payload = items.map { CachedWallpaper.from(it) }
-            folder.resolve(WALLPAPERS_FILE).writeText(json.encodeToString(payload))
+            writeAtomically(folder.resolve(WALLPAPERS_FILE), json.encodeToString(payload))
         }
     }
 
@@ -39,7 +42,26 @@ class FeedCache(context: Context) : FeedCacheStore {
 
     override fun writeCollections(items: List<WallpaperCollection>) {
         runCatching {
-            folder.resolve(COLLECTIONS_FILE).writeText(json.encodeToString(items))
+            writeAtomically(folder.resolve(COLLECTIONS_FILE), json.encodeToString(items))
+        }
+    }
+
+    /**
+     * Escribe primero en un archivo temporal y lo reemplaza de una vez, para
+     * que un cierre a mitad de escritura no deje el caché corrupto.
+     */
+    private fun writeAtomically(file: File, content: String) {
+        val temp = File(file.parentFile, "${file.name}.tmp")
+        temp.writeText(content)
+        try {
+            Files.move(
+                temp.toPath(),
+                file.toPath(),
+                StandardCopyOption.REPLACE_EXISTING,
+                StandardCopyOption.ATOMIC_MOVE,
+            )
+        } catch (_: Exception) {
+            Files.move(temp.toPath(), file.toPath(), StandardCopyOption.REPLACE_EXISTING)
         }
     }
 

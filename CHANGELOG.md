@@ -6,6 +6,23 @@ así que todo vive bajo "Sin publicar" hasta el primer tag.
 
 ## Sin publicar
 
+### Fase 2 — Estabilidad
+
+- Al volver a la app o tocar "Actualizar", el feed anterior sigue visible: ya no
+  se reemplaza por el esqueleto de carga. Solo aparece una barra fina de
+  progreso mientras se refresca en segundo plano.
+- Si falla la carga de colecciones pero el feed responde, se muestra un aviso
+  puntual sin ocultar el contenido.
+- Un 403 (permiso denegado) ahora tiene su propio mensaje en vez de
+  confundirse con una sesión vencida. Corregido el mensaje del error de
+  servidor, que mezclaba inglés y español.
+- Los errores de parseo ya no se reintentan: son deterministas y reintentarlos
+  solo demoraba el aviso al usuario.
+- El caché del feed se escribe de forma atómica (archivo temporal + reemplazo),
+  así un cierre a mitad de escritura no lo deja corrupto.
+- La imagen del detalle se pide al tamaño de la pantalla en vez de a resolución
+  completa, para bajar el uso de memoria y evitar cierres por OOM.
+
 ### Fase 1 — Seguridad
 
 **Permisos del backend**

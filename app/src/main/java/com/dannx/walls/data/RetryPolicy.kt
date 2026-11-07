@@ -47,8 +47,9 @@ class RetryPolicy(
 fun Throwable.isTransient(): Boolean = when (this) {
     is DannXError.Offline -> true
     is DannXError.Server -> code >= 500
-    is DannXError.Parse -> true
+    is DannXError.Parse -> false
     is DannXError.SessionExpired -> false
+    is DannXError.Forbidden -> false
     is DannXError.Unexpected -> false
     is java.io.IOException -> true
     else -> false

@@ -33,6 +33,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
@@ -164,6 +165,16 @@ fun HomeScreen(
                     ),
                 )
                 Spacer(Modifier.height(14.dp))
+            }
+        }
+
+        if (state.refreshing && state.feed is LoadState.Content) {
+            item(span = { GridItemSpan(2) }) {
+                LinearProgressIndicator(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(2.dp),
+                )
             }
         }
 

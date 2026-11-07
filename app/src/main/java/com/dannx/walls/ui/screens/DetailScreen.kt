@@ -70,7 +70,9 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.IntSize
@@ -173,9 +175,20 @@ fun DetailScreen(
             .onSizeChanged { containerSize = it },
     ) {
         val context = LocalContext.current
-        val imageRequest = remember(wallpaper.id, wallpaper.imageUrl) {
+        val configuration = LocalConfiguration.current
+        val density = LocalDensity.current
+        val imageRequest = remember(
+            wallpaper.id,
+            wallpaper.imageUrl,
+            configuration.screenWidthDp,
+            configuration.screenHeightDp,
+            density,
+        ) {
+            val width = with(density) { configuration.screenWidthDp.dp.roundToPx() }
+            val height = with(density) { configuration.screenHeightDp.dp.roundToPx() }
             ImageRequest.Builder(context)
                 .data(wallpaper.imageUrl)
+                .size(width, height)
                 .build()
         }
         AsyncImage(

@@ -390,7 +390,8 @@ class WallsApi(
     }
 
     private fun errorFor(code: Int, body: String): DannXError = when (code) {
-        401, 403 -> DannXError.SessionExpired
+        401 -> DannXError.SessionExpired
+        403 -> DannXError.Forbidden
         in 500..599 -> DannXError.Server(code)
         else -> DannXError.Unexpected(
             "El servidor respondió $code${if (body.isBlank()) "" else ": ${body.take(120)}"}",

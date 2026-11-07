@@ -19,6 +19,9 @@ sealed class DannXError(message: String) : IOException(message) {
     /** La sesión venció y no se pudo renovar. */
     data object SessionExpired : DannXError("Tu sesión venció.")
 
+    /** La cuenta autenticada no tiene permiso para esta acción (403). */
+    data object Forbidden : DannXError("No tenés permiso para esta acción.")
+
     /** Fallo al analizar la respuesta. */
     data class Parse(val causeDetail: String) : DannXError(causeDetail)
 
@@ -46,7 +49,8 @@ fun Throwable.toDannXError(): DannXError = when (this) {
 fun DannXError.isRetryable(): Boolean = when (this) {
     is DannXError.Offline -> true
     is DannXError.Server -> code >= 500
-    is DannXError.Parse -> true
+    is DannXError.Parse -> false
     is DannXError.SessionExpired -> false
+    is DannXError.Forbidden -> false
     is DannXError.Unexpected -> false
 }
