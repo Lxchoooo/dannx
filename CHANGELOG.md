@@ -26,7 +26,7 @@ Explorar.
 - La pestaña **Estudio** ya no forma parte de la barra para el público: solo
   aparece cuando hay una sesión de administrador iniciada. Para llegar a la
   pantalla de inicio de sesión existe un gesto oculto: mantener presionado el
-  título "DannX" en Explorar.
+  título "DannX" en Explorar durante ~9 segundos sin mover el dedo.
 - El Estudio sin sesión muestra un botón "Volver" y se ve como una pantalla
   independiente, sin barra inferior.
 
