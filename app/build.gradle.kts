@@ -21,17 +21,24 @@ fun configValue(key: String): String =
 fun quoted(value: String): String =
     "\"${value.replace("\\", "\\\\").replace("\"", "\\\"")}\""
 
+val releaseStorePath = configValue("ANDROID_KEYSTORE_PATH")
+val releaseStorePassword = configValue("ANDROID_KEYSTORE_PASSWORD")
+val releaseKeyAlias = configValue("ANDROID_KEY_ALIAS")
+val releaseKeyPassword = configValue("ANDROID_KEY_PASSWORD")
+
 android {
     namespace = "com.dannx.walls"
     compileSdk = 36
 
     signingConfigs {
-        getByName("debug") {
-            storeFile = rootProject.file("debug-signing.p12")
-            storePassword = "android"
-            storeType = "PKCS12"
-            keyAlias = "androiddebugkey"
-            keyPassword = "android"
+        if (releaseStorePath.isNotBlank() && file(releaseStorePath).exists()) {
+            create("release") {
+                storeFile = file(releaseStorePath)
+                storePassword = releaseStorePassword
+                storeType = "PKCS12"
+                keyAlias = releaseKeyAlias
+                keyPassword = releaseKeyPassword
+            }
         }
     }
 
@@ -39,8 +46,8 @@ android {
         applicationId = "com.dannx.walls"
         minSdk = 29
         targetSdk = 36
-        versionCode = 1
-        versionName = "1.0.0"
+        versionCode = configValue("VERSION_CODE").toIntOrNull() ?: 2
+        versionName = configValue("VERSION_NAME").ifBlank { "1.1.0" }
 
         buildConfigField("String", "SUPABASE_URL", quoted(configValue("SUPABASE_URL")))
         buildConfigField(
@@ -54,7 +61,7 @@ android {
         release {
             isMinifyEnabled = true
             isShrinkResources = true
-            signingConfig = signingConfigs.getByName("debug")
+            signingConfig = signingConfigs.findByName("release")
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro",

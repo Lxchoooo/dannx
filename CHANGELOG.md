@@ -6,6 +6,36 @@ así que todo vive bajo "Sin publicar" hasta el primer tag.
 
 ## Sin publicar
 
+### Fase 1 — Seguridad
+
+**Permisos del backend**
+- Las escrituras de `wallpapers` y del bucket ahora comparan `auth.uid()` con
+  el UUID de administrador configurado en `supabase/setup.sql`. Cualquier otra
+  cuenta autenticada recibe un error de política.
+- El bucket `wallpapers` limita los archivos a 25 MB y solo acepta JPEG, PNG y
+  WebP.
+- Se retiró la función `increment_downloads`: cualquiera con la clave anon
+  podía inflar el contador sin límite.
+- `wallpapers` gana límites de longitud para título, categoría, autor y tags,
+  columnas `updated_at` y `created_by`, e índices por fecha y tags.
+- Las colecciones ahora permiten actualizar `position` dentro de la colección
+  propia.
+
+**Firma y distribución**
+- Se eliminó `debug-signing.p12` del repositorio. El build de release usa una
+  clave nueva guardada como secreto de GitHub, y los tags publican ese APK en
+  lugar del build de debug.
+- `versionCode` y `versionName` se derivan de propiedades de Gradle; CI usa el
+  número de ejecución y el tag.
+- El pipeline se separó en `verify` (lint + tests en cada PR) y `package`
+  (APKs firmados en `main` y tags).
+
+**Dispositivo**
+- Se agregó el permiso `ACCESS_NETWORK_STATE`, que `Connectivity` ya leía.
+- Los tokens de sesión viven en un archivo de preferencias separado, excluido
+  de los backups en la nube y de la transferencia entre dispositivos.
+- `Gradle` ya no recurre a la clave de debug para firmar release.
+
 ### Fase 3 — Robustez
 
 **Errores y red**
@@ -115,7 +145,8 @@ así que todo vive bajo "Sin publicar" hasta el primer tag.
 - `bitmapFactoryMaxParallelism(2)`, crossfade corto solo en hero.
 - Ícono adaptativo nuevo con capa monocroma, splash screen y accesos directos.
 - Firma de debug estable (`debug-signing.p12`) para que las actualizaciones
-  instalen encima sin desinstalar.
+  instalen encima sin desinstalar. Reemplazada en la Fase 1 por una clave de
+  release guardada fuera del repositorio.
 - README profesional y textos de desarrollo fuera de la app.
 
 ### Verificación

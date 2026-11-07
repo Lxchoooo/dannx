@@ -583,7 +583,6 @@ class MainViewModel(
                     _actionState.update { it.copy(progress = percent) }
                 }
                 prefs.rememberDownload(wallpaper.id, uri)
-                api.incrementDownloads(wallpaper.id)
                 _state.update {
                     it.copy(
                         downloadedIds = it.downloadedIds + wallpaper.id,
@@ -609,7 +608,6 @@ class MainViewModel(
             _actionState.value = ActionState(active = UiAction.APPLY)
             try {
                 val applied = actions.setAsWallpaper(wallpaper, target)
-                api.incrementDownloads(wallpaper.id)
                 _state.update {
                     it.copy(
                         message = when (applied) {

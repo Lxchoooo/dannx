@@ -7,7 +7,35 @@ import kotlinx.serialization.json.Json
 
 class Prefs(context: Context) : LocalStore {
     private val prefs = context.getSharedPreferences("dannx", Context.MODE_PRIVATE)
+    private val sessionPrefs =
+        context.getSharedPreferences("dannx_session", Context.MODE_PRIVATE)
     private val json = Json { ignoreUnknownKeys = true }
+
+    init {
+        migrateSession()
+    }
+
+    /**
+     * Mueve los tokens que versiones anteriores guardaban en "dannx" al archivo
+     * "dannx_session", que queda excluido de los backups del dispositivo.
+     */
+    private fun migrateSession() {
+        val legacyAccess = prefs.getString(KEY_ACCESS_TOKEN, null)
+        val legacyRefresh = prefs.getString(KEY_REFRESH_TOKEN, null)
+        if (legacyAccess == null && legacyRefresh == null) return
+        sessionPrefs.edit()
+            .putString(KEY_ACCESS_TOKEN, legacyAccess)
+            .putString(KEY_REFRESH_TOKEN, legacyRefresh)
+            .putString(KEY_ADMIN_EMAIL, prefs.getString(KEY_ADMIN_EMAIL, null))
+            .putString(KEY_USER_ID, prefs.getString(KEY_USER_ID, null))
+            .apply()
+        prefs.edit()
+            .remove(KEY_ACCESS_TOKEN)
+            .remove(KEY_REFRESH_TOKEN)
+            .remove(KEY_ADMIN_EMAIL)
+            .remove(KEY_USER_ID)
+            .apply()
+    }
 
     override fun favorites(): Set<String> =
         prefs.getStringSet(KEY_FAVORITES, emptySet())?.toSet() ?: emptySet()
@@ -22,20 +50,20 @@ class Prefs(context: Context) : LocalStore {
     }
 
     var accessToken: String?
-        get() = prefs.getString(KEY_ACCESS_TOKEN, null)
-        set(value) = prefs.edit().putString(KEY_ACCESS_TOKEN, value).apply()
+        get() = sessionPrefs.getString(KEY_ACCESS_TOKEN, null)
+        set(value) = sessionPrefs.edit().putString(KEY_ACCESS_TOKEN, value).apply()
 
     var refreshToken: String?
-        get() = prefs.getString(KEY_REFRESH_TOKEN, null)
-        set(value) = prefs.edit().putString(KEY_REFRESH_TOKEN, value).apply()
+        get() = sessionPrefs.getString(KEY_REFRESH_TOKEN, null)
+        set(value) = sessionPrefs.edit().putString(KEY_REFRESH_TOKEN, value).apply()
 
     var adminEmail: String?
-        get() = prefs.getString(KEY_ADMIN_EMAIL, null)
-        set(value) = prefs.edit().putString(KEY_ADMIN_EMAIL, value).apply()
+        get() = sessionPrefs.getString(KEY_ADMIN_EMAIL, null)
+        set(value) = sessionPrefs.edit().putString(KEY_ADMIN_EMAIL, value).apply()
 
     var userId: String?
-        get() = prefs.getString(KEY_USER_ID, null)
-        set(value) = prefs.edit().putString(KEY_USER_ID, value).apply()
+        get() = sessionPrefs.getString(KEY_USER_ID, null)
+        set(value) = sessionPrefs.edit().putString(KEY_USER_ID, value).apply()
 
     override fun session(): AdminSession? {
         val email = adminEmail ?: return null
@@ -56,7 +84,7 @@ class Prefs(context: Context) : LocalStore {
     }
 
     override fun clearSession() {
-        prefs.edit()
+        sessionPrefs.edit()
             .remove(KEY_ACCESS_TOKEN)
             .remove(KEY_REFRESH_TOKEN)
             .remove(KEY_ADMIN_EMAIL)
