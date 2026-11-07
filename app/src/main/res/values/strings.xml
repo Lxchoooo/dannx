@@ -5,6 +5,9 @@
     <string name="shortcut_favorites">Favoritos</string>
     <string name="shortcut_studio">Estudio</string>
 
+    <string name="live_wallpaper_name">Fondo vivo DannX</string>
+    <string name="live_wallpaper_description">Manchas de color que se mueven suave, con el estilo de DannX.</string>
+
     <string name="apply_sheet_title">Aplicar como</string>
     <string name="apply_system">Pantalla de inicio</string>
     <string name="apply_system_hint">Iconos y widgets</string>

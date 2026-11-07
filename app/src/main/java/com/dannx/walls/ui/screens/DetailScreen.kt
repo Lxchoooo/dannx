@@ -39,6 +39,7 @@ import androidx.compose.material.icons.rounded.Smartphone
 import androidx.compose.material.icons.rounded.Wallpaper
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.LinearWavyProgressIndicator
@@ -67,6 +68,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
@@ -88,6 +90,7 @@ import com.dannx.walls.ActionState
 import com.dannx.walls.UiAction
 import com.dannx.walls.data.Wallpaper
 import com.dannx.walls.data.WallpaperCollection
+import com.dannx.walls.ui.components.rememberWallpaperAccent
 import com.dannx.walls.ui.components.StatefulImage
 import com.dannx.walls.util.DoubleTapZoom
 import com.dannx.walls.util.MinZoom
@@ -132,6 +135,9 @@ fun DetailScreen(
     var showCreateCollection by rememberSaveable { mutableStateOf(false) }
     var showApplySheet by rememberSaveable { mutableStateOf(false) }
     val haptics = LocalHapticFeedback.current
+    // El botón principal toma el color de la imagen para sentirse parte de ella.
+    val accent = rememberWallpaperAccent(wallpaper.imageUrl, MaterialTheme.colorScheme.primary)
+    val onAccent = if (accent.luminance() > 0.5f) Color.Black else Color.White
     var containerSize by remember { mutableStateOf(IntSize.Zero) }
     val scope = rememberCoroutineScope()
     val scaleAnimation = remember { Animatable(1f) }
@@ -294,7 +300,7 @@ fun DetailScreen(
                     onClick = onToggleFavorite,
                     colors = IconButtonDefaults.filledIconButtonColors(
                         containerColor = Color.Black.copy(alpha = 0.35f),
-                        contentColor = Color.White,
+                        contentColor = if (isFavorite) accent else Color.White,
                     ),
                 ) {
                     Icon(
@@ -367,6 +373,10 @@ fun DetailScreen(
                     },
                     modifier = Modifier.weight(1f),
                     shape = CircleShape,
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = accent,
+                        contentColor = onAccent,
+                    ),
                     contentPadding = PaddingValues(horizontal = 14.dp, vertical = 14.dp),
                     enabled = actionState.active == null && !offline,
                 ) {
