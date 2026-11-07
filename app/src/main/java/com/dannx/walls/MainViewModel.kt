@@ -13,12 +13,16 @@ import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.dannx.walls.data.AdminSession
+import com.dannx.walls.data.AppearancePrefs
+import com.dannx.walls.data.AppearanceStore
 import com.dannx.walls.data.Connectivity
 import com.dannx.walls.data.DannXError
 import com.dannx.walls.data.FeedCache
 import com.dannx.walls.data.FeedCacheStore
+import com.dannx.walls.data.InMemoryAppearanceStore
 import com.dannx.walls.data.LocalStore
 import com.dannx.walls.data.Prefs
+import com.dannx.walls.data.ThemeMode
 import com.dannx.walls.data.Wallpaper
 import com.dannx.walls.data.WallpaperActions
 import com.dannx.walls.data.WallpaperCollection
@@ -106,6 +110,8 @@ data class UiState(
     val downloadPrompt: DownloadPrompt? = null,
     val offline: Boolean = false,
     val selectedUploadUri: String? = null,
+    val themeMode: ThemeMode = ThemeMode.SYSTEM,
+    val liteMode: Boolean = false,
 ) {
     val filtered: List<Wallpaper>
         get() = filterWallpapers(wallpapers, query, category, tag)
@@ -146,6 +152,7 @@ class MainViewModel(
     private val cache: FeedCacheStore,
     private val actions: WallpaperActions,
     private val isOnline: () -> Boolean = { true },
+    private val appearance: AppearanceStore = InMemoryAppearanceStore(),
 ) : ViewModel() {
     private var actionJob: Job? = null
     private var refreshJob: Job? = null
@@ -160,6 +167,8 @@ class MainViewModel(
             category = savedState.get<String>(KEY_CATEGORY),
             tag = savedState.get<String>(KEY_TAG),
             selectedUploadUri = savedState.get<String>(KEY_UPLOAD_URI),
+            themeMode = appearance.themeMode(),
+            liteMode = appearance.liteMode(),
         ),
     )
     val state: StateFlow<UiState> = _state.asStateFlow()
@@ -690,6 +699,37 @@ class MainViewModel(
         _state.update { it.copy(message = null, messageAction = null) }
     }
 
+    /** Cambia entre tema del sistema, claro u oscuro. */
+    fun setThemeMode(mode: ThemeMode) {
+        appearance.saveThemeMode(mode)
+        _state.update { it.copy(themeMode = mode) }
+    }
+
+    /** Activa o desactiva las animaciones más pesadas. */
+    fun setLiteMode(enabled: Boolean) {
+        appearance.saveLiteMode(enabled)
+        _state.update { it.copy(liteMode = enabled) }
+    }
+
+    /** Vuelve la apariencia a los valores de fábrica. */
+    fun resetAppearance() {
+        appearance.reset()
+        _state.update {
+            it.copy(
+                themeMode = ThemeMode.SYSTEM,
+                liteMode = false,
+                message = "Ajustes restablecidos.",
+            )
+        }
+    }
+
+    /** Borra la copia local del feed; se vuelve a bajar al actualizar. */
+    fun clearCache() {
+        cache.writeWallpapers(emptyList())
+        cache.writeCollections(emptyList())
+        _state.update { it.copy(message = "Caché borrada.") }
+    }
+
     /**
      * Marca la bienvenida como vista; [UiState.onboardingDone] abre la app.
      */
@@ -727,6 +767,7 @@ class MainViewModel(
                     cache = FeedCache(application),
                     actions = WallpaperFiles(application),
                     isOnline = { Connectivity.isOnline(application) },
+                    appearance = AppearancePrefs(application),
                 )
             }
         }

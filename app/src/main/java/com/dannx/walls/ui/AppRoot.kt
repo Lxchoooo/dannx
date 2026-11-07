@@ -46,6 +46,7 @@ import com.dannx.walls.ui.screens.DetailScreen
 import com.dannx.walls.ui.screens.FavoritesScreen
 import com.dannx.walls.ui.screens.HomeScreen
 import com.dannx.walls.ui.screens.OnboardingScreen
+import com.dannx.walls.ui.screens.SettingsScreen
 import com.dannx.walls.ui.screens.StudioScreen
 import com.dannx.walls.util.WallpaperFiles
 
@@ -167,6 +168,7 @@ fun AppRoot(viewModel: MainViewModel, startTab: String = "home") {
                     },
                     onToggleFavorite = viewModel::toggleFavorite,
                     onOpenStudio = { navController.navigateTopLevel("studio") },
+                    onOpenSettings = { navController.navigate("settings") },
                 )
             }
             composable("favorites") {
@@ -224,6 +226,20 @@ fun AppRoot(viewModel: MainViewModel, startTab: String = "home") {
                         onDelete = { viewModel.deleteCollection(collection.id) },
                     )
                 }
+            }
+            composable("settings") {
+                SettingsScreen(
+                    state = state,
+                    onBack = { navController.popBackStack() },
+                    onThemeModeChange = viewModel::setThemeMode,
+                    onLiteModeChange = viewModel::setLiteMode,
+                    onClearCache = viewModel::clearCache,
+                    onResetAppearance = viewModel::resetAppearance,
+                    onSignOut = {
+                        viewModel.signOut()
+                        navController.popBackStack()
+                    },
+                )
             }
             composable("studio") {
                 StudioScreen(

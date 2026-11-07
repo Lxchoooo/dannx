@@ -26,6 +26,7 @@ internal val DannXShapes = Shapes(
 fun DannXTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
     dynamicColor: Boolean = true,
+    liteMode: Boolean = false,
     content: @Composable () -> Unit,
 ) {
     val context = LocalContext.current
@@ -43,7 +44,7 @@ fun DannXTheme(
     // springs que usan las pantallas, además del esquema de motion oficial.
     MaterialTheme(
         colorScheme = colors,
-        motionScheme = MotionScheme.expressive(),
+        motionScheme = if (liteMode) MotionScheme.standard() else MotionScheme.expressive(),
         typography = DannXTypography,
         shapes = DannXShapes,
         content = content,
