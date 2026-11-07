@@ -17,14 +17,13 @@ arreglo.
 ## Alcance
 
 - La app DannX y sus builds publicados en Releases.
-- La configuración del backend descrita en `supabase/setup.sql`.
 
-Fuera de alcance: problemas en Supabase, en el sistema Android o en otras apps
-de terceros.
+Fuera de alcance: problemas en servicios de terceros, en el sistema Android o en
+otras apps.
 
 ## Buenas prácticas que ya aplica el proyecto
 
-- La clave `service_role` de Supabase nunca se usa en la app ni en el repo.
-- Las escrituras en la base están limitadas por RLS a una sola cuenta de
-  administrador.
+- La clave de servicio del backend nunca se usa en la app ni en el repo.
+- Las escrituras en la base están limitadas por reglas del servidor a una sola
+  cuenta de administrador.
 - La firma de release vive como secreto de GitHub, no en el repositorio.
