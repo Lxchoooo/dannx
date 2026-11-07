@@ -56,6 +56,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.toShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -363,20 +364,29 @@ private fun PageContent(
 /** Marca de la primera pantalla: palabra grande y miniaturas decorativas. */
 @Composable
 private fun WordmarkRow(accent: Color, liteMode: Boolean) {
-    val drift = if (liteMode) null else rememberInfiniteTransition(label = "wordmark")
-    val driftValue = drift?.animateFloat(
-        initialValue = 0f,
-        targetValue = 1f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 8_000, easing = FastOutSlowInEasing),
-            repeatMode = RepeatMode.Reverse,
-        ),
-        label = "wordmarkDrift",
-    )
+    if (liteMode) {
+        WordmarkContent(accent = accent, drift = null)
+    } else {
+        val transition = rememberInfiniteTransition(label = "wordmark")
+        val drift = transition.animateFloat(
+            initialValue = 0f,
+            targetValue = 1f,
+            animationSpec = infiniteRepeatable(
+                animation = tween(durationMillis = 8_000, easing = FastOutSlowInEasing),
+                repeatMode = RepeatMode.Reverse,
+            ),
+            label = "wordmarkDrift",
+        )
+        WordmarkContent(accent = accent, drift = drift)
+    }
+}
+
+@Composable
+private fun WordmarkContent(accent: Color, drift: State<Float>?) {
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = Modifier.graphicsLayer {
-            val t = driftValue?.value ?: 0f
+            val t = drift?.value ?: 0f
             translationY = -t * 6.dp.toPx()
             scaleX = 0.99f + 0.02f * t
             scaleY = 0.99f + 0.02f * t
@@ -398,7 +408,7 @@ private fun WordmarkRow(accent: Color, liteMode: Boolean) {
                     Modifier
                         .size(width = size, height = size * 1.5f)
                         .graphicsLayer {
-                            val t = driftValue?.value ?: 0f
+                            val t = drift?.value ?: 0f
                             rotationZ = rotation + (index - 1) * 3f * t
                         }
                         .clip(RoundedCornerShape(22.dp))
@@ -472,57 +482,80 @@ private fun FinishStage(accent: Color) {
  * Fondo del setup: formas expresivas que rotan y derivan a distinta velocidad,
  * así nunca se repite el mismo dibujo. En modo lite quedan quietas.
  */
-@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 private fun AnimatedBackdrop(accent: Color, liteMode: Boolean) {
-    val transition = if (liteMode) null else rememberInfiniteTransition(label = "backdrop")
+    if (liteMode) {
+        BackdropShapes(
+            accent = accent,
+            spinA = null,
+            spinB = null,
+            driftA = null,
+            driftB = null,
+            breathe = null,
+        )
+    } else {
+        val transition = rememberInfiniteTransition(label = "backdrop")
+        BackdropShapes(
+            accent = accent,
+            spinA = transition.animateFloat(
+                initialValue = 0f,
+                targetValue = 360f,
+                animationSpec = infiniteRepeatable(
+                    animation = tween(52_000, easing = LinearEasing),
+                    initialStartOffset = StartOffset(0),
+                ),
+                label = "spinA",
+            ),
+            spinB = transition.animateFloat(
+                initialValue = 0f,
+                targetValue = -360f,
+                animationSpec = infiniteRepeatable(
+                    animation = tween(38_000, easing = LinearEasing),
+                    initialStartOffset = StartOffset(3_500),
+                ),
+                label = "spinB",
+            ),
+            driftA = transition.animateFloat(
+                initialValue = 0f,
+                targetValue = (2 * Math.PI).toFloat(),
+                animationSpec = infiniteRepeatable(
+                    animation = tween(21_000, easing = LinearEasing),
+                    initialStartOffset = StartOffset(1_200),
+                ),
+                label = "driftA",
+            ),
+            driftB = transition.animateFloat(
+                initialValue = 0f,
+                targetValue = (2 * Math.PI).toFloat(),
+                animationSpec = infiniteRepeatable(
+                    animation = tween(29_000, easing = LinearEasing),
+                    initialStartOffset = StartOffset(6_000),
+                ),
+                label = "driftB",
+            ),
+            breathe = transition.animateFloat(
+                initialValue = 0.94f,
+                targetValue = 1.06f,
+                animationSpec = infiniteRepeatable(
+                    animation = tween(9_000, easing = FastOutSlowInEasing),
+                    repeatMode = RepeatMode.Reverse,
+                ),
+                label = "breathe",
+            ),
+        )
+    }
+}
 
-    val spinA = transition?.animateFloat(
-        initialValue = 0f,
-        targetValue = 360f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(52_000, easing = LinearEasing),
-            initialStartOffset = StartOffset(0),
-        ),
-        label = "spinA",
-    )
-    val spinB = transition?.animateFloat(
-        initialValue = 0f,
-        targetValue = -360f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(38_000, easing = LinearEasing),
-            initialStartOffset = StartOffset(3_500),
-        ),
-        label = "spinB",
-    )
-    val driftA = transition?.animateFloat(
-        initialValue = 0f,
-        targetValue = (2 * Math.PI).toFloat(),
-        animationSpec = infiniteRepeatable(
-            animation = tween(21_000, easing = LinearEasing),
-            initialStartOffset = StartOffset(1_200),
-        ),
-        label = "driftA",
-    )
-    val driftB = transition?.animateFloat(
-        initialValue = 0f,
-        targetValue = (2 * Math.PI).toFloat(),
-        animationSpec = infiniteRepeatable(
-            animation = tween(29_000, easing = LinearEasing),
-            initialStartOffset = StartOffset(6_000),
-        ),
-        label = "driftB",
-    )
-    val breathe = transition?.animateFloat(
-        initialValue = 0.94f,
-        targetValue = 1.06f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(9_000, easing = FastOutSlowInEasing),
-            repeatMode = RepeatMode.Reverse,
-        ),
-        label = "breathe",
-    )
-
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
+@Composable
+private fun BackdropShapes(
+    accent: Color,
+    spinA: State<Float>?,
+    spinB: State<Float>?,
+    driftA: State<Float>?,
+    driftB: State<Float>?,
+    breathe: State<Float>?,
+) {
     Box(Modifier.fillMaxSize()) {
         // Cookie grande arriba a la derecha.
         Box(
