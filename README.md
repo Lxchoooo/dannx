@@ -11,8 +11,8 @@ English | [Español](README.es.md)
 
 A wallpaper app for Android built with Kotlin and Jetpack Compose. Explore a
 curated feed, organise your favourites into collections, and apply or download
-any image in a couple of taps. The backend is optional: without it, the app runs
-with a built-in demo feed.
+any image in a couple of taps. It ships with a built-in demo feed, so it works
+right after installing.
 
 ## 📸 Screenshots
 
@@ -40,6 +40,9 @@ with a built-in demo feed.
   splash screen and launcher shortcuts.
 - Works offline: the feed you already loaded stays available.
 - Dark and light themes, with dynamic colour on Android 12+.
+- Settings screen: theme (system, light, dark), lite mode and cache reset.
+- Live wallpaper with soft animated colour blobs that pauses when hidden.
+- Detail buttons take the colour of the wallpaper you are looking at.
 - Welcome screens shown once on first launch.
 
 ## ⬇️ Download and install
@@ -57,28 +60,6 @@ with a built-in demo feed.
 Requirements: **Android 10 (API 29) or newer**. Release builds are signed with a
 private key stored as a GitHub secret; the key is never committed to the
 repository.
-
-## ☁️ Backend (optional, Supabase)
-
-DannX works out of the box with a demo feed. To publish your own wallpapers you
-connect a free [Supabase](https://supabase.com) project:
-
-1. Create a project and run [`supabase/setup.sql`](supabase/setup.sql) in the
-   SQL Editor. Replace the admin UUID in the file with your own user's UID.
-2. Copy the **Project URL** and the **anon public** key from
-   *Project Settings → API*.
-3. Add them as repository secrets with the exact names the build expects:
-   `SUPABASE_URL` and `SUPABASE_ANON_KEY`.
-4. Push to `main`: the CI builds a new APK with those values baked in.
-
-Notes:
-
-- Without these two values the app shows the built-in demo feed.
-- The **anon** key is public by design; the database rules (RLS) are what
-  protect the data. The `service_role` key is **never** used in the app or in
-  the repository.
-- Step-by-step guide with screenshots of the dashboard:
-  [`CONECTAR-SUPABASE.md`](CONECTAR-SUPABASE.md).
 
 ## 🛠 Development
 
@@ -99,7 +80,6 @@ app/src/main/java/com/dannx/walls/
 ├── data/      # API client, cache, preferences, demo feed, retry policy
 ├── ui/        # screens, components, theme, window size classes
 └── util/      # wallpaper files (gallery, apply) and geometry helpers
-supabase/      # setup.sql for the backend
 .github/       # CI workflows
 docs/          # screenshots and documentation assets
 ```

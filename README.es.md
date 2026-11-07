@@ -11,8 +11,8 @@
 
 Una app de fondos de pantalla para Android hecha en Kotlin con Jetpack Compose.
 Explorá un feed curado, armá tus colecciones con los favoritos y aplicá o
-descargá cualquier imagen en dos toques. El backend es opcional: sin configurar,
-la app funciona con un feed de ejemplo incluido.
+descargá cualquier imagen en dos toques. Viene con un feed de ejemplo incluido,
+así que funciona apenas la instalás.
 
 ## 📸 Capturas
 
@@ -40,6 +40,9 @@ la app funciona con un feed de ejemplo incluido.
   splash screen y accesos directos en el launcher.
 - Funciona sin conexión: el feed que ya cargaste sigue disponible.
 - Temas claro y oscuro, con color dinámico en Android 12+.
+- Pantalla de ajustes: tema (sistema, claro, oscuro), modo lite y borrar caché.
+- Fondo vivo con manchas de color en movimiento que se pausa cuando no se ve.
+- Los botones del detalle toman el color del fondo que estás mirando.
 - Pantallas de bienvenida que se muestran una sola vez al inicio.
 
 ## ⬇️ Descarga e instalación
@@ -57,29 +60,6 @@ la app funciona con un feed de ejemplo incluido.
 Requisitos: **Android 10 (API 29) o superior**. Los builds de release se firman
 con una clave privada guardada como secreto de GitHub; la clave nunca se
 commitea al repositorio.
-
-## ☁️ Backend (opcional, Supabase)
-
-DannX funciona desde el primer momento con un feed de ejemplo. Para publicar tus
-propios fondos conectá un proyecto gratis de [Supabase](https://supabase.com):
-
-1. Creá un proyecto y corré [`supabase/setup.sql`](supabase/setup.sql) en el
-   SQL Editor. Reemplazá el UUID de administrador del archivo con el UID de tu
-   propia cuenta.
-2. Copiá la **Project URL** y la clave **anon public** desde
-   *Project Settings → API*.
-3. Cargalas como secretos del repositorio con los nombres exactos que usa el
-   build: `SUPABASE_URL` y `SUPABASE_ANON_KEY`.
-4. Hacé push a `main`: la CI compila un APK nuevo con esos valores adentro.
-
-Notas:
-
-- Sin esos dos valores, la app muestra el feed de ejemplo incluido.
-- La clave **anon** es pública por diseño; lo que protege los datos son las
-  reglas de la base (RLS). La clave `service_role` **nunca** se usa en la app ni
-  en el repositorio.
-- Guía paso a paso con capturas del dashboard:
-  [`CONECTAR-SUPABASE.md`](CONECTAR-SUPABASE.md).
 
 ## 🛠 Desarrollo
 
@@ -100,7 +80,6 @@ app/src/main/java/com/dannx/walls/
 ├── data/      # cliente de API, caché, preferencias, feed demo, reintentos
 ├── ui/        # pantallas, componentes, tema, clases de tamaño de ventana
 └── util/      # archivos de fondo (galería, aplicar) y helpers de geometría
-supabase/      # setup.sql para el backend
 .github/       # workflows de CI
 docs/          # capturas y assets de documentación
 ```
