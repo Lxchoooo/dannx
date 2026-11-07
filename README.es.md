@@ -48,10 +48,11 @@ así que funciona apenas la instalás.
 ## ⬇️ Descarga e instalación
 
 1. Descargá el APK desde la página
-   [Releases](https://github.com/Lxchoooo/dannx/releases) (cada versión
-   etiquetada tiene un asset `DannX.apk`), o desde
-   [Actions](https://github.com/Lxchoooo/dannx/actions): bajá el artifact
-   `DannX-release` del último run exitoso.
+   [Releases](https://github.com/Lxchoooo/dannx/releases): la versión
+   **DannX · última versión** siempre tiene el build firmado más nuevo, y se
+   regenera sola en cada merge a `main`. Si necesitás un run puntual, el
+   artifact `DannX-release-<número>` también está en
+   [Actions](https://github.com/Lxchoooo/dannx/actions).
 2. Abrí el APK en el teléfono y aceptá instalar desde **orígenes desconocidos**
    cuando Android te lo pida.
 3. Las actualizaciones se instalan encima de la app existente: se conservan
