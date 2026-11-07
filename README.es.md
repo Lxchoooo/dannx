@@ -41,7 +41,6 @@ así que funciona apenas la instalás.
 - Funciona sin conexión: el feed que ya cargaste sigue disponible.
 - Temas claro y oscuro, con color dinámico en Android 12+.
 - Pantalla de ajustes: tema (sistema, claro, oscuro), modo lite y borrar caché.
-- Fondo vivo con manchas de color en movimiento que se pausa cuando no se ve.
 - Los botones del detalle toman el color del fondo que estás mirando.
 - Pantallas de bienvenida que se muestran una sola vez al inicio.
 

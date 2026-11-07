@@ -1,5 +1,12 @@
 package com.dannx.walls.ui
 
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
@@ -39,6 +46,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.dannx.walls.MainViewModel
+import com.dannx.walls.UiState
 import com.dannx.walls.ui.components.DebugFpsOverlay
 import com.dannx.walls.ui.screens.CollectionDetailScreen
 import com.dannx.walls.ui.screens.CollectionsScreen
@@ -65,13 +73,37 @@ private val tabs = listOf(
 @Composable
 fun AppRoot(viewModel: MainViewModel, startTab: String = "home") {
     val state by viewModel.state.collectAsStateWithLifecycle()
-    val actionState by viewModel.actionState.collectAsStateWithLifecycle()
 
-    if (!state.onboardingDone) {
-        OnboardingScreen(onFinish = viewModel::completeOnboarding)
-        return
+    AnimatedContent(
+        targetState = state.onboardingDone,
+        transitionSpec = {
+            (fadeIn(tween(380, easing = FastOutSlowInEasing)) +
+                scaleIn(
+                    initialScale = 0.97f,
+                    animationSpec = tween(380, easing = FastOutSlowInEasing),
+                ))
+                .togetherWith(fadeOut(tween(240)))
+        },
+        label = "appRoot",
+    ) { done ->
+        if (done) {
+            MainApp(viewModel = viewModel, state = state, startTab = startTab)
+        } else {
+            OnboardingScreen(
+                liteMode = state.liteMode,
+                onFinish = viewModel::completeOnboarding,
+            )
+        }
     }
+}
 
+@Composable
+private fun MainApp(
+    viewModel: MainViewModel,
+    state: UiState,
+    startTab: String,
+) {
+    val actionState by viewModel.actionState.collectAsStateWithLifecycle()
     val navController = rememberNavController()
     val context = LocalContext.current
     val wallpaperFiles = remember(context) { WallpaperFiles(context) }
@@ -148,6 +180,10 @@ fun AppRoot(viewModel: MainViewModel, startTab: String = "home") {
                 navController = navController,
                 startDestination = startDestination,
                 modifier = Modifier.padding(innerPadding),
+                enterTransition = { fadeIn(tween(200)) },
+                exitTransition = { fadeOut(tween(160)) },
+                popEnterTransition = { fadeIn(tween(200)) },
+                popExitTransition = { fadeOut(tween(160)) },
             ) {
             composable("home") {
                 HomeScreen(
