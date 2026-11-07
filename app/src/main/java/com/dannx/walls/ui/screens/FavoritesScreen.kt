@@ -35,6 +35,7 @@ import com.dannx.walls.data.Wallpaper
 import com.dannx.walls.ui.components.EmptyState
 import com.dannx.walls.ui.components.ErrorState
 import com.dannx.walls.ui.components.FeedSkeleton
+import com.dannx.walls.ui.components.StaggeredAppear
 import com.dannx.walls.ui.components.WallpaperCard
 
 @Composable
@@ -96,16 +97,18 @@ fun FavoritesScreen(
                 items = items,
                 key = { _, wallpaper -> wallpaper.id },
                 contentType = { _, _ -> "wall" },
-            ) { _, wallpaper ->
-                WallpaperCard(
-                    wallpaper = wallpaper,
-                    isFavorite = true,
-                    onClick = { onOpenWallpaper(wallpaper) },
-                    onToggleFavorite = { onToggleFavorite(wallpaper.id) },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .aspectRatio(9f / 16f),
-                )
+            ) { index, wallpaper ->
+                StaggeredAppear(index = index) {
+                    WallpaperCard(
+                        wallpaper = wallpaper,
+                        isFavorite = true,
+                        onClick = { onOpenWallpaper(wallpaper) },
+                        onToggleFavorite = { onToggleFavorite(wallpaper.id) },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .aspectRatio(9f / 16f),
+                    )
+                }
             }
         }
     }

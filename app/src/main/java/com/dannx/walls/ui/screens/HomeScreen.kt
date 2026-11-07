@@ -71,6 +71,7 @@ import com.dannx.walls.ui.components.FeaturedCard
 import com.dannx.walls.ui.components.HeroHeight
 import com.dannx.walls.ui.components.FeedSkeleton
 import com.dannx.walls.ui.components.OfflineBanner
+import com.dannx.walls.ui.components.StaggeredAppear
 import com.dannx.walls.ui.components.WallpaperCard
 import com.dannx.walls.ui.components.wallpaperThumbRequest
 import com.dannx.walls.ui.LocalWindowSizeClass
@@ -412,16 +413,18 @@ fun HomeScreen(
                 items = filtered,
                 key = { _, wallpaper -> wallpaper.id },
                 contentType = { _, _ -> "wall" },
-            ) { _, wallpaper ->
-                WallpaperCard(
-                    wallpaper = wallpaper,
-                    isFavorite = wallpaper.id in state.favorites,
-                    onClick = { onOpenWallpaper(wallpaper) },
-                    onToggleFavorite = { onToggleFavorite(wallpaper.id) },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .aspectRatio(9f / 16f),
-                )
+            ) { index, wallpaper ->
+                StaggeredAppear(index = index) {
+                    WallpaperCard(
+                        wallpaper = wallpaper,
+                        isFavorite = wallpaper.id in state.favorites,
+                        onClick = { onOpenWallpaper(wallpaper) },
+                        onToggleFavorite = { onToggleFavorite(wallpaper.id) },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .aspectRatio(9f / 16f),
+                    )
+                }
             }
         }
     }

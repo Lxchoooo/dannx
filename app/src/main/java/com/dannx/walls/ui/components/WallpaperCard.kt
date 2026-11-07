@@ -1,9 +1,12 @@
 package com.dannx.walls.ui.components
 
 import android.content.Context
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -26,12 +29,14 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalConfiguration
@@ -48,6 +53,7 @@ import androidx.compose.ui.unit.dp
 import coil.imageLoader
 import coil.request.ImageRequest
 import com.dannx.walls.data.Wallpaper
+import com.dannx.walls.ui.theme.LocalLiteMode
 
 internal const val ThumbWidth = 540
 internal const val ThumbHeight = 960
@@ -102,8 +108,19 @@ fun WallpaperCard(
     modifier: Modifier = Modifier,
 ) {
     val interactionSource = remember { MutableInteractionSource() }
+    val liteMode = LocalLiteMode.current
+    val pressed by interactionSource.collectIsPressedAsState()
+    val pressScale by animateFloatAsState(
+        targetValue = if (pressed && !liteMode) 0.97f else 1f,
+        animationSpec = spring(dampingRatio = 0.6f, stiffness = 650f),
+        label = "cardPress",
+    )
     Box(
         modifier = modifier
+            .graphicsLayer {
+                scaleX = pressScale
+                scaleY = pressScale
+            }
             .clip(MaterialTheme.shapes.extraLarge)
             .background(MaterialTheme.colorScheme.surfaceVariant)
             // Una sola frase para TalkBack en cada tarjeta, en vez de leer
@@ -172,8 +189,19 @@ fun FeaturedCard(
     heroHeight: Dp = HeroHeight,
 ) {
     val interactionSource = remember { MutableInteractionSource() }
+    val liteMode = LocalLiteMode.current
+    val pressed by interactionSource.collectIsPressedAsState()
+    val pressScale by animateFloatAsState(
+        targetValue = if (pressed && !liteMode) 0.975f else 1f,
+        animationSpec = spring(dampingRatio = 0.6f, stiffness = 650f),
+        label = "featuredPress",
+    )
     Box(
         modifier = modifier
+            .graphicsLayer {
+                scaleX = pressScale
+                scaleY = pressScale
+            }
             .clip(MaterialTheme.shapes.extraLarge)
             .background(MaterialTheme.colorScheme.surfaceVariant)
             .semantics(mergeDescendants = true) {

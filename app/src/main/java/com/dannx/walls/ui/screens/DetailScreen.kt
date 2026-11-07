@@ -2,6 +2,8 @@ package com.dannx.walls.ui.screens
 
 import androidx.activity.compose.LocalActivity
 import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -57,6 +59,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -92,6 +95,7 @@ import com.dannx.walls.data.Wallpaper
 import com.dannx.walls.data.WallpaperCollection
 import com.dannx.walls.ui.components.rememberWallpaperAccent
 import com.dannx.walls.ui.components.StatefulImage
+import com.dannx.walls.ui.theme.LocalLiteMode
 import com.dannx.walls.util.DoubleTapZoom
 import com.dannx.walls.util.MinZoom
 import com.dannx.walls.util.PanOffset
@@ -159,6 +163,19 @@ fun DetailScreen(
         )
     }
     val activity = LocalActivity.current
+    val liteMode = LocalLiteMode.current
+    var entered by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) { entered = true }
+    val enterScale by animateFloatAsState(
+        targetValue = if (entered || liteMode) 1f else 1.04f,
+        animationSpec = tween(durationMillis = 420, easing = FastOutSlowInEasing),
+        label = "detailEnterScale",
+    )
+    val enterAlpha by animateFloatAsState(
+        targetValue = if (entered || liteMode) 1f else 0f,
+        animationSpec = tween(durationMillis = 280),
+        label = "detailEnterAlpha",
+    )
 
     DisposableEffect(activity) {
         val window = activity?.window
@@ -207,10 +224,11 @@ fun DetailScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .graphicsLayer {
-                    scaleX = zoom.scale
-                    scaleY = zoom.scale
+                    scaleX = zoom.scale * enterScale
+                    scaleY = zoom.scale * enterScale
                     translationX = zoom.offset.x
                     translationY = zoom.offset.y
+                    alpha = enterAlpha
                 }
                 .transformable(transformState)
                 .pointerInput(Unit) {

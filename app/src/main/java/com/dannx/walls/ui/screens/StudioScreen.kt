@@ -6,6 +6,13 @@ import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -455,18 +462,34 @@ private fun UploadCard(
                 shape = CircleShape,
                 enabled = selectedUri != null && !state.uploading,
             ) {
-                if (state.uploading) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(18.dp),
-                        strokeWidth = 2.dp,
-                        color = MaterialTheme.colorScheme.onPrimary,
-                    )
-                    Spacer(Modifier.width(10.dp))
-                    Text("Subiendo...")
-                } else {
-                    Icon(Icons.Rounded.CloudUpload, contentDescription = null)
-                    Spacer(Modifier.width(8.dp))
-                    Text("Publicar wallpaper")
+                AnimatedContent(
+                    targetState = state.uploading,
+                    transitionSpec = {
+                        (fadeIn(tween(180)) + scaleIn(tween(180), initialScale = 0.9f))
+                            .togetherWith(
+                                fadeOut(tween(120)) + scaleOut(tween(120), targetScale = 0.95f),
+                            )
+                    },
+                    label = "uploadAction",
+                ) { uploading ->
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center,
+                    ) {
+                        if (uploading) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(18.dp),
+                                strokeWidth = 2.dp,
+                                color = MaterialTheme.colorScheme.onPrimary,
+                            )
+                            Spacer(Modifier.width(10.dp))
+                            Text("Subiendo...")
+                        } else {
+                            Icon(Icons.Rounded.CloudUpload, contentDescription = null)
+                            Spacer(Modifier.width(8.dp))
+                            Text("Publicar wallpaper")
+                        }
+                    }
                 }
             }
             Spacer(Modifier.height(10.dp))

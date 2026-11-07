@@ -1,11 +1,17 @@
 package com.dannx.walls.ui
 
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.WindowInsets
@@ -56,6 +62,7 @@ import com.dannx.walls.ui.screens.HomeScreen
 import com.dannx.walls.ui.screens.OnboardingScreen
 import com.dannx.walls.ui.screens.SettingsScreen
 import com.dannx.walls.ui.screens.StudioScreen
+import com.dannx.walls.ui.theme.LocalLiteMode
 import com.dannx.walls.util.WallpaperFiles
 
 private data class TopLevelTab(
@@ -114,6 +121,7 @@ private fun MainApp(
     val topTabs = tabs
     val showBar = currentRoute in topTabs.map { it.route }
     val startDestination = if (startTab in topTabs.map { it.route }) startTab else "home"
+    val liteMode = LocalLiteMode.current
     val snackbarHostState = remember { SnackbarHostState() }
 
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -149,7 +157,23 @@ private fun MainApp(
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
         snackbarHost = { SnackbarHost(snackbarHostState) },
         bottomBar = {
-            if (showBar) {
+            AnimatedVisibility(
+                visible = showBar,
+                enter = if (liteMode) {
+                    fadeIn(tween(120))
+                } else {
+                    slideInVertically(
+                        animationSpec = tween(260, easing = FastOutSlowInEasing),
+                    ) { it } + fadeIn(tween(200))
+                },
+                exit = if (liteMode) {
+                    fadeOut(tween(90))
+                } else {
+                    slideOutVertically(
+                        animationSpec = tween(200, easing = FastOutSlowInEasing),
+                    ) { it } + fadeOut(tween(140))
+                },
+            ) {
                 NavigationBar(
                     containerColor = MaterialTheme.colorScheme.surfaceContainer,
                     tonalElevation = 0.dp,
@@ -180,12 +204,62 @@ private fun MainApp(
                 navController = navController,
                 startDestination = startDestination,
                 modifier = Modifier.padding(innerPadding),
-                enterTransition = { fadeIn(tween(200)) },
-                exitTransition = { fadeOut(tween(160)) },
-                popEnterTransition = { fadeIn(tween(200)) },
-                popExitTransition = { fadeOut(tween(160)) },
+                enterTransition = {
+                    if (liteMode) {
+                        fadeIn(tween(120))
+                    } else {
+                        fadeIn(tween(240)) +
+                            slideInHorizontally(
+                                animationSpec = tween(280, easing = FastOutSlowInEasing),
+                            ) { it / 14 } +
+                            scaleIn(
+                                animationSpec = tween(280, easing = FastOutSlowInEasing),
+                                initialScale = 0.985f,
+                            )
+                    }
+                },
+                exitTransition = {
+                    if (liteMode) {
+                        fadeOut(tween(90))
+                    } else {
+                        fadeOut(tween(160)) +
+                            scaleOut(
+                                animationSpec = tween(220, easing = FastOutSlowInEasing),
+                                targetScale = 0.99f,
+                            )
+                    }
+                },
+                popEnterTransition = {
+                    if (liteMode) {
+                        fadeIn(tween(120))
+                    } else {
+                        fadeIn(tween(220)) +
+                            scaleIn(
+                                animationSpec = tween(260, easing = FastOutSlowInEasing),
+                                initialScale = 0.985f,
+                            )
+                    }
+                },
+                popExitTransition = {
+                    if (liteMode) {
+                        fadeOut(tween(90))
+                    } else {
+                        fadeOut(tween(160)) +
+                            slideOutHorizontally(
+                                animationSpec = tween(240, easing = FastOutSlowInEasing),
+                            ) { it / 14 } +
+                            scaleOut(
+                                animationSpec = tween(220, easing = FastOutSlowInEasing),
+                                targetScale = 0.985f,
+                            )
+                    }
+                },
             ) {
-            composable("home") {
+            composable(
+                route = "home",
+                enterTransition = { fadeIn(tween(180)) },
+                exitTransition = { fadeOut(tween(140)) },
+            ) {
                 HomeScreen(
                     state = state,
                     onClearFilters = {
@@ -207,7 +281,11 @@ private fun MainApp(
                     onOpenSettings = { navController.navigate("settings") },
                 )
             }
-            composable("favorites") {
+            composable(
+                route = "favorites",
+                enterTransition = { fadeIn(tween(180)) },
+                exitTransition = { fadeOut(tween(140)) },
+            ) {
                 FavoritesScreen(
                     state = state,
                     onRefresh = viewModel::refresh,
@@ -220,7 +298,11 @@ private fun MainApp(
                     onExplore = { navController.navigateTopLevel("home") },
                 )
             }
-            composable("collections") {
+            composable(
+                route = "collections",
+                enterTransition = { fadeIn(tween(180)) },
+                exitTransition = { fadeOut(tween(140)) },
+            ) {
                 CollectionsScreen(
                     state = state,
                     onRefresh = viewModel::refresh,

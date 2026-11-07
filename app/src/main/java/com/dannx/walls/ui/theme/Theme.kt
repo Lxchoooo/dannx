@@ -10,6 +10,7 @@ import androidx.compose.material3.Shapes
 import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 
@@ -42,11 +43,13 @@ fun DannXTheme(
     }
     // El estilo Expressive viene dado por la tipografía, las formas y los
     // springs que usan las pantallas, además del esquema de motion oficial.
-    MaterialTheme(
-        colorScheme = colors,
-        motionScheme = if (liteMode) MotionScheme.standard() else MotionScheme.expressive(),
-        typography = DannXTypography,
-        shapes = DannXShapes,
-        content = content,
-    )
+    CompositionLocalProvider(LocalLiteMode provides liteMode) {
+        MaterialTheme(
+            colorScheme = colors,
+            motionScheme = if (liteMode) MotionScheme.standard() else MotionScheme.expressive(),
+            typography = DannXTypography,
+            shapes = DannXShapes,
+            content = content,
+        )
+    }
 }
