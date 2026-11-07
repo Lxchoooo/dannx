@@ -1,7 +1,8 @@
 package com.dannx.walls.ui.screens
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -52,7 +53,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -73,6 +77,10 @@ import com.dannx.walls.ui.components.WallpaperCard
 import com.dannx.walls.ui.components.wallpaperThumbRequest
 import kotlin.math.absoluteValue
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.withTimeoutOrNull
+
+/** Segundos que hay que mantener presionado el título para la puerta secreta. */
+private const val SECRET_HOLD_MS = 9_000L
 
 @Composable
 fun HomeScreen(
@@ -133,14 +141,52 @@ fun HomeScreen(
             Column(Modifier.fillMaxWidth()) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Column(Modifier.weight(1f)) {
+                        // Puerta secreta: mantener presionado el título unos
+                        // segundos sin mover el dedo abre la puerta del Estudio.
+                        val haptics = LocalHapticFeedback.current
                         Text(
                             text = "DannX",
                             style = MaterialTheme.typography.displayLarge,
                             color = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.combinedClickable(
-                                onClick = {},
-                                onLongClick = onOpenStudio,
-                            ),
+                            modifier = Modifier.pointerInput(onOpenStudio) {
+                                awaitEachGesture {
+                                    val down = awaitFirstDown()
+                                    val slop = viewConfiguration.touchSlop
+                                    val deadline = down.uptimeMillis + SECRET_HOLD_MS
+                                    var lastUptime = down.uptimeMillis
+                                    var triggered = false
+                                    var canceled = false
+                                    while (!canceled && !triggered) {
+                                        val remaining = deadline - lastUptime
+                                        val event =
+                                            withTimeoutOrNull(remaining) { awaitPointerEvent() }
+                                        if (event == null) {
+                                            // Llegó la hora y el dedo sigue quieto.
+                                            triggered = true
+                                            break
+                                        }
+                                        val change = event.changes.firstOrNull() ?: continue
+                                        lastUptime = change.uptimeMillis
+                                        val position = change.position
+                                        val dx = position.x - down.position.x
+                                        val dy = position.y - down.position.y
+                                        if (dx * dx + dy * dy > slop * slop) {
+                                            canceled = true
+                                            break
+                                        }
+                                        if (!change.pressed) {
+                                            canceled = true
+                                            break
+                                        }
+                                    }
+                                    if (triggered) {
+                                        haptics.performHapticFeedback(
+                                            HapticFeedbackType.LongPress,
+                                        )
+                                        onOpenStudio()
+                                    }
+                                }
+                            },
                         )
                         Text(
                             text = "Papeles que se sienten tuyos.",
