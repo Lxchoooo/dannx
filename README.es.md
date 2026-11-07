@@ -7,6 +7,7 @@
 ![Kotlin](https://img.shields.io/badge/Kotlin-2.2.20-7F52FF?logo=kotlin&logoColor=white)
 ![Jetpack Compose](https://img.shields.io/badge/Jetpack%20Compose-BOM%202026.09.00-4285F4?logo=jetpackcompose&logoColor=white)
 ![Material 3](https://img.shields.io/badge/Material%203-1.5.0--rc01-6750A4?logo=materialdesign&logoColor=white)
+![Licencia: MIT](https://img.shields.io/badge/Licencia-MIT-yellow.svg)
 
 Una app de fondos de pantalla para Android hecha en Kotlin con Jetpack Compose.
 Explorá un feed curado, armá tus colecciones con los favoritos y aplicá o
@@ -121,9 +122,8 @@ requests son bienvenidos.
 
 ## 📄 Licencia
 
-Todos los derechos reservados. Todavía no se definió una licencia para este
-repositorio; hasta que se elija una, no podés copiar, modificar ni distribuir
-el código sin permiso del autor.
+Publicado bajo la [licencia MIT](LICENSE). Podés usar, copiar, modificar y
+distribuir el código, manteniendo el aviso de autoría.
 
 ## 🎨 Créditos
 
