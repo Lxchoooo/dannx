@@ -1,14 +1,12 @@
 # Changelog
 
 Registro de los cambios hechos en DannX. Se actualiza al cerrar cada bloque de
-trabajo (fases de la hoja de ruta). La app todavía no tiene versiones públicas,
-así que todo vive bajo "Sin publicar" hasta el primer tag.
+trabajo (fases de la hoja de ruta) y al publicar cada versión.
 
-Sobre el Estudio: la pantalla de publicación es de uso privado. Los usuarios no
-la ven en el menú; el acceso llega manteniendo presionado el título "DannX" en
-Explorar.
+Sobre el Estudio: la pantalla de publicación es de uso privado. El acceso está
+reservado a administradores y no se detalla en la documentación.
 
-## Sin publicar
+## v1.3.0
 
 ### Fase 5 — Experiencia
 
@@ -24,9 +22,8 @@ Explorar.
   estilo Expressive de Material 3 (springs elásticos, formas decorativas e
   indicadores animados). Se muestra una sola vez y se salta con "Saltar".
 - La pestaña **Estudio** ya no forma parte de la barra para el público: solo
-  aparece cuando hay una sesión de administrador iniciada. Para llegar a la
-  pantalla de inicio de sesión existe un gesto oculto: mantener presionado el
-  título "DannX" en Explorar durante ~9 segundos sin mover el dedo.
+  aparece cuando hay una sesión de administrador iniciada. El ingreso al área
+  privada no se detalla en la documentación.
 - El Estudio sin sesión muestra un botón "Volver" y se ve como una pantalla
   independiente, sin barra inferior.
 - El feed se adapta al tamaño de pantalla: 2 columnas en celular, 3 en tablet
