@@ -21,9 +21,9 @@ Lo que falta es encender el backend. Son 6 pasos, unos 15 minutos.
 
 1. Abrí el archivo `supabase/setup.sql` del repositorio y copiá todo su
    contenido en el **SQL Editor** (ícono `</>` en la barra lateral).
-2. En el editor, reemplazá **todas** las apariciones de
-   `00000000-0000-0000-0000-000000000000` por el UUID del paso 2.
-   Hasta que lo hagas, la base rechaza toda escritura, incluida la tuya.
+2. El archivo ya viene con tu UUID de administrador, no hace falta modificar
+   nada. Solo si recreás la cuenta admin algún día, pegá el SQL otra vez con
+   el UUID nuevo.
 3. **Run**. Tiene que salir "Success. No rows returned".
 
 Esto crea las tablas `wallpapers`, `collections` y `collection_items`, activa
