@@ -141,7 +141,11 @@ class WallsApi(
                 // El archivo ya está arriba pero la ficha falló: se borra para
                 // no dejar basura en el almacenamiento.
                 runCatching { deleteObject(token, fileName) }
-                throw error
+                throw if (error.message.orEmpty().contains("Could not find the table")) {
+                    DannXError.Unexpected("Falta crear las tablas del catálogo en Supabase.")
+                } else {
+                    error
+                }
             }
             if (collectionId != null) {
                 runCatching { insertCollectionItem(token, collectionId, created.id) }
@@ -372,7 +376,8 @@ class WallsApi(
             this is DannXError.Unexpected && detail.contains("maximum", ignoreCase = true) ->
                 DannXError.Unexpected("La imagen supera el límite de 25 MB.")
 
-            this is DannXError.Unexpected && detail.contains("bucket", ignoreCase = true) ->
+            this is DannXError.Unexpected &&
+                detail.contains("bucket not found", ignoreCase = true) ->
                 DannXError.Unexpected(
                     "Falta crear el almacenamiento «wallpapers» en Supabase.",
                 )
