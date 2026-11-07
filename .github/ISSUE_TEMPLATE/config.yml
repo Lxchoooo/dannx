@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Guía para conectar Supabase
+    url: https://github.com/Lxchoooo/dannx/blob/main/CONECTAR-SUPABASE.md
+    about: Pasos para publicar tus propios fondos desde el Estudio
+  - name: Releases
+    url: https://github.com/Lxchoooo/dannx/releases
+    about: Descargar el APK de una versión
