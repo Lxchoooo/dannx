@@ -29,6 +29,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.Search
+import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material.icons.rounded.Wallpaper
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
@@ -103,6 +104,7 @@ fun HomeScreen(
         onTagChange(null)
     },
     onOpenStudio: () -> Unit = {},
+    onOpenSettings: () -> Unit = {},
 ) {
     val favorites = state.favorites
     val featured = remember(state.wallpapers) { state.featured }
@@ -211,6 +213,10 @@ fun HomeScreen(
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
+                    FilledTonalIconButton(onClick = onOpenSettings) {
+                        Icon(Icons.Rounded.Settings, contentDescription = "Ajustes")
+                    }
+                    Spacer(Modifier.width(8.dp))
                     FilledTonalIconButton(onClick = onRefresh) {
                         Icon(Icons.Rounded.Refresh, contentDescription = "Actualizar feed")
                     }
