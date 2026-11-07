@@ -30,7 +30,9 @@ import androidx.compose.material.icons.rounded.AutoAwesome
 import androidx.compose.material.icons.rounded.Wallpaper
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialShapes
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -46,12 +48,14 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.graphics.shapes.toShape
 import kotlinx.coroutines.launch
 
 /**
  * Bienvenida en tres pantallas: qué es DannX, cómo descubrir fondos y cómo
  * aplicarlos. Sale una sola vez la primera vez que se abre la app.
  */
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun OnboardingScreen(onFinish: () -> Unit) {
     val pages = remember {
@@ -190,6 +194,7 @@ private data class OnboardingPage(
     val icon: ImageVector?,
 )
 
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 private fun PageContent(
     page: OnboardingPage,
@@ -215,13 +220,14 @@ private fun PageContent(
             .fillMaxSize()
             .padding(horizontal = 28.dp, vertical = 8.dp),
     ) {
-        // Formas expresivas de fondo: círculo y "blob" redondeado fuera del marco.
+        // Formas expresivas de fondo: forma "cookie" y blob redondeado
+        // fuera del marco, con el toque visual de Material 3 Expressive.
         Box(
             Modifier
                 .align(Alignment.TopEnd)
                 .offset(x = 80.dp, y = (-40).dp)
                 .size(230.dp)
-                .clip(CircleShape)
+                .clip(MaterialShapes.Cookie12Sided.toShape())
                 .background(accent.copy(alpha = if (index == 0) 0.22f else 0.16f)),
         )
         Box(
