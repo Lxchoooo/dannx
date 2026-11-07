@@ -28,7 +28,7 @@ val releaseKeyPassword = configValue("ANDROID_KEY_PASSWORD")
 
 android {
     namespace = "com.dannx.walls"
-    compileSdk = 36
+    compileSdk = 37
 
     signingConfigs {
         if (releaseStorePath.isNotBlank() && file(releaseStorePath).exists()) {
