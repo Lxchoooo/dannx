@@ -44,13 +44,12 @@ class RetryPolicy(
 /**
  * Un error de red es pasable si se puede reintentar más tarde.
  */
+/**
+ * Un error se puede reintentar si la red puede mejorar. Los errores tipados
+ * delegan en [isRetryable] para que la decisión viva en un solo lugar.
+ */
 fun Throwable.isTransient(): Boolean = when (this) {
-    is DannXError.Offline -> true
-    is DannXError.Server -> code >= 500
-    is DannXError.Parse -> false
-    is DannXError.SessionExpired -> false
-    is DannXError.Forbidden -> false
-    is DannXError.Unexpected -> false
+    is DannXError -> isRetryable()
     is java.io.IOException -> true
     else -> false
 }
