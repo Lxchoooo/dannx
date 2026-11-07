@@ -1,0 +1,33 @@
+name: Pedir una mejora
+description: Algo que te gustaría ver en DannX
+title: "[mejora] "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Contá qué te gustaría y para qué te serviría.
+  - type: textarea
+    id: idea
+    attributes:
+      label: La idea
+      description: Qué debería hacer la app que hoy no hace.
+      placeholder: Ej. Que las colecciones se puedan ordenar por fecha.
+    validations:
+      required: true
+  - type: textarea
+    id: why
+    attributes:
+      label: Para qué te serviría
+  - type: dropdown
+    id: area
+    attributes:
+      label: Apartado
+      options:
+        - Explorar / feed
+        - Detalle del fondo
+        - Colecciones
+        - Favoritos
+        - Estudio (publicar)
+        - Instalación o actualización
+        - Otro
