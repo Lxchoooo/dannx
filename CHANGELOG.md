@@ -29,6 +29,14 @@ Explorar.
   título "DannX" en Explorar durante ~9 segundos sin mover el dedo.
 - El Estudio sin sesión muestra un botón "Volver" y se ve como una pantalla
   independiente, sin barra inferior.
+- El feed se adapta al tamaño de pantalla: 2 columnas en celular, 3 en tablet
+  chica y 4 en tablet grande o pantalla dividida; el hero se limita a poco más
+  de la mitad del alto disponible para que no tape el resto.
+- Accesibilidad: los botones de favorito y de quitar de una colección miden al
+  menos 48 dp, TalkBack lee cada tarjeta como una sola frase, las flechas
+  "Volver" se espejan en idiomas de derecha a izquierda, y las imágenes
+  muestran un indicador al cargar y un aviso si no se pudieron descargar.
+- Se eliminó código sin uso (`RoundedCornersTransformation`).
 
 ### Fase 2 — Estabilidad
 

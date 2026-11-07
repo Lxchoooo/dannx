@@ -41,6 +41,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
@@ -55,6 +56,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
@@ -75,7 +77,9 @@ import com.dannx.walls.ui.components.FeedSkeleton
 import com.dannx.walls.ui.components.OfflineBanner
 import com.dannx.walls.ui.components.WallpaperCard
 import com.dannx.walls.ui.components.wallpaperThumbRequest
+import com.dannx.walls.ui.LocalWindowSizeClass
 import kotlin.math.absoluteValue
+import kotlin.math.min
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withTimeoutOrNull
 
@@ -127,9 +131,20 @@ fun HomeScreen(
     }
     val pagerState = rememberPagerState(pageCount = { featured.size })
     val currentPage = remember { derivedStateOf { pagerState.currentPage } }
+    val windowWidth = LocalWindowSizeClass.current.widthSizeClass
+    val columns = when (windowWidth) {
+        WindowWidthSizeClass.Compact -> 2
+        WindowWidthSizeClass.Medium -> 3
+        else -> 4
+    }
+    // En pantallas bajas el hero no debe comerse todo el alto: se limita a
+    // poco más de la mitad de la ventana.
+    val heroHeight = with(LocalConfiguration.current) {
+        min(HeroHeight.value, screenHeightDp * 0.55f).dp
+    }
 
     LazyVerticalGrid(
-        columns = GridCells.Fixed(2),
+        columns = GridCells.Fixed(columns),
         modifier = Modifier
             .fillMaxSize()
             .statusBarsPadding(),
@@ -137,7 +152,7 @@ fun HomeScreen(
         horizontalArrangement = Arrangement.spacedBy(12.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        item(span = { GridItemSpan(2) }) {
+        item(span = { GridItemSpan(maxLineSpan) }) {
             Column(Modifier.fillMaxWidth()) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Column(Modifier.weight(1f)) {
@@ -221,7 +236,7 @@ fun HomeScreen(
         }
 
         if (state.refreshing && state.feed is LoadState.Content) {
-            item(span = { GridItemSpan(2) }) {
+            item(span = { GridItemSpan(maxLineSpan) }) {
                 LinearProgressIndicator(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -230,7 +245,7 @@ fun HomeScreen(
             }
         }
 
-        item(span = { GridItemSpan(2) }) {
+        item(span = { GridItemSpan(maxLineSpan) }) {
             LazyRow(
                 contentPadding = PaddingValues(end = 20.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -250,7 +265,7 @@ fun HomeScreen(
         }
 
         if (availableTags.isNotEmpty()) {
-            item(span = { GridItemSpan(2) }) {
+            item(span = { GridItemSpan(maxLineSpan) }) {
                 Column {
                     Text(
                         text = "Etiquetas",
@@ -286,7 +301,7 @@ fun HomeScreen(
         }
 
         if (state.isDemo) {
-            item(span = { GridItemSpan(2) }) {
+            item(span = { GridItemSpan(maxLineSpan) }) {
                 Surface(
                     shape = MaterialTheme.shapes.large,
                     color = MaterialTheme.colorScheme.secondaryContainer,
@@ -303,14 +318,14 @@ fun HomeScreen(
         }
 
         if (showHero) {
-            item(span = { GridItemSpan(2) }) {
+            item(span = { GridItemSpan(maxLineSpan) }) {
                 Column {
                     Spacer(Modifier.height(6.dp))
                     HorizontalPager(
                         state = pagerState,
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(HeroHeight),
+                            .height(heroHeight),
                         pageSpacing = 12.dp,
                     ) { page ->
                         val wallpaper = featured[page]
@@ -319,6 +334,7 @@ fun HomeScreen(
                             isFavorite = wallpaper.id in favorites,
                             onClick = { onOpenWallpaper(wallpaper) },
                             onToggleFavorite = { onToggleFavorite(wallpaper.id) },
+                            heroHeight = heroHeight,
                             modifier = Modifier
                                 .fillMaxSize()
                                 .graphicsLayer {
@@ -363,7 +379,7 @@ fun HomeScreen(
             }
         }
 
-        item(span = { GridItemSpan(2) }) {
+        item(span = { GridItemSpan(maxLineSpan) }) {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -384,26 +400,26 @@ fun HomeScreen(
         }
 
         if (state.offline) {
-            item(span = { GridItemSpan(2) }) {
+            item(span = { GridItemSpan(maxLineSpan) }) {
                 OfflineBanner()
             }
         }
 
         when (val feed = state.feed) {
             is LoadState.Loading -> {
-                item(span = { GridItemSpan(2) }) {
+                item(span = { GridItemSpan(maxLineSpan) }) {
                     FeedSkeleton()
                 }
             }
 
             is LoadState.Error -> {
-                item(span = { GridItemSpan(2) }) {
+                item(span = { GridItemSpan(maxLineSpan) }) {
                     ErrorState(message = feed.message, onRetry = onRefresh)
                 }
             }
 
             is LoadState.Empty -> {
-                item(span = { GridItemSpan(2) }) {
+                item(span = { GridItemSpan(maxLineSpan) }) {
                     EmptyState(
                         title = stringResource(R.string.state_empty_feed_title),
                         message = stringResource(R.string.state_empty_feed_body),
@@ -413,7 +429,7 @@ fun HomeScreen(
 
             is LoadState.Content -> {
                 if (filtered.isEmpty()) {
-                    item(span = { GridItemSpan(2) }) {
+                    item(span = { GridItemSpan(maxLineSpan) }) {
                         EmptyState(
                             title = stringResource(R.string.state_empty_filter_title),
                             message = stringResource(R.string.state_empty_filter_body),

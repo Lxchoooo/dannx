@@ -52,7 +52,6 @@ import com.dannx.walls.R
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.dannx.walls.LoadState
 import com.dannx.walls.UiState
@@ -60,6 +59,7 @@ import com.dannx.walls.data.WallpaperCollection
 import com.dannx.walls.ui.components.EmptyState
 import com.dannx.walls.ui.components.ErrorState
 import com.dannx.walls.ui.components.FeedSkeleton
+import com.dannx.walls.ui.components.StatefulImage
 import com.dannx.walls.ui.components.screenImageSize
 
 @Composable
@@ -199,7 +199,7 @@ private fun CollectionCard(
                         .size(coverSize.width, coverSize.height)
                         .build()
                 }
-                AsyncImage(
+                StatefulImage(
                     model = coverRequest,
                     contentDescription = collection.name,
                     contentScale = ContentScale.Crop,

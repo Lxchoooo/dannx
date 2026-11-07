@@ -27,7 +27,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.ArrowBack
+import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.BookmarkAdd
 import androidx.compose.material.icons.rounded.CollectionsBookmark
 import androidx.compose.material.icons.rounded.Download
@@ -79,7 +79,6 @@ import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.res.stringResource
 import androidx.core.view.WindowCompat
-import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.dannx.walls.R
 import com.dannx.walls.DownloadPrompt
@@ -87,6 +86,7 @@ import com.dannx.walls.ActionState
 import com.dannx.walls.UiAction
 import com.dannx.walls.data.Wallpaper
 import com.dannx.walls.data.WallpaperCollection
+import com.dannx.walls.ui.components.StatefulImage
 import com.dannx.walls.util.DoubleTapZoom
 import com.dannx.walls.util.MinZoom
 import com.dannx.walls.util.PanOffset
@@ -191,7 +191,7 @@ fun DetailScreen(
                 .size(width, height)
                 .build()
         }
-        AsyncImage(
+        StatefulImage(
             model = imageRequest,
             contentDescription = wallpaper.title,
             contentScale = ContentScale.Crop,
@@ -270,7 +270,7 @@ fun DetailScreen(
                     contentColor = Color.White,
                 ),
             ) {
-                Icon(Icons.Rounded.ArrowBack, contentDescription = "Volver")
+                Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "Volver")
             }
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 if (canManageCollections) {
