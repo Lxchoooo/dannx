@@ -104,7 +104,7 @@ fun CollectionsScreen(
                 } else {
                     Spacer(Modifier.height(12.dp))
                     Text(
-                        text = "Inicia sesión en Estudio para crear tus propias colecciones.",
+                        text = "Iniciá sesión en Estudio para crear tus propias colecciones.",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )

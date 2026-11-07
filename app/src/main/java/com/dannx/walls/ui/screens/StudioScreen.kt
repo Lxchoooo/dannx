@@ -101,7 +101,7 @@ fun StudioScreen(
         )
         Text(
             text = if (session == null) {
-                "Un solo lugar para publicar tus fondos."
+                "Publicá un fondo y aparece en el feed de Explorar."
             } else {
                 "Publica como ${session.email}."
             },
@@ -145,12 +145,12 @@ private fun SetupCard(onRefresh: () -> Unit) {
             )
             Spacer(Modifier.height(12.dp))
             Text(
-                text = "Conecta tu nube",
+                text = "Falta conectar Supabase",
                 style = MaterialTheme.typography.headlineMedium,
             )
             Spacer(Modifier.height(6.dp))
             Text(
-                text = "La nube todavía no está conectada. Podés seguir creando colecciones y guardando tus fondos favoritos.",
+                text = "La app funciona con fondos de ejemplo. Al conectar Supabase, el Estudio publica directo en el feed.",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -397,7 +397,7 @@ private fun UploadCard(
                 label = { Text("Tags") },
                 placeholder = { Text("anime, noche, flores") },
                 supportingText = {
-                    Text("Sepáralos con comas. Tú decides cómo clasificar tu arte.")
+                    Text("Sepáralos con comas. Los usás para filtrar en Explorar.")
                 },
                 singleLine = true,
                 shape = MaterialTheme.shapes.medium,
@@ -410,7 +410,7 @@ private fun UploadCard(
             Spacer(Modifier.height(6.dp))
             if (myCollections.isEmpty()) {
                 Text(
-                    text = "Crea una colección desde la pestaña Colecciones para agrupar este fondo.",
+                    text = "Creá una colección desde la pestaña Colecciones para agrupar este fondo.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )

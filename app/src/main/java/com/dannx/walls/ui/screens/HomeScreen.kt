@@ -204,7 +204,7 @@ fun HomeScreen(
                             },
                         )
                         Text(
-                            text = "Papeles que se sienten tuyos.",
+                            text = "Wallpapers que se sienten tuyos.",
                             style = MaterialTheme.typography.bodyLarge,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
