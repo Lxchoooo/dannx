@@ -1,10 +1,8 @@
 package com.dannx.walls.ui.screens
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -13,7 +11,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
@@ -23,8 +20,6 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.itemsIndexed
-import androidx.compose.foundation.pager.HorizontalPager
-import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Refresh
@@ -43,19 +38,19 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.carousel.HorizontalMultiBrowseCarousel
+import androidx.compose.material3.carousel.rememberCarouselState
 import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalConfiguration
@@ -64,7 +59,6 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.util.lerp
 import coil.imageLoader
 import com.dannx.walls.R
 import com.dannx.walls.LoadState
@@ -80,7 +74,6 @@ import com.dannx.walls.ui.components.OfflineBanner
 import com.dannx.walls.ui.components.WallpaperCard
 import com.dannx.walls.ui.components.wallpaperThumbRequest
 import com.dannx.walls.ui.LocalWindowSizeClass
-import kotlin.math.absoluteValue
 import kotlin.math.min
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withTimeoutOrNull
@@ -133,8 +126,9 @@ fun HomeScreen(
         listOf("Todos", "Destacados") +
             (DefaultCategories + state.wallpapers.map { it.category }).distinct().sorted()
     }
-    val pagerState = rememberPagerState(pageCount = { featured.size })
-    val currentPage = remember { derivedStateOf { pagerState.currentPage } }
+    // Se recrea cuando cambia la cantidad de destacados para que el carrusel
+    // siempre conozca el total actual.
+    val carouselState = key(featured.size) { rememberCarouselState { featured.size } }
     val windowWidth = LocalWindowSizeClass.current.widthSizeClass
     val columns = when (windowWidth) {
         WindowWidthSizeClass.Compact -> 2
@@ -327,12 +321,15 @@ fun HomeScreen(
             item(span = { GridItemSpan(maxLineSpan) }) {
                 Column {
                     Spacer(Modifier.height(6.dp))
-                    HorizontalPager(
-                        state = pagerState,
+                    HorizontalMultiBrowseCarousel(
+                        state = carouselState,
+                        preferredItemWidth = heroHeight * 0.72f,
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(heroHeight),
-                        pageSpacing = 12.dp,
+                        itemSpacing = 12.dp,
+                        minSmallItemWidth = 42.dp,
+                        maxSmallItemWidth = 84.dp,
                     ) { page ->
                         val wallpaper = featured[page]
                         FeaturedCard(
@@ -341,45 +338,8 @@ fun HomeScreen(
                             onClick = { onOpenWallpaper(wallpaper) },
                             onToggleFavorite = { onToggleFavorite(wallpaper.id) },
                             heroHeight = heroHeight,
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .graphicsLayer {
-                                    val offset = (
-                                        (pagerState.currentPage - page) +
-                                            pagerState.currentPageOffsetFraction
-                                        ).absoluteValue.coerceIn(0f, 1f)
-                                    val scale = lerp(0.92f, 1f, 1f - offset)
-                                    scaleX = scale
-                                    scaleY = scale
-                                    alpha = lerp(0.6f, 1f, 1f - offset)
-                                },
+                            modifier = Modifier.fillMaxSize(),
                         )
-                    }
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(top = 10.dp),
-                        horizontalArrangement = Arrangement.Center,
-                    ) {
-                        repeat(featured.size) { index ->
-                            val selected = index == currentPage.value
-                            Box(
-                                Modifier
-                                    .padding(horizontal = 3.dp)
-                                    .size(
-                                        width = if (selected) 22.dp else 7.dp,
-                                        height = 7.dp,
-                                    )
-                                    .clip(CircleShape)
-                                    .background(
-                                        if (selected) {
-                                            MaterialTheme.colorScheme.primary
-                                        } else {
-                                            MaterialTheme.colorScheme.outlineVariant
-                                        },
-                                    ),
-                            )
-                        }
                     }
                 }
             }

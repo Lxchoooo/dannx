@@ -40,6 +40,8 @@ import androidx.compose.material.icons.rounded.Wallpaper
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.material3.LinearWavyProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.FilledTonalButton
@@ -101,6 +103,7 @@ private val ZoomStateSaver = listSaver<ZoomState, Float>(
     restore = { ZoomState(it[0], PanOffset(it[1], it[2])) },
 )
 
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun DetailScreen(
     wallpaper: Wallpaper,
@@ -435,12 +438,6 @@ fun DetailScreen(
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(18.dp),
-                        strokeWidth = 2.dp,
-                        color = Color.White,
-                    )
-                    Spacer(Modifier.width(10.dp))
                     Text(
                         text = stringResource(
                             R.string.download_in_progress,
@@ -457,6 +454,12 @@ fun DetailScreen(
                         )
                     }
                 }
+                LinearWavyProgressIndicator(
+                    progress = { (actionState.progress ?: 0).coerceIn(0, 100) / 100f },
+                    modifier = Modifier.fillMaxWidth(),
+                    color = Color.White,
+                    trackColor = Color.White.copy(alpha = 0.30f),
+                )
             }
         }
     }
