@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">DannX</string>
+    <string name="shortcut_collections">Collections</string>
+    <string name="shortcut_favorites">Favorites</string>
+    <string name="shortcut_studio">Studio</string>
+
+    <string name="onboarding_skip">Skip</string>
+    <string name="onboarding_next">Next</string>
+    <string name="onboarding_start">Start</string>
+    <string name="onboarding_kicker_explore">Explore</string>
+    <string name="onboarding_kicker_apply">Apply</string>
+    <string name="onboarding_title_1">Your screen shouldn\'t look stock.</string>
+    <string name="onboarding_message_1">Hand-picked wallpapers, no ads, no filler. Open, pick, done.</string>
+    <string name="onboarding_title_2">Less searching. More finding.</string>
+    <string name="onboarding_message_2">Categories and tags that take you straight to the wallpaper that fits you.</string>
+    <string name="onboarding_title_3">Set it and let it show.</string>
+    <string name="onboarding_message_3">Home, lock screen, or both. Download in original quality and save what you like.</string>
+
+    <string name="apply_sheet_title">Apply as</string>
+    <string name="apply_system">Home screen</string>
+    <string name="apply_system_hint">Icons and widgets</string>
+    <string name="apply_lock">Lock screen</string>
+    <string name="apply_lock_hint">When you unlock your phone</string>
+    <string name="apply_both">Both screens</string>
+    <string name="apply_both_hint">Home and lock</string>
+    <string name="apply_in_progress">Applying the wallpaper…</string>
+    <string name="apply_in_progress_hint">Large images may take a moment.</string>
+    <string name="action_cancel">Cancel</string>
+    <string name="action_open">Open</string>
+    <string name="download_in_progress">Saving… %1$d%%</string>
+    <string name="download_action">Download</string>
+    <string name="download_duplicate_title">You already had it</string>
+    <string name="download_duplicate_body">This image is already in your gallery. You can open it or save a new copy.</string>
+    <string name="download_again">Download again</string>
+
+    <string name="state_error_title">We couldn\'t load it</string>
+    <string name="state_retry">Try again</string>
+    <string name="state_offline">No connection: showing what you already had saved.</string>
+    <string name="state_offline_detail">No connection: downloading, applying and sharing need internet.</string>
+    <string name="state_empty_feed_title">No wallpapers yet</string>
+    <string name="state_empty_feed_body">As soon as they are published, you will see them here.</string>
+    <string name="state_empty_filter_title">Nothing here yet</string>
+    <string name="state_empty_filter_body">Try another search or category.</string>
+    <string name="state_clear_filters">Clear filters</string>
+    <string name="state_empty_favorites_title">Your collection starts here</string>
+    <string name="state_empty_favorites_body">Tap the heart on any wallpaper to save it.</string>
+    <string name="state_explore">Explore wallpapers</string>
+    <string name="state_empty_collections_title">Your first collection starts here</string>
+    <string name="state_empty_collections_body">Make a folder with what you like: a series, a color, a season.</string>
+</resources>

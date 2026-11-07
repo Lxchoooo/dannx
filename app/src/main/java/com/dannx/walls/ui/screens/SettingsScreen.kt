@@ -1,7 +1,5 @@
 package com.dannx.walls.ui.screens
 
-import android.app.WallpaperManager
-import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
@@ -42,7 +40,6 @@ import androidx.compose.ui.unit.dp
 import com.dannx.walls.BuildConfig
 import com.dannx.walls.UiState
 import com.dannx.walls.data.ThemeMode
-import com.dannx.walls.wallpaper.DannXWallpaperService
 
 private const val REPO_URL = "https://github.com/Lxchoooo/dannx"
 
@@ -136,27 +133,6 @@ fun SettingsScreen(
                 }
             }
 
-            item {
-                Card(Modifier.fillMaxWidth()) {
-                    Row(
-                        modifier = Modifier.padding(16.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Column(Modifier.weight(1f)) {
-                            Text("Fondo vivo", style = MaterialTheme.typography.titleMedium)
-                            Text(
-                                "Manchas de color que se mueven suave.",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                        }
-                        TextButton(onClick = { openLiveWallpaper(context) }) {
-                            Text("Ver")
-                        }
-                    }
-                }
-            }
-
             item { SectionTitle("Almacenamiento") }
             item {
                 Card(Modifier.fillMaxWidth()) {
@@ -177,7 +153,7 @@ fun SettingsScreen(
                 }
             }
 
-            item { SectionTitle("Acerca de") }
+            item { SectionTitle("Créditos") }
             item {
                 Card(Modifier.fillMaxWidth()) {
                     Column(Modifier.padding(16.dp)) {
@@ -187,26 +163,18 @@ fun SettingsScreen(
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
+                        Spacer(Modifier.height(10.dp))
+                        Text(
+                            "Hecho por Lxchoooo.",
+                            style = MaterialTheme.typography.bodyMedium,
+                        )
                         Text(
                             "Código abierto con licencia MIT.",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
-                        Spacer(Modifier.height(8.dp))
-                        Text(
-                            "Wallpapers para personalizar tu teléfono.",
-                            style = MaterialTheme.typography.bodyMedium,
-                        )
-                        TextButton(
-                            onClick = {
-                                runCatching {
-                                    context.startActivity(
-                                        Intent(Intent.ACTION_VIEW, Uri.parse(REPO_URL)),
-                                    )
-                                }
-                            },
-                        ) {
-                            Text("Ver el proyecto")
+                        TextButton(onClick = { openUrl(context, REPO_URL) }) {
+                            Text("GitHub")
                             Spacer(Modifier.width(6.dp))
                             Icon(
                                 Icons.Rounded.OpenInNew,
@@ -258,18 +226,8 @@ private fun ThemeMode.label(): String = when (this) {
     ThemeMode.DARK -> "Oscuro"
 }
 
-/**
- * Abre la vista previa del fondo animado del sistema. Si el teléfono no la
- * tiene, cae en el selector de fondos en vivo.
- */
-private fun openLiveWallpaper(context: Context) {
-    val component = ComponentName(context, DannXWallpaperService::class.java)
-    val preview = Intent(WallpaperManager.ACTION_CHANGE_LIVE_WALLPAPER).apply {
-        putExtra(WallpaperManager.EXTRA_LIVE_WALLPAPER_COMPONENT, component)
+private fun openUrl(context: Context, url: String) {
+    runCatching {
+        context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
     }
-    val chooser = Intent(WallpaperManager.ACTION_LIVE_WALLPAPER_CHOOSER)
-    if (!context.tryStart(preview)) context.tryStart(chooser)
 }
-
-private fun Context.tryStart(intent: Intent): Boolean =
-    runCatching { startActivity(intent) }.isSuccess

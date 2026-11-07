@@ -13,6 +13,8 @@
         android:icon="@mipmap/ic_launcher"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:label="@string/app_name"
+        android:localeConfig="@xml/locales_config"
+        android:enableOnBackInvokedCallback="false"
         android:supportsRtl="true"
         android:theme="@style/Theme.DannX"
         android:usesCleartextTraffic="false">
@@ -29,19 +31,6 @@
                 android:name="android.app.shortcuts"
                 android:resource="@xml/shortcuts" />
         </activity>
-
-        <service
-            android:name=".wallpaper.DannXWallpaperService"
-            android:exported="true"
-            android:label="@string/live_wallpaper_name"
-            android:permission="android.permission.BIND_WALLPAPER">
-            <intent-filter>
-                <action android:name="android.service.wallpaper.WallpaperService" />
-            </intent-filter>
-            <meta-data
-                android:name="android.service.wallpaper"
-                android:resource="@xml/live_wallpaper" />
-        </service>
 
         <provider
             android:name="androidx.core.content.FileProvider"            android:authorities="${applicationId}.fileprovider"

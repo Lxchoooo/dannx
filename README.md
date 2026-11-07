@@ -41,7 +41,6 @@ right after installing.
 - Works offline: the feed you already loaded stays available.
 - Dark and light themes, with dynamic colour on Android 12+.
 - Settings screen: theme (system, light, dark), lite mode and cache reset.
-- Live wallpaper with soft animated colour blobs that pauses when hidden.
 - Detail buttons take the colour of the wallpaper you are looking at.
 - Welcome screens shown once on first launch.
 
