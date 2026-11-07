@@ -18,25 +18,27 @@ Compilada y distribuida con GitHub Actions.
 
 ## Instalación
 
-Descargá el APK desde [Actions](https://github.com/Lxchoooo/dannx/actions)
-(artefacto `DannX-debug` del último run) o desde
-[Releases](https://github.com/Lxchoooo/dannx/releases) para versiones
-etiquetadas. Abre el archivo y acepta instalar desde origen desconocido.
+Descargá el APK desde [Releases](https://github.com/Lxchoooo/dannx/releases)
+para versiones etiquetadas, o desde [Actions](https://github.com/Lxchoooo/dannx/actions)
+(artefacto `DannX-release` del último run). Abre el archivo y acepta instalar
+desde origen desconocido.
 
-Las actualizaciones se instalan encima sin desinstalar: todos los builds se
-firma con la misma clave.
+Los builds de release se firman con una clave privada guardada como secreto de
+GitHub, no en el repositorio. Las actualizaciones se instalan encima sin
+desinstalar. Si venís de una versión firmada con la clave de debug anterior,
+la primera actualización requiere desinstalar e instalar de nuevo.
 
 ## Back end (opcional)
 
 Sin configurar, la app arranca con un feed de ejemplo y guarda favoritos y
 colecciones en el teléfono. Para un feed real:
 
-1. Ejecutá `supabase/setup.sql` en el SQL Editor de un proyecto Supabase.
-2. Definí las variables `SUPABASE_URL` y `SUPABASE_ANON_KEY` en
-   **Settings > Secrets and variables > Actions > Variables**.
+1. Ejecutá `supabase/setup.sql` en el SQL Editor de un proyecto Supabase,
+   reemplazando antes el UUID de administrador.
+2. Definí los secrets `SUPABASE_URL` y `SUPABASE_ANON_KEY` en
+   **Settings > Secrets and variables > Actions > Secrets**.
 
-La guía completa paso a paso está como comentario al inicio del propio
-`supabase/setup.sql`.
+La guía completa paso a paso está en `CONECTAR-SUPABASE.md`.
 
 ## Desarrollo
 

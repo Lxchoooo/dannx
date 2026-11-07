@@ -86,11 +86,6 @@ data class AuthResponse(
     val user: AuthUser? = null,
 )
 
-@Serializable
-data class DownloadRequest(
-    @SerialName("wallpaper_id") val wallpaperId: String,
-)
-
 fun WallpaperDto.toWallpaper(baseUrl: String): Wallpaper = Wallpaper(
     id = id,
     title = title.ifBlank { "Sin título" },

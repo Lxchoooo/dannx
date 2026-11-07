@@ -68,8 +68,6 @@ class FakeRepository : WallpapersRepository {
     override suspend fun removeFromCollection(collectionId: String, wallpaperId: String) = Unit
 
     override suspend fun deleteCollection(id: String) = Unit
-
-    override suspend fun incrementDownloads(id: String) = Unit
 }
 
 class FakeStore : LocalStore {

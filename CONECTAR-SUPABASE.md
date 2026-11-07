@@ -10,22 +10,26 @@ Lo que falta es encender el backend. Son 6 pasos, unos 15 minutos.
    cercana → **Create new project**. Te genera una contraseña de base de datos:
    **guardala**, no la vas a necesitar para la app, pero sí para el panel.
 
-## 2. Crear las tablas y el bucket
-
-1. En el proyecto, abrí **SQL Editor** (ícono `</>` en la barra lateral).
-2. Abrí el archivo `supabase/setup.sql` del repositorio, copiá **todo** su
-   contenido y pegalo en el editor.
-3. **Run**. Tiene que salir "Success. No rows returned".
-
-Esto crea las tablas `wallpapers`, `collections` y `collection_items`, activa las
-políticas de seguridad (RLS) y crea el bucket público `wallpapers` donde se
-guardan las imágenes.
-
-## 3. Crear tu cuenta de administrador
+## 2. Crear tu cuenta de administrador
 
 1. **Authentication → Users → Add user → Create a new user**.
 2. Poné tu correo, una contraseña y activá **Auto Confirm User**.
-3. Guardá el usuario: esa es la cuenta con la que vas a entrar en la app.
+3. Copiá el **User UID** de esa cuenta: lo vas a usar en el paso siguiente.
+   Esa es la única cuenta que va a poder publicar, editar o borrar fondos.
+
+## 3. Crear las tablas y el bucket
+
+1. Abrí el archivo `supabase/setup.sql` del repositorio y copiá todo su
+   contenido en el **SQL Editor** (ícono `</>` en la barra lateral).
+2. En el editor, reemplazá **todas** las apariciones de
+   `00000000-0000-0000-0000-000000000000` por el UUID del paso 2.
+   Hasta que lo hagas, la base rechaza toda escritura, incluida la tuya.
+3. **Run**. Tiene que salir "Success. No rows returned".
+
+Esto crea las tablas `wallpapers`, `collections` y `collection_items`, activa
+las políticas de seguridad (RLS), limita las escrituras a tu UUID y crea el
+bucket público `wallpapers` con un máximo de 25 MB y solo imágenes
+JPEG, PNG o WebP.
 
 ## 4. Desactivar los registros abiertos
 
@@ -33,8 +37,9 @@ guardan las imágenes.
 2. Apagá **Allow new users to sign up** (toggle "Enable sign up").
 3. Guardá.
 
-Esto es importante: si queda abierto, cualquier persona que se registre podría
-subir y borrar fondos. Con esto apagado, la única cuenta que existe es la tuya.
+Las políticas ya bloquean a cualquier cuenta que no seas vos, pero dejar los
+registros apagados evita que se creen cuentas que puedan leer colecciones
+privadas.
 
 ## 5. Copiar las dos claves
 
@@ -47,14 +52,14 @@ subir y borrar fondos. Con esto apagado, la única cuenta que existe es la tuya.
 > de la base (RLS) son las que protegen los datos. **Nunca** copies la clave
 > `service_role`: esa no va en la app ni en el repo.
 
-## 6. Cargar las variables en GitHub
+## 6. Cargar las claves en GitHub
 
 En el repositorio (`Lxchoooo/dannx`):
 
-1. **Settings → Secrets and variables → Actions → Variables** (la pestaña
-   *Variables*, no *Secrets*).
-2. **New repository variable** → nombre `SUPABASE_URL`, valor = tu Project URL.
-3. **New repository variable** → nombre `SUPABASE_ANON_KEY`, valor = la clave
+1. **Settings → Secrets and variables → Actions → Secrets** (la pestaña
+   *Secrets*, no *Variables*).
+2. **New repository secret** → nombre `SUPABASE_URL`, valor = tu Project URL.
+3. **New repository secret** → nombre `SUPABASE_ANON_KEY`, valor = la clave
    anon.
 4. Guardá los dos.
 
@@ -63,7 +68,7 @@ que esté publicado en `wallpapers` y la pestaña **Estudio** habilita la subida
 
 ## 7. Recompilar la app
 
-Las variables se inyectan al compilar, así que hace falta un build nuevo:
+Las claves se inyectan al compilar, así que hace falta un build nuevo:
 
 -(make push to main → la CI compila y sube el artifact)*
 
@@ -94,16 +99,19 @@ accidente.
 
 | Síntoma | Causa probable |
 |---|---|
-| La app sigue mostrando el feed de ejemplo | Faltan las variables en GitHub, o el APK se compiló antes de cargarlas |
+| La app sigue mostrando el feed de ejemplo | Faltan los secrets en GitHub, o el APK se compiló antes de cargarlos |
 | "Inicia sesión para crear colecciones" | No iniciaste sesión en Estudio, o el usuario no está confirmado |
 | "Falta conectar Supabase en la configuración" | `SUPABASE_URL` quedó vacío o mal pegado |
 | Al subir, error 401 | La clave anon está mal copiada, o el signup sigue abierto y la sesión venció |
 | La imagen no aparece en la galería del teléfono | Es normal: las imágenes viven en el bucket de Supabase, no en el teléfono hasta que las descargás desde la app |
 
-## Nota de seguridad (pendiente en Fase 6)
+## Nota de seguridad
 
-Hoy las políticas de escritura permiten a **cualquier** usuario autenticado
-subir o borrar. Con el signup apagado, en la práctica solo existe tu cuenta, así
-que es seguro en la práctica; pero la Fase 6 lo va a endurecer con un rol
-`admin` real en el JWT, para que quede garantizado aunque alguien vuelva a
-activar los registros.
+Las políticas de escritura de `wallpapers` y del bucket solo aceptan el UUID
+de administrador configurado en `supabase/setup.sql`. Cualquier otra cuenta
+autenticada recibe un error de política al intentar publicar, editar o borrar.
+El bucket además limita el tamaño a 25 MB y acepta solo JPEG, PNG y WebP.
+
+Si algún día recreás la cuenta de administrador (nuevo UUID), volvé a correr
+`setup.sql` con el UUID nuevo. Mientras no lo hagas, las escrituras quedan
+bloqueadas.

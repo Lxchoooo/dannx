@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Los tokens de sesión no viajan en backup en la nube ni en transferencia. -->
+<data-extraction-rules>
+    <cloud-backup>
+        <exclude domain="sharedpref" path="dannx_session.xml" />
+    </cloud-backup>
+    <device-transfer>
+        <exclude domain="sharedpref" path="dannx_session.xml" />
+    </device-transfer>
+</data-extraction-rules>

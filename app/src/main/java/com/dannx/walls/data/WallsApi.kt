@@ -228,24 +228,6 @@ class WallsApi(
         }
     }
 
-    override suspend fun incrementDownloads(id: String) {
-        if (!isConfigured || id.startsWith("demo-")) return
-        withContext(Dispatchers.IO) {
-            runCatching {
-                val request = Request.Builder()
-                    .url("$baseUrl/rest/v1/rpc/increment_downloads")
-                    .header("apikey", anonKey)
-                    .header("Authorization", "Bearer $anonKey")
-                    .post(
-                        json.encodeToString(DownloadRequest(id))
-                            .toRequestBody(JSON_MEDIA),
-                    )
-                    .build()
-                client.newCall(request).execute().use { it.close() }
-            }
-        }
-    }
-
     /**
      * Petición pública de lectura. No reintenta ante 401 porque no usa sesión.
      */

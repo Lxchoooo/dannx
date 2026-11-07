@@ -32,7 +32,6 @@ interface WallpapersRepository {
     suspend fun addToCollection(collectionId: String, wallpaperId: String)
     suspend fun removeFromCollection(collectionId: String, wallpaperId: String)
     suspend fun deleteCollection(id: String)
-    suspend fun incrementDownloads(id: String)
 }
 
 /**
