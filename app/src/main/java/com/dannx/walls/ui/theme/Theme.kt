@@ -36,6 +36,8 @@ fun DannXTheme(
         darkTheme -> DarkColors
         else -> LightColors
     }
+    // El estilo Expressive viene dado por la tipografía, las formas y los
+    // springs que usan las pantallas; el esquema de color sigue dinámico.
     MaterialTheme(
         colorScheme = colors,
         typography = DannXTypography,

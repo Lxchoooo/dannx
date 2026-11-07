@@ -4,7 +4,24 @@ Registro de los cambios hechos en DannX. Se actualiza al cerrar cada bloque de
 trabajo (fases de la hoja de ruta). La app todavía no tiene versiones públicas,
 así que todo vive bajo "Sin publicar" hasta el primer tag.
 
+Sobre el Estudio: la pantalla de publicación es de uso privado. Los usuarios no
+la ven en el menú; el acceso llega manteniendo presionado el título "DannX" en
+Explorar.
+
 ## Sin publicar
+
+### Fase 5 — Experiencia
+
+- El onboarding de bienvenida hace su primera pasada: tres pantallas a página
+  completa con pager horizontal, tipografía display y formas de acento, en el
+  estilo Expressive de Material 3 (springs elásticos, formas decorativas e
+  indicadores animados). Se muestra una sola vez y se salta con "Saltar".
+- La pestaña **Estudio** ya no forma parte de la barra para el público: solo
+  aparece cuando hay una sesión de administrador iniciada. Para llegar a la
+  pantalla de inicio de sesión existe un gesto oculto: mantener presionado el
+  título "DannX" en Explorar.
+- El Estudio sin sesión muestra un botón "Volver" y se ve como una pantalla
+  independiente, sin barra inferior.
 
 ### Fase 2 — Estabilidad
 

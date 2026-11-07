@@ -48,6 +48,8 @@ interface LocalStore {
     fun downloadedIds(): Set<String>
     fun downloadedUri(wallpaperId: String): String?
     fun rememberDownload(wallpaperId: String, uri: String)
+    fun onboardingDone(): Boolean
+    fun completeOnboarding()
 }
 
 /**

@@ -75,6 +75,7 @@ class FakeStore : LocalStore {
     private val downloads = mutableMapOf<String, String>()
     private var collections: List<WallpaperCollection> = emptyList()
     private var storedSession: AdminSession? = null
+    private var onboardingDone = false
 
     override fun favorites(): Set<String> = favoriteIds.toSet()
 
@@ -105,6 +106,12 @@ class FakeStore : LocalStore {
 
     override fun rememberDownload(wallpaperId: String, uri: String) {
         downloads[wallpaperId] = uri
+    }
+
+    override fun onboardingDone(): Boolean = onboardingDone
+
+    override fun completeOnboarding() {
+        onboardingDone = true
     }
 }
 

@@ -119,6 +119,12 @@ class Prefs(context: Context) : LocalStore {
             .apply()
     }
 
+    override fun onboardingDone(): Boolean = prefs.getBoolean(KEY_ONBOARDING_DONE, false)
+
+    override fun completeOnboarding() {
+        prefs.edit().putBoolean(KEY_ONBOARDING_DONE, true).apply()
+    }
+
     private fun downloads(): Map<String, String> {
         val raw = prefs.getString(KEY_DOWNLOADS, null) ?: return emptyMap()
         return runCatching {
@@ -134,5 +140,6 @@ class Prefs(context: Context) : LocalStore {
         const val KEY_USER_ID = "user_id"
         const val KEY_LOCAL_COLLECTIONS = "local_collections"
         const val KEY_DOWNLOADS = "downloads"
+        const val KEY_ONBOARDING_DONE = "onboarding_done"
     }
 }
