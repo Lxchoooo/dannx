@@ -7,6 +7,7 @@ English | [Español](README.es.md)
 ![Kotlin](https://img.shields.io/badge/Kotlin-2.2.20-7F52FF?logo=kotlin&logoColor=white)
 ![Jetpack Compose](https://img.shields.io/badge/Jetpack%20Compose-BOM%202026.09.00-4285F4?logo=jetpackcompose&logoColor=white)
 ![Material 3](https://img.shields.io/badge/Material%203-1.5.0--rc01-6750A4?logo=materialdesign&logoColor=white)
+![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)
 
 A wallpaper app for Android built with Kotlin and Jetpack Compose. Explore a
 curated feed, organise your favourites into collections, and apply or download
@@ -120,9 +121,11 @@ requests are welcome.
 
 ## 📄 License
 
-All rights reserved. No license has been defined for this repository yet; until
-one is chosen, you may not copy, modify or distribute the code without
-permission from the author.
+Released under the [MIT License](LICENSE). You can use, copy, modify and
+distribute the code, keeping the copyright notice.
+
+Wallpapers included in the demo feed are original works and are covered by
+their own authorship and licensing terms. They are not part of the code license.
 
 ## 🎨 Credits
 
