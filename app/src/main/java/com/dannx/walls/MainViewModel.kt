@@ -313,7 +313,7 @@ class MainViewModel(
 
     fun signIn(email: String, password: String) {
         if (email.isBlank() || password.isBlank()) {
-            _state.update { it.copy(message = "Escribe tu correo y contraseña.") }
+            _state.update { it.copy(message = "Completá tu correo y contraseña.") }
             return
         }
         viewModelScope.launch {
@@ -385,7 +385,7 @@ class MainViewModel(
     fun createCollection(name: String, description: String, isPublic: Boolean) {
         val cleanName = name.trim()
         if (cleanName.isBlank()) {
-            _state.update { it.copy(message = "Escribe un nombre para la colección.") }
+            _state.update { it.copy(message = "Poné un nombre para la colección.") }
             return
         }
         if (_state.value.isDemo) {
@@ -394,7 +394,7 @@ class MainViewModel(
                 name = cleanName,
                 description = description.trim(),
                 ownerId = "local",
-                ownerName = "Tú",
+                ownerName = "Vos",
                 isPublic = isPublic,
             )
             val updated = listOf(created) + _state.value.collectionItems
@@ -409,7 +409,7 @@ class MainViewModel(
         }
         val session = _state.value.session
         if (session == null) {
-            _state.update { it.copy(message = "Inicia sesión para crear colecciones.") }
+            _state.update { it.copy(message = "Iniciá sesión en Estudio para crear colecciones.") }
             return
         }
         viewModelScope.launch {
@@ -458,7 +458,7 @@ class MainViewModel(
             return
         }
         if (_state.value.session == null) {
-            _state.update { it.copy(message = "Inicia sesión para guardar en colecciones.") }
+            _state.update { it.copy(message = "Iniciá sesión en Estudio para guardar en colecciones.") }
             return
         }
         viewModelScope.launch {
@@ -506,7 +506,7 @@ class MainViewModel(
             return
         }
         if (_state.value.session == null) {
-            _state.update { it.copy(message = "Inicia sesión para editar colecciones.") }
+            _state.update { it.copy(message = "Iniciá sesión en Estudio para editar colecciones.") }
             return
         }
         viewModelScope.launch {
@@ -552,7 +552,7 @@ class MainViewModel(
             return
         }
         if (_state.value.session == null) {
-            _state.update { it.copy(message = "Inicia sesión para borrar colecciones.") }
+            _state.update { it.copy(message = "Iniciá sesión en Estudio para borrar colecciones.") }
             return
         }
         viewModelScope.launch {

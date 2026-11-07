@@ -61,7 +61,7 @@ fun OnboardingScreen(onFinish: () -> Unit) {
     val pages = remember {
         listOf(
             OnboardingPage(
-                title = "Papeles que se sienten tuyos.",
+                title = "Wallpapers que se sienten tuyos.",
                 message = "Fondos curados, ordenados y hechos para que tu teléfono " +
                     "parezca diseñado por vos.",
                 bullets = emptyList(),
@@ -84,7 +84,7 @@ fun OnboardingScreen(onFinish: () -> Unit) {
                 bullets = listOf(
                     "Fondo de inicio o de bloqueo, ya recortado",
                     "Descargá a Galería sin perder calidad",
-                    "Colecciones para cada mood",
+                    "Colecciones para cada momento",
                 ),
                 icon = Icons.Rounded.Wallpaper,
             ),

@@ -616,7 +616,7 @@ private fun CollectionPickerDialog(
             Column {
                 if (collections.isEmpty()) {
                     Text(
-                        text = "Todavía no tienes colecciones. Crea una para agrupar tus fondos.",
+                        text = "Todavía no tenés colecciones. Creá una para agrupar tus fondos.",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )

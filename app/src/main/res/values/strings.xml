@@ -35,5 +35,5 @@
     <string name="state_empty_favorites_body">Toca el corazón de cualquier fondo para guardarlo.</string>
     <string name="state_explore">Explorar fondos</string>
     <string name="state_empty_collections_title">Tu primera colección empieza aquí</string>
-    <string name="state_empty_collections_body">Crea una carpeta como Immortal Edition o Flowers y ve sumando fondos.</string>
+    <string name="state_empty_collections_body">Creá una carpeta con lo que te guste: una serie, un color, una temporada.</string>
 </resources>
