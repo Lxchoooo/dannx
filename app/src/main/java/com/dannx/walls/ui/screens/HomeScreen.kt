@@ -32,10 +32,11 @@ import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.Wallpaper
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.material3.LinearWavyProgressIndicator
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.Icon
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
@@ -86,6 +87,7 @@ import kotlinx.coroutines.withTimeoutOrNull
 /** Segundos que hay que mantener presionado el título para la puerta secreta. */
 private const val SECRET_HOLD_MS = 9_000L
 
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun HomeScreen(
     state: UiState,
@@ -237,10 +239,8 @@ fun HomeScreen(
 
         if (state.refreshing && state.feed is LoadState.Content) {
             item(span = { GridItemSpan(maxLineSpan) }) {
-                LinearProgressIndicator(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(2.dp),
+                LinearWavyProgressIndicator(
+                    modifier = Modifier.fillMaxWidth(),
                 )
             }
         }

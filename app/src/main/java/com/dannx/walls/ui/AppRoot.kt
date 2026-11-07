@@ -5,7 +5,6 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.CloudUpload
 import androidx.compose.material.icons.rounded.CollectionsBookmark
 import androidx.compose.material.icons.rounded.Explore
 import androidx.compose.material.icons.rounded.FavoriteBorder
@@ -60,19 +59,7 @@ private val tabs = listOf(
     TopLevelTab("home", "Explorar", Icons.Rounded.Explore),
     TopLevelTab("collections", "Colecciones", Icons.Rounded.CollectionsBookmark),
     TopLevelTab("favorites", "Favoritos", Icons.Rounded.FavoriteBorder),
-    TopLevelTab("studio", "Estudio", Icons.Rounded.CloudUpload),
 )
-
-/**
- * El Estudio solo aparece para la sesión de administrador que haya iniciado.
- * El resto de las personas ni siquiera ve la pestaña. La forma de entrar a
- * iniciar sesión es un gesto oculto (mantener presionado el título de
- * Explorar).
- */
-@Composable
-private fun visibleTabs(signedIn: Boolean): List<TopLevelTab> = remember(signedIn) {
-    if (signedIn) tabs else tabs.filter { it.route != "studio" }
-}
 
 @Composable
 fun AppRoot(viewModel: MainViewModel, startTab: String = "home") {
@@ -89,7 +76,9 @@ fun AppRoot(viewModel: MainViewModel, startTab: String = "home") {
     val wallpaperFiles = remember(context) { WallpaperFiles(context) }
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = backStackEntry?.destination?.route
-    val topTabs = visibleTabs(signedIn = state.session != null)
+    // El Estudio no aparece en la barra: se entra con el gesto secreto de la
+    // pantalla de Explorar (mantener presionado el título).
+    val topTabs = tabs
     val showBar = currentRoute in topTabs.map { it.route }
     val startDestination = if (startTab in topTabs.map { it.route }) startTab else "home"
     val snackbarHostState = remember { SnackbarHostState() }
