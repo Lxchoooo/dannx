@@ -38,12 +38,14 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import coil.imageLoader
-import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.dannx.walls.data.Wallpaper
 
@@ -99,12 +101,17 @@ fun WallpaperCard(
     onToggleFavorite: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val context = LocalContext.current
     val interactionSource = remember { MutableInteractionSource() }
     Box(
         modifier = modifier
             .clip(MaterialTheme.shapes.extraLarge)
             .background(MaterialTheme.colorScheme.surfaceVariant)
+            // Una sola frase para TalkBack en cada tarjeta, en vez de leer
+            // piezas sueltas.
+            .semantics(mergeDescendants = true) {
+                contentDescription =
+                    "Fondo ${wallpaper.title}, ${wallpaper.category}, de ${wallpaper.author}"
+            }
             .clickable(interactionSource = interactionSource, indication = null) {
                 onClick()
             },
@@ -162,18 +169,22 @@ fun FeaturedCard(
     onClick: () -> Unit,
     onToggleFavorite: () -> Unit,
     modifier: Modifier = Modifier,
+    heroHeight: Dp = HeroHeight,
 ) {
-    val context = LocalContext.current
     val interactionSource = remember { MutableInteractionSource() }
     Box(
         modifier = modifier
             .clip(MaterialTheme.shapes.extraLarge)
             .background(MaterialTheme.colorScheme.surfaceVariant)
+            .semantics(mergeDescendants = true) {
+                contentDescription =
+                    "Fondo destacado ${wallpaper.title}, ${wallpaper.category}, de ${wallpaper.author}"
+            }
             .clickable(interactionSource = interactionSource, indication = null) {
                 onClick()
             },
     ) {
-        WallpaperImage(wallpaper, isHero = true)
+        WallpaperImage(wallpaper, isHero = true, heroHeight = heroHeight)
         val scrim = remember {
             Brush.verticalGradient(
                 colors = listOf(
@@ -255,9 +266,9 @@ fun FeaturedCard(
 }
 
 @Composable
-private fun WallpaperImage(wallpaper: Wallpaper, isHero: Boolean) {
+private fun WallpaperImage(wallpaper: Wallpaper, isHero: Boolean, heroHeight: Dp = HeroHeight) {
     val context = LocalContext.current
-    val heroSize = if (isHero) screenImageSize(HeroHeight) else null
+    val heroSize = if (isHero) screenImageSize(heroHeight) else null
     val model = remember(wallpaper.id, wallpaper.thumbnailUrl, isHero, heroSize) {
         if (heroSize != null) {
             ImageRequest.Builder(context)
@@ -268,9 +279,10 @@ private fun WallpaperImage(wallpaper: Wallpaper, isHero: Boolean) {
             wallpaperThumbRequest(context, wallpaper)
         }
     }
-    AsyncImage(
+    StatefulImage(
         model = model,
-        contentDescription = wallpaper.title,
+        // El tile ya describe el contenido por el texto superpuesto.
+        contentDescription = null,
         contentScale = ContentScale.Crop,
         modifier = Modifier
             .fillMaxSize()
@@ -290,7 +302,8 @@ private fun FavoriteButton(
             haptics.performHapticFeedback(HapticFeedbackType.LongPress)
             onClick()
         },
-        modifier = modifier.size(42.dp),
+        // Mínimo 48 dp para que el dedo acierte y TalkBack lo tome como botón.
+    modifier = modifier.size(48.dp),
         colors = IconButtonDefaults.filledIconButtonColors(
             containerColor = Color.Black.copy(alpha = 0.32f),
             contentColor = Color.White,

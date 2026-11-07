@@ -20,7 +20,7 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.ArrowBack
+import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.CollectionsBookmark
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.RemoveCircleOutline
@@ -78,7 +78,7 @@ fun CollectionDetailScreen(
             Column(Modifier.fillMaxWidth()) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     FilledTonalIconButton(onClick = onBack) {
-                        Icon(Icons.Rounded.ArrowBack, contentDescription = "Volver")
+                        Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "Volver")
                     }
                     Spacer(Modifier.width(12.dp))
                     Column(Modifier.weight(1f)) {
@@ -175,7 +175,7 @@ fun CollectionDetailScreen(
                             modifier = Modifier
                                 .align(Alignment.TopStart)
                                 .padding(10.dp)
-                                .size(36.dp),
+                                .size(48.dp),
                             colors = IconButtonDefaults.filledTonalIconButtonColors(
                                 containerColor = Color.Black.copy(alpha = 0.4f),
                                 contentColor = Color.White,
