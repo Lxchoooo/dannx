@@ -67,6 +67,7 @@ enum class ErrorKind {
     OFFLINE,
     SERVER,
     SESSION,
+    PERMISSION,
     UNEXPECTED,
 }
 
@@ -84,6 +85,7 @@ data class ActionState(
 data class UiState(
     val feed: LoadState<List<Wallpaper>> = LoadState.Loading,
     val collections: LoadState<List<WallpaperCollection>> = LoadState.Loading,
+    val refreshing: Boolean = false,
     val wallpapers: List<Wallpaper> = emptyList(),
     val collectionItems: List<WallpaperCollection> = emptyList(),
     val query: String = "",
@@ -201,10 +203,28 @@ class MainViewModel(
     fun refresh() {
         refreshJob?.cancel()
         refreshJob = viewModelScope.launch {
-            _state.update { it.copy(feed = LoadState.Loading, collections = LoadState.Loading) }
+            val hasContent = _state.value.wallpapers.isNotEmpty()
+            _state.update {
+                if (hasContent) {
+                    it.copy(refreshing = true)
+                } else {
+                    it.copy(
+                        feed = LoadState.Loading,
+                        collections = LoadState.Loading,
+                        refreshing = false,
+                    )
+                }
+            }
             try {
                 val items = api.loadWallpapers()
-                val collections = loadCollectionsOrEmpty(_state.value.collectionItems)
+                val collections = try {
+                    api.loadCollections()
+                } catch (error: CancellationException) {
+                    throw error
+                } catch (error: Exception) {
+                    _state.update { state -> state.copy(message = error.userMessage()) }
+                    _state.value.collectionItems
+                }
                 cache.writeWallpapers(items)
                 cache.writeCollections(collections)
                 _state.update {
@@ -219,6 +239,7 @@ class MainViewModel(
                         collectionItems = collections,
                         isDemo = !api.isConfigured,
                         offline = false,
+                        refreshing = false,
                     )
                 }
             } catch (error: CancellationException) {
@@ -242,6 +263,7 @@ class MainViewModel(
                         wallpapers = cachedWallpapers,
                         collectionItems = cachedCollections,
                         offline = cachedWallpapers.isNotEmpty() && kind == ErrorKind.OFFLINE,
+                        refreshing = false,
                     )
                 }
             }
@@ -701,6 +723,7 @@ fun Throwable.kind(): ErrorKind = when (this) {
     is DannXError.Offline -> ErrorKind.OFFLINE
     is DannXError.Server -> ErrorKind.SERVER
     is DannXError.SessionExpired -> ErrorKind.SESSION
+    is DannXError.Forbidden -> ErrorKind.PERMISSION
     else -> ErrorKind.UNEXPECTED
 }
 
@@ -709,7 +732,8 @@ fun Throwable.kind(): ErrorKind = when (this) {
  */
 fun Throwable.userMessage(): String = when (kind()) {
     ErrorKind.OFFLINE -> "Sin conexión. Revisá tu internet y probá de nuevo."
-    ErrorKind.SERVER -> "El servidor está having problemas. Probá en un momento."
+    ErrorKind.SERVER -> "El servidor está teniendo problemas. Probá en un momento."
     ErrorKind.SESSION -> "Tu sesión venció. Volvé a iniciar sesión."
+    ErrorKind.PERMISSION -> "No tenés permiso para esta acción."
     ErrorKind.UNEXPECTED -> "Algo salió mal. Intentá de nuevo."
 }
