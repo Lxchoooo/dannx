@@ -14,8 +14,8 @@ Explorar.
 
 - El onboarding de bienvenida hace su primera pasada: tres pantallas a página
   completa con pager horizontal, tipografía display y formas de acento, en el
-  estilo Expressive de Material 3 (tema con `MotionScheme.expressive()`).
-  Se muestra una sola vez y se salta con "Saltar".
+  estilo Expressive de Material 3 (springs elásticos, formas decorativas e
+  indicadores animados). Se muestra una sola vez y se salta con "Saltar".
 - La pestaña **Estudio** ya no forma parte de la barra para el público: solo
   aparece cuando hay una sesión de administrador iniciada. Para llegar a la
   pantalla de inicio de sesión existe un gesto oculto: mantener presionado el
