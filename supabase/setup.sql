@@ -2,21 +2,18 @@
 --
 -- Setup checklist:
 --   1. Create a free project at supabase.com and open the SQL Editor.
---   2. Authentication > Users: create the admin account (email + password).
---   3. Copy the admin account UUID and replace every occurrence of
---      00000000-0000-0000-0000-000000000000 in this file.
---      Until you do, every write is rejected, including yours.
---   4. Paste this file and run it.
---   5. Authentication > Providers > Email: turn off "Allow new users to sign up".
---   6. Storage > wallpapers: this file sets the 25 MB limit and the allowed
+--   2. This file already carries the admin UUID:
+--      87645d98-691d-42a7-b1f3-b18f05cabd59
+--      If you ever recreate the admin account, paste the SQL again with the
+--      new UUID. Until then, every other write is rejected.
+--   3. Paste this file and run it.
+--   4. Authentication > Providers > Email: turn off "Allow new users to sign up".
+--   5. Storage > wallpapers: this file sets the 25 MB limit and the allowed
 --      image types. Do not remove them in the dashboard.
---   7. Project Settings > API: copy the Project URL and anon public key into the
+--   6. Project Settings > API: copy the Project URL and anon public key into the
 --      repository secrets SUPABASE_URL and SUPABASE_ANON_KEY.
 --
 -- Write access is limited to the admin UUID below. Read access stays public.
--- Replace the placeholder with your real UUID before running.
---
--- ADMIN_UUID = 00000000-0000-0000-0000-000000000000
 
 create extension if not exists "pgcrypto";
 
@@ -97,22 +94,22 @@ create policy "wallpapers_admin_insert"
     on public.wallpapers
     for insert
     to authenticated
-    with check (auth.uid() = '00000000-0000-0000-0000-000000000000'::uuid);
+    with check (auth.uid() = '87645d98-691d-42a7-b1f3-b18f05cabd59'::uuid);
 
 drop policy if exists "wallpapers_admin_update" on public.wallpapers;
 create policy "wallpapers_admin_update"
     on public.wallpapers
     for update
     to authenticated
-    using (auth.uid() = '00000000-0000-0000-0000-000000000000'::uuid)
-    with check (auth.uid() = '00000000-0000-0000-0000-000000000000'::uuid);
+    using (auth.uid() = '87645d98-691d-42a7-b1f3-b18f05cabd59'::uuid)
+    with check (auth.uid() = '87645d98-691d-42a7-b1f3-b18f05cabd59'::uuid);
 
 drop policy if exists "wallpapers_admin_delete" on public.wallpapers;
 create policy "wallpapers_admin_delete"
     on public.wallpapers
     for delete
     to authenticated
-    using (auth.uid() = '00000000-0000-0000-0000-000000000000'::uuid);
+    using (auth.uid() = '87645d98-691d-42a7-b1f3-b18f05cabd59'::uuid);
 
 -- Bucket público de solo lectura para el catálogo. Las escrituras quedan
 -- limitadas al admin y el propio bucket impone tamaño y tipo de archivo.
@@ -142,7 +139,7 @@ create policy "wallpapers_storage_insert"
     to authenticated
     with check (
         bucket_id = 'wallpapers'
-        and auth.uid() = '00000000-0000-0000-0000-000000000000'::uuid
+        and auth.uid() = '87645d98-691d-42a7-b1f3-b18f05cabd59'::uuid
     );
 
 drop policy if exists "wallpapers_storage_update" on storage.objects;
@@ -152,11 +149,11 @@ create policy "wallpapers_storage_update"
     to authenticated
     using (
         bucket_id = 'wallpapers'
-        and auth.uid() = '00000000-0000-0000-0000-000000000000'::uuid
+        and auth.uid() = '87645d98-691d-42a7-b1f3-b18f05cabd59'::uuid
     )
     with check (
         bucket_id = 'wallpapers'
-        and auth.uid() = '00000000-0000-0000-0000-000000000000'::uuid
+        and auth.uid() = '87645d98-691d-42a7-b1f3-b18f05cabd59'::uuid
     );
 
 drop policy if exists "wallpapers_storage_delete" on storage.objects;
@@ -166,7 +163,7 @@ create policy "wallpapers_storage_delete"
     to authenticated
     using (
         bucket_id = 'wallpapers'
-        and auth.uid() = '00000000-0000-0000-0000-000000000000'::uuid
+        and auth.uid() = '87645d98-691d-42a7-b1f3-b18f05cabd59'::uuid
     );
 
 create table if not exists public.collections (
