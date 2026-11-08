@@ -159,6 +159,17 @@ jobs:
           VERSION_CODE: ${{ github.run_number }}
         run: ./gradlew assembleRelease -x lintVitalRelease
 
+      - name: Normalize compose reports
+        if: always()
+        continue-on-error: true
+        run: |
+          if [ -d app/build/compose-reports ]; then
+            find app/build/compose-reports -type f -name '*:*' -print0 |
+              while IFS= read -r -d '' file; do
+                mv "$file" "${file//:/_}"
+              done
+          fi
+
       - name: Upload compose reports
         if: always()
         continue-on-error: true
