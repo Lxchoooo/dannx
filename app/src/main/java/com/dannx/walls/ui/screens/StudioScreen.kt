@@ -265,7 +265,7 @@ fun StudioScreen(
 
                     StudioSection.COLLECTIONS -> CollectionsPanel(
                         state = state,
-                        onCreate = { collectionEditor = WallpaperCollection(id = "") },
+                        onCreate = { collectionEditor = WallpaperCollection(id = "", name = "") },
                         onEdit = { collectionEditor = it },
                         onDelete = { collectionToDelete = it },
                         onManageWalls = { collectionWalls = it },
