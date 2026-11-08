@@ -7,6 +7,7 @@ import com.dannx.walls.data.FeedCacheStore
 import com.dannx.walls.data.LocalStore
 import com.dannx.walls.data.Wallpaper
 import com.dannx.walls.data.WallpaperActions
+import com.dannx.walls.data.WallpaperCategory
 import com.dannx.walls.data.WallpaperCollection
 import com.dannx.walls.data.WallpapersRepository
 import com.dannx.walls.util.SharedImage
@@ -17,6 +18,7 @@ import com.dannx.walls.util.WallpaperTarget
  */
 class FakeRepository : WallpapersRepository {
     var wallpapers: List<Wallpaper> = emptyList()
+    var categories: List<WallpaperCategory> = emptyList()
     var collections: List<WallpaperCollection> = emptyList()
     var failWith: Throwable? = null
     var failTimes: Int = 0
@@ -34,6 +36,10 @@ class FakeRepository : WallpapersRepository {
         }
         return wallpapers
     }
+
+    override suspend fun loadAdminWallpapers(): List<Wallpaper> = wallpapers
+
+    override suspend fun loadCategories(): List<WallpaperCategory> = categories
 
     override suspend fun loadCollections(): List<WallpaperCollection> {
         val error = failWith
@@ -53,9 +59,70 @@ class FakeRepository : WallpapersRepository {
         uri: Uri,
         title: String,
         category: String,
+        categoryId: String?,
         tags: List<String>,
         collectionId: String?,
-    ): Wallpaper = Wallpaper(id = "new", title = title, category = category, imageUrl = "url")
+    ): Wallpaper = Wallpaper(
+        id = "new",
+        title = title,
+        category = category,
+        categoryId = categoryId,
+        imageUrl = "url",
+        tags = tags,
+    )
+
+    override suspend fun updateWallpaper(
+        wallpaperId: String,
+        title: String,
+        category: String,
+        categoryId: String?,
+        tags: List<String>,
+        featured: Boolean,
+    ): Wallpaper = wallpapers.firstOrNull { it.id == wallpaperId }
+        ?.copy(
+            title = title,
+            category = category,
+            categoryId = categoryId,
+            tags = tags,
+            featured = featured,
+        )
+        ?: Wallpaper(
+            id = wallpaperId,
+            title = title,
+            category = category,
+            categoryId = categoryId,
+            imageUrl = "url",
+            tags = tags,
+            featured = featured,
+        )
+
+    override suspend fun replaceWallpaperImage(wallpaper: Wallpaper, uri: Uri): Wallpaper =
+        wallpaper.copy(imageUrl = uri.toString(), thumbUrl = "")
+
+    override suspend fun archiveWallpaper(wallpaperId: String, archived: Boolean) {
+        wallpapers = wallpapers.map {
+            if (it.id == wallpaperId) {
+                it.copy(archivedAt = if (archived) "archived" else "")
+            } else {
+                it
+            }
+        }
+    }
+
+    override suspend fun deleteWallpaper(wallpaper: Wallpaper) {
+        wallpapers = wallpapers.filterNot { it.id == wallpaper.id }
+    }
+
+    override suspend fun createCategory(name: String, position: Int): WallpaperCategory =
+        WallpaperCategory(id = "cat-${categories.size + 1}", name = name, position = position)
+
+    override suspend fun updateCategory(
+        id: String,
+        name: String,
+        position: Int,
+    ): WallpaperCategory = WallpaperCategory(id = id, name = name, position = position)
+
+    override suspend fun deleteCategory(id: String) = Unit
 
     override suspend fun createCollection(
         name: String,
@@ -63,11 +130,30 @@ class FakeRepository : WallpapersRepository {
         isPublic: Boolean,
     ): WallpaperCollection = WallpaperCollection(id = "c1", name = name)
 
+    override suspend fun updateCollection(
+        id: String,
+        name: String,
+        description: String,
+        isPublic: Boolean,
+    ): WallpaperCollection = collections.firstOrNull { it.id == id }?.copy(
+        name = name,
+        description = description,
+        isPublic = isPublic,
+    ) ?: WallpaperCollection(id = id, name = name)
+
     override suspend fun addToCollection(collectionId: String, wallpaperId: String) = Unit
 
     override suspend fun removeFromCollection(collectionId: String, wallpaperId: String) = Unit
 
+    override suspend fun reorderCollection(collectionId: String, wallpaperIds: List<String>) = Unit
+
     override suspend fun deleteCollection(id: String) = Unit
+
+    override suspend fun addTag(tag: String, wallpaperIds: List<String>) = Unit
+
+    override suspend fun renameTag(oldTag: String, newTag: String) = Unit
+
+    override suspend fun deleteTag(tag: String) = Unit
 }
 
 class FakeStore : LocalStore {

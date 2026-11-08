@@ -380,6 +380,28 @@ private fun MainApp(
                     onRefresh = viewModel::refresh,
                     onSelectUploadUri = { uri -> viewModel.setSelectedUploadUri(uri?.toString()) },
                     onBack = { navController.popBackStack() },
+                    onLoadStudio = viewModel::loadStudio,
+                    onCreateCategory = viewModel::createCategory,
+                    onUpdateCategory = viewModel::updateCategory,
+                    onDeleteCategory = viewModel::deleteCategory,
+                    onUpdateWallpaper = viewModel::updateWallpaper,
+                    onReplaceImage = viewModel::replaceWallpaperImage,
+                    onArchiveWallpaper = viewModel::archiveWallpaper,
+                    onDeleteWallpaper = viewModel::deleteWallpaper,
+                    onCreateCollection = viewModel::createCollection,
+                    onUpdateCollection = viewModel::updateCollection,
+                    onDeleteCollection = viewModel::deleteCollection,
+                    onAddToCollection = viewModel::addToCollection,
+                    onRemoveFromCollection = viewModel::removeFromCollection,
+                    onReorderCollection = viewModel::reorderCollection,
+                    onAddTag = viewModel::addTag,
+                    onRenameTag = viewModel::renameTag,
+                    onDeleteTag = viewModel::deleteTag,
+                    onOpenCollection = { collection ->
+                        navController.navigate("collection/${collection.id}") {
+                            launchSingleTop = true
+                        }
+                    },
                 )
             }
             composable(

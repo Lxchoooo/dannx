@@ -15,17 +15,88 @@ data class WallpaperDto(
     val featured: Boolean = false,
     @SerialName("created_at") val createdAt: String = "",
     val tags: List<String> = emptyList(),
+    @SerialName("category_id") val categoryId: String? = null,
+    @SerialName("created_by") val createdBy: String? = null,
+    @SerialName("updated_at") val updatedAt: String = "",
+    @SerialName("archived_at") val archivedAt: String? = null,
+    val categories: CategoryRefDto? = null,
+)
+
+@Serializable
+data class CategoryRefDto(
+    val name: String = "",
 )
 
 @Serializable
 data class NewWallpaper(
     val title: String,
     val category: String,
+    @SerialName("category_id") val categoryId: String? = null,
     @SerialName("storage_path") val storagePath: String,
     val author: String,
     val width: Int,
     val height: Int,
     val tags: List<String> = emptyList(),
+    val featured: Boolean = false,
+)
+
+@Serializable
+data class WallpaperUpdate(
+    val title: String,
+    val category: String,
+    @SerialName("category_id") val categoryId: String? = null,
+    val tags: List<String> = emptyList(),
+    val featured: Boolean = false,
+)
+
+@Serializable
+data class CategoryDto(
+    val id: String,
+    val name: String = "",
+    val position: Int = 0,
+    @SerialName("created_at") val createdAt: String = "",
+    @SerialName("updated_at") val updatedAt: String = "",
+)
+
+@Serializable
+data class NewCategory(
+    val name: String,
+    val position: Int = 0,
+)
+
+@Serializable
+data class CollectionUpdate(
+    val name: String,
+    val description: String,
+    @SerialName("is_public") val isPublic: Boolean,
+)
+
+@Serializable
+data class WallpaperImageUpdate(
+    @SerialName("storage_path") val storagePath: String,
+    val width: Int,
+    val height: Int,
+)
+
+@Serializable
+data class CategoryUpdate(
+    val name: String,
+    val position: Int,
+)
+
+@Serializable
+data class CategoryNameUpdate(
+    val category: String,
+)
+
+@Serializable
+data class PositionUpdate(
+    val position: Int,
+)
+
+@Serializable
+data class TagsUpdate(
+    val tags: List<String>,
 )
 
 @Serializable
@@ -89,7 +160,8 @@ data class AuthResponse(
 fun WallpaperDto.toWallpaper(baseUrl: String): Wallpaper = Wallpaper(
     id = id,
     title = title.ifBlank { "Sin título" },
-    category = category.ifBlank { "Abstracto" },
+    category = categories?.name?.takeIf { it.isNotBlank() }
+        ?: category.ifBlank { "Abstracto" },
     imageUrl = "$baseUrl/storage/v1/object/public/wallpapers/$storagePath",
     author = author.ifBlank { "DannX" },
     width = width,
@@ -97,6 +169,17 @@ fun WallpaperDto.toWallpaper(baseUrl: String): Wallpaper = Wallpaper(
     featured = featured,
     createdAt = createdAt,
     tags = tags.map { it.trim() }.filter { it.isNotEmpty() },
+    categoryId = categoryId,
+    storagePath = storagePath,
+    createdBy = createdBy.orEmpty(),
+    updatedAt = updatedAt,
+    archivedAt = archivedAt.orEmpty(),
+)
+
+fun CategoryDto.toCategory(): WallpaperCategory = WallpaperCategory(
+    id = id,
+    name = name.ifBlank { "Sin categoría" },
+    position = position,
 )
 
 fun CollectionDto.toCollection(items: List<CollectionItemDto>): WallpaperCollection =

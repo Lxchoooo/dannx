@@ -85,6 +85,11 @@ private data class CachedWallpaper(
     val featured: Boolean = false,
     val createdAt: String = "",
     val tags: List<String> = emptyList(),
+    val categoryId: String? = null,
+    val storagePath: String = "",
+    val createdBy: String = "",
+    val updatedAt: String = "",
+    val archivedAt: String = "",
 ) {
     fun toWallpaper(): Wallpaper = Wallpaper(
         id = id,
@@ -98,6 +103,11 @@ private data class CachedWallpaper(
         featured = featured,
         createdAt = createdAt,
         tags = tags,
+        categoryId = categoryId,
+        storagePath = storagePath,
+        createdBy = createdBy,
+        updatedAt = updatedAt,
+        archivedAt = archivedAt,
     )
 
     companion object {
@@ -113,6 +123,11 @@ private data class CachedWallpaper(
             featured = wallpaper.featured,
             createdAt = wallpaper.createdAt,
             tags = wallpaper.tags,
+            categoryId = wallpaper.categoryId,
+            storagePath = wallpaper.storagePath,
+            createdBy = wallpaper.createdBy,
+            updatedAt = wallpaper.updatedAt,
+            archivedAt = wallpaper.archivedAt,
         )
     }
 }

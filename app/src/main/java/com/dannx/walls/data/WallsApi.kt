@@ -3,6 +3,7 @@ package com.dannx.walls.data
 import android.content.Context
 import android.net.Uri
 import com.dannx.walls.BuildConfig
+import java.time.Instant
 import java.util.UUID
 import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.Dispatchers
@@ -48,6 +49,31 @@ class WallsApi(
                 throw error.toDannXError()
             }
         }
+    }
+
+    override suspend fun loadAdminWallpapers(): List<Wallpaper> = withContext(Dispatchers.IO) {
+        if (!isConfigured) {
+            return@withContext DemoWallpapers.items
+        }
+        retryPolicy.run { attempt ->
+            try {
+                adminWallpaperDtos()
+                    .filter { it.storagePath.isNotBlank() }
+                    .map { it.toWallpaper(baseUrl) }
+            } catch (error: Throwable) {
+                throw error.toDannXError()
+            }
+        }
+    }
+
+    override suspend fun loadCategories(): List<WallpaperCategory> = withContext(Dispatchers.IO) {
+        if (!isConfigured) {
+            return@withContext defaultCategories()
+        }
+        runCatching {
+            getList<CategoryDto>("categories?select=*&order=position.asc,name.asc")
+                .map { it.toCategory() }
+        }.getOrElse { defaultCategories() }
     }
 
     override suspend fun loadCollections(): List<WallpaperCollection> = withContext(Dispatchers.IO) {
@@ -111,6 +137,7 @@ class WallsApi(
         uri: Uri,
         title: String,
         category: String,
+        categoryId: String?,
         tags: List<String>,
         collectionId: String?,
     ): Wallpaper = withContext(Dispatchers.IO) {
@@ -127,6 +154,7 @@ class WallsApi(
                     wallpaper = NewWallpaper(
                         title = title.trim().ifBlank { "Sin título" }.take(120),
                         category = category.trim().take(40).ifBlank { "Abstracto" },
+                        categoryId = categoryId,
                         storagePath = fileName,
                         author = author.take(60),
                         width = prepared.width,
@@ -153,6 +181,337 @@ class WallsApi(
             created.toWallpaper(baseUrl)
         } finally {
             prepared.file.delete()
+        }
+    }
+
+    override suspend fun updateWallpaper(
+        wallpaperId: String,
+        title: String,
+        category: String,
+        categoryId: String?,
+        tags: List<String>,
+        featured: Boolean,
+    ): Wallpaper = withContext(Dispatchers.IO) {
+        ensureConfigured()
+        val body = executeAuthorized(
+            build = { token ->
+                Request.Builder()
+                    .url("$baseUrl/rest/v1/wallpapers?id=eq.$wallpaperId")
+                    .header("apikey", anonKey)
+                    .header("Authorization", "Bearer $token")
+                    .header("Prefer", "return=representation")
+                    .patch(
+                        json.encodeToString(
+                            WallpaperUpdate(
+                                title = title.trim().ifBlank { "Sin título" }.take(120),
+                                category = category.trim().take(40).ifBlank { "Abstracto" },
+                                categoryId = categoryId,
+                                tags = cleanTags(tags),
+                                featured = featured,
+                            ),
+                        ).toRequestBody(JSON_MEDIA),
+                    )
+                    .build()
+            },
+        )
+        json.decodeFromString<List<WallpaperDto>>(body).firstOrNull()
+            ?.toWallpaper(baseUrl)
+            ?: throw DannXError.Parse("El servidor no devolvió el fondo actualizado.")
+    }
+
+    override suspend fun replaceWallpaperImage(
+        wallpaper: Wallpaper,
+        uri: Uri,
+    ): Wallpaper = withContext(Dispatchers.IO) {
+        ensureConfigured()
+        val token = requireToken()
+        val prepared = prepareUploadImage(context, uri, MAX_BYTES)
+        val fileName = "${UUID.randomUUID()}.${prepared.extension}"
+        val oldPath = wallpaper.storagePath.ifBlank {
+            wallpaper.imageUrl.substringAfter("/object/public/wallpapers/", "")
+        }
+        try {
+            uploadObject(token, fileName, prepared)
+            val body = executeAuthorized(
+                build = { token ->
+                    Request.Builder()
+                        .url("$baseUrl/rest/v1/wallpapers?id=eq.${wallpaper.id}")
+                        .header("apikey", anonKey)
+                        .header("Authorization", "Bearer $token")
+                        .header("Prefer", "return=representation")
+                        .patch(
+                            json.encodeToString(
+                                WallpaperImageUpdate(
+                                    storagePath = fileName,
+                                    width = prepared.width,
+                                    height = prepared.height,
+                                ),
+                            ).toRequestBody(JSON_MEDIA),
+                        )
+                        .build()
+                },
+            )
+            val updated = json.decodeFromString<List<WallpaperDto>>(body)
+                .firstOrNull()
+                ?.toWallpaper(baseUrl)
+                ?: wallpaper.copy(
+                    imageUrl = "$baseUrl/storage/v1/object/public/wallpapers/$fileName",
+                    thumbUrl = "",
+                    storagePath = fileName,
+                    width = prepared.width,
+                    height = prepared.height,
+                )
+            if (oldPath.isNotBlank() && oldPath != fileName) {
+                runCatching { deleteObject(token, oldPath) }
+            }
+            updated
+        } catch (error: Throwable) {
+            runCatching { deleteObject(token, fileName) }
+            throw error
+        } finally {
+            prepared.file.delete()
+        }
+    }
+
+    override suspend fun archiveWallpaper(wallpaperId: String, archived: Boolean) {
+        if (!isConfigured) return
+        withContext(Dispatchers.IO) {
+            val payload = if (archived) {
+                """{"archived_at":"${Instant.now()}"}"""
+            } else {
+                """{"archived_at":null}"""
+            }
+            executeAuthorized(
+                build = { token ->
+                    Request.Builder()
+                        .url("$baseUrl/rest/v1/wallpapers?id=eq.$wallpaperId")
+                        .header("apikey", anonKey)
+                        .header("Authorization", "Bearer $token")
+                        .header("Prefer", "return=minimal")
+                        .patch(payload.toRequestBody(JSON_MEDIA))
+                        .build()
+                },
+            )
+        }
+    }
+
+    override suspend fun deleteWallpaper(wallpaper: Wallpaper) {
+        if (!isConfigured) return
+        withContext(Dispatchers.IO) {
+            val token = requireToken()
+            executeAuthorized(
+                build = { token ->
+                    Request.Builder()
+                        .url("$baseUrl/rest/v1/wallpapers?id=eq.${wallpaper.id}")
+                        .header("apikey", anonKey)
+                        .header("Authorization", "Bearer $token")
+                        .delete()
+                        .build()
+                },
+            )
+            val path = wallpaper.storagePath.ifBlank {
+                wallpaper.imageUrl.substringAfter("/object/public/wallpapers/", "")
+            }
+            if (path.isNotBlank()) {
+                // La ficha ya no existe; si falla el archivo no se rompe el catálogo.
+                runCatching { deleteObject(token, path) }
+            }
+        }
+    }
+
+    override suspend fun createCategory(
+        name: String,
+        position: Int,
+    ): WallpaperCategory = withContext(Dispatchers.IO) {
+        ensureConfigured()
+        val body = executeAuthorized(
+            build = { token ->
+                Request.Builder()
+                    .url("$baseUrl/rest/v1/categories")
+                    .header("apikey", anonKey)
+                    .header("Authorization", "Bearer $token")
+                    .header("Prefer", "return=representation")
+                    .post(
+                        json.encodeToString(
+                            NewCategory(
+                                name = name.trim().take(40),
+                                position = position,
+                            ),
+                        ).toRequestBody(JSON_MEDIA),
+                    )
+                    .build()
+            },
+        )
+        json.decodeFromString<List<CategoryDto>>(body).firstOrNull()
+            ?.toCategory()
+            ?: throw DannXError.Parse("El servidor no devolvió la categoría creada.")
+    }
+
+    override suspend fun updateCategory(
+        id: String,
+        name: String,
+        position: Int,
+    ): WallpaperCategory = withContext(Dispatchers.IO) {
+        ensureConfigured()
+        val cleanName = name.trim().take(40)
+        val body = executeAuthorized(
+            build = { token ->
+                Request.Builder()
+                    .url("$baseUrl/rest/v1/categories?id=eq.$id")
+                    .header("apikey", anonKey)
+                    .header("Authorization", "Bearer $token")
+                    .header("Prefer", "return=representation")
+                    .patch(
+                        json.encodeToString(
+                            CategoryUpdate(name = cleanName, position = position),
+                        ).toRequestBody(JSON_MEDIA),
+                    )
+                    .build()
+            },
+        )
+        executeAuthorized(
+            build = { token ->
+                Request.Builder()
+                    .url("$baseUrl/rest/v1/wallpapers?category_id=eq.$id")
+                    .header("apikey", anonKey)
+                    .header("Authorization", "Bearer $token")
+                    .header("Prefer", "return=minimal")
+                    .patch(
+                        json.encodeToString(CategoryNameUpdate(cleanName))
+                            .toRequestBody(JSON_MEDIA),
+                    )
+                    .build()
+            },
+        )
+        json.decodeFromString<List<CategoryDto>>(body).firstOrNull()
+            ?.toCategory()
+            ?: throw DannXError.Parse("El servidor no devolvió la categoría actualizada.")
+    }
+
+    override suspend fun deleteCategory(id: String) {
+        if (!isConfigured) return
+        withContext(Dispatchers.IO) {
+            executeAuthorized(
+                build = { token ->
+                    Request.Builder()
+                        .url("$baseUrl/rest/v1/categories?id=eq.$id")
+                        .header("apikey", anonKey)
+                        .header("Authorization", "Bearer $token")
+                        .delete()
+                        .build()
+                },
+            )
+        }
+    }
+
+    override suspend fun updateCollection(
+        id: String,
+        name: String,
+        description: String,
+        isPublic: Boolean,
+    ): WallpaperCollection = withContext(Dispatchers.IO) {
+        ensureConfigured()
+        val body = executeAuthorized(
+            build = { token ->
+                Request.Builder()
+                    .url("$baseUrl/rest/v1/collections?id=eq.$id")
+                    .header("apikey", anonKey)
+                    .header("Authorization", "Bearer $token")
+                    .header("Prefer", "return=representation")
+                    .patch(
+                        json.encodeToString(
+                            CollectionUpdate(
+                                name = name.trim().take(60),
+                                description = description.trim(),
+                                isPublic = isPublic,
+                            ),
+                        ).toRequestBody(JSON_MEDIA),
+                    )
+                    .build()
+            },
+        )
+        json.decodeFromString<List<CollectionDto>>(body).firstOrNull()
+            ?.toCollection(emptyList())
+            ?: throw DannXError.Parse("El servidor no devolvió la colección actualizada.")
+    }
+
+    override suspend fun reorderCollection(
+        collectionId: String,
+        wallpaperIds: List<String>,
+    ) {
+        if (!isConfigured) return
+        withContext(Dispatchers.IO) {
+            wallpaperIds.forEachIndexed { index, wallpaperId ->
+                executeAuthorized(
+                    build = { token ->
+                        Request.Builder()
+                            .url(
+                                "$baseUrl/rest/v1/collection_items" +
+                                    "?collection_id=eq.$collectionId" +
+                                    "&wallpaper_id=eq.$wallpaperId",
+                            )
+                            .header("apikey", anonKey)
+                            .header("Authorization", "Bearer $token")
+                            .header("Prefer", "return=minimal")
+                            .patch(
+                                json.encodeToString(PositionUpdate(index))
+                                    .toRequestBody(JSON_MEDIA),
+                            )
+                            .build()
+                    },
+                )
+            }
+        }
+    }
+
+    override suspend fun addTag(tag: String, wallpaperIds: List<String>) {
+        if (!isConfigured) return
+        withContext(Dispatchers.IO) {
+            val clean = tag.trim().take(40)
+            if (clean.isBlank() || wallpaperIds.isEmpty()) return@withContext
+            val token = requireToken()
+            val selected = wallpaperIds.toSet()
+            adminWallpaperDtos()
+                .filter { it.id in selected }
+                .forEach { dto ->
+                    val tags = cleanTags(dto.tags + clean)
+                    if (tags != dto.tags) updateTags(token, dto.id, tags)
+                }
+        }
+    }
+
+    override suspend fun renameTag(oldTag: String, newTag: String) {
+        if (!isConfigured) return
+        withContext(Dispatchers.IO) {
+            val old = oldTag.trim()
+            val new = newTag.trim().take(40)
+            if (old.isBlank() || new.isBlank()) return@withContext
+            val token = requireToken()
+            adminWallpaperDtos().forEach { dto ->
+                if (dto.tags.none { it.equals(old, ignoreCase = true) }) {
+                    return@forEach
+                }
+                val tags = cleanTags(
+                    dto.tags.map { if (it.equals(old, ignoreCase = true)) new else it },
+                )
+                updateTags(token, dto.id, tags)
+            }
+        }
+    }
+
+    override suspend fun deleteTag(tag: String) {
+        if (!isConfigured) return
+        withContext(Dispatchers.IO) {
+            val clean = tag.trim()
+            if (clean.isBlank()) return@withContext
+            val token = requireToken()
+            adminWallpaperDtos().forEach { dto ->
+                if (dto.tags.none { it.equals(clean, ignoreCase = true) }) {
+                    return@forEach
+                }
+                val tags = dto.tags.filterNot { it.equals(clean, ignoreCase = true) }
+                updateTags(token, dto.id, tags)
+            }
         }
     }
 
@@ -228,6 +587,48 @@ class WallsApi(
             )
         }
     }
+
+    private suspend fun adminWallpaperDtos(): List<WallpaperDto> {
+        val body = executeAuthorized(
+            build = { token ->
+                Request.Builder()
+                    .url("$baseUrl/rest/v1/wallpapers?select=*&order=created_at.desc")
+                    .header("apikey", anonKey)
+                    .header("Authorization", "Bearer $token")
+                    .header("Accept", "application/json")
+                    .get()
+                    .build()
+            },
+        )
+        return json.decodeFromString<List<WallpaperDto>>(body)
+    }
+
+    private suspend fun updateTags(token: String, wallpaperId: String, tags: List<String>) {
+        executeAuthorized(
+            build = { token ->
+                Request.Builder()
+                    .url("$baseUrl/rest/v1/wallpapers?id=eq.$wallpaperId")
+                    .header("apikey", anonKey)
+                    .header("Authorization", "Bearer $token")
+                    .header("Prefer", "return=minimal")
+                    .patch(
+                        json.encodeToString(TagsUpdate(tags)).toRequestBody(JSON_MEDIA),
+                    )
+                    .build()
+            },
+        )
+    }
+
+    private fun cleanTags(tags: List<String>): List<String> = tags
+        .map { it.trim().take(40) }
+        .filter { it.isNotBlank() }
+        .distinctBy { it.lowercase() }
+        .take(12)
+
+    private fun defaultCategories(): List<WallpaperCategory> =
+        DefaultCategories.mapIndexed { index, name ->
+            WallpaperCategory(id = "demo-category-$index", name = name, position = index)
+        }
 
     /**
      * Petición pública de lectura. No reintenta ante 401 porque no usa sesión.

@@ -18,10 +18,25 @@ data class Wallpaper(
     val featured: Boolean = false,
     val createdAt: String = "",
     val tags: List<String> = emptyList(),
+    val categoryId: String? = null,
+    val storagePath: String = "",
+    val createdBy: String = "",
+    val updatedAt: String = "",
+    val archivedAt: String = "",
 ) {
     val thumbnailUrl: String
         get() = thumbUrl.ifBlank { imageUrl }
+
+    val isArchived: Boolean
+        get() = archivedAt.isNotBlank()
 }
+
+@Immutable
+data class WallpaperCategory(
+    val id: String,
+    val name: String,
+    val position: Int = 0,
+)
 
 @Immutable
 data class AdminSession(

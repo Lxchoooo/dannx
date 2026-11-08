@@ -12,6 +12,8 @@ interface WallpapersRepository {
     val isConfigured: Boolean
 
     suspend fun loadWallpapers(): List<Wallpaper>
+    suspend fun loadAdminWallpapers(): List<Wallpaper>
+    suspend fun loadCategories(): List<WallpaperCategory>
     suspend fun loadCollections(): List<WallpaperCollection>
     suspend fun signIn(email: String, password: String): AdminSession
     suspend fun refreshSession(): AdminSession?
@@ -19,9 +21,27 @@ interface WallpapersRepository {
         uri: Uri,
         title: String,
         category: String,
+        categoryId: String?,
         tags: List<String>,
         collectionId: String?,
     ): Wallpaper
+
+    suspend fun updateWallpaper(
+        wallpaperId: String,
+        title: String,
+        category: String,
+        categoryId: String?,
+        tags: List<String>,
+        featured: Boolean,
+    ): Wallpaper
+
+    suspend fun replaceWallpaperImage(wallpaper: Wallpaper, uri: Uri): Wallpaper
+    suspend fun archiveWallpaper(wallpaperId: String, archived: Boolean)
+    suspend fun deleteWallpaper(wallpaper: Wallpaper)
+
+    suspend fun createCategory(name: String, position: Int): WallpaperCategory
+    suspend fun updateCategory(id: String, name: String, position: Int): WallpaperCategory
+    suspend fun deleteCategory(id: String)
 
     suspend fun createCollection(
         name: String,
@@ -29,9 +49,21 @@ interface WallpapersRepository {
         isPublic: Boolean,
     ): WallpaperCollection
 
+    suspend fun updateCollection(
+        id: String,
+        name: String,
+        description: String,
+        isPublic: Boolean,
+    ): WallpaperCollection
+
     suspend fun addToCollection(collectionId: String, wallpaperId: String)
     suspend fun removeFromCollection(collectionId: String, wallpaperId: String)
+    suspend fun reorderCollection(collectionId: String, wallpaperIds: List<String>)
     suspend fun deleteCollection(id: String)
+
+    suspend fun addTag(tag: String, wallpaperIds: List<String>)
+    suspend fun renameTag(oldTag: String, newTag: String)
+    suspend fun deleteTag(tag: String)
 }
 
 /**

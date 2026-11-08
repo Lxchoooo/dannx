@@ -25,6 +25,7 @@ import com.dannx.walls.data.Prefs
 import com.dannx.walls.data.ThemeMode
 import com.dannx.walls.data.Wallpaper
 import com.dannx.walls.data.WallpaperActions
+import com.dannx.walls.data.WallpaperCategory
 import com.dannx.walls.data.WallpaperCollection
 import com.dannx.walls.data.WallpapersRepository
 import com.dannx.walls.data.WallsApi
@@ -92,6 +93,8 @@ data class UiState(
     val collections: LoadState<List<WallpaperCollection>> = LoadState.Loading,
     val refreshing: Boolean = false,
     val wallpapers: List<Wallpaper> = emptyList(),
+    val adminWallpapers: List<Wallpaper> = emptyList(),
+    val categories: List<WallpaperCategory> = emptyList(),
     val collectionItems: List<WallpaperCollection> = emptyList(),
     val query: String = "",
     val category: String? = null,
@@ -102,6 +105,7 @@ data class UiState(
     val uploading: Boolean = false,
     val onboardingDone: Boolean = false,
     val collectionBusy: Boolean = false,
+    val studioBusy: Boolean = false,
     val uploadSuccessCount: Int = 0,
     val authBusy: Boolean = false,
     val message: String? = null,
@@ -134,6 +138,26 @@ data class UiState(
             if (id.isBlank()) emptyList() else collectionItems.filter { it.ownerId == id }
         }
 
+    val studioWallpapers: List<Wallpaper>
+        get() = if (isDemo) wallpapers else adminWallpapers
+
+    val categoryOptions: List<WallpaperCategory>
+        get() = categories.ifEmpty {
+            wallpapers.map { it.category }
+                .filter { it.isNotBlank() }
+                .distinctBy { it.lowercase() }
+                .mapIndexed { index, name ->
+                    WallpaperCategory(id = "", name = name, position = index)
+                }
+        }
+
+    val categoryNames: List<String>
+        get() = categoryOptions.map { it.name }
+
+    fun categoryNameFor(wallpaper: Wallpaper): String =
+        categories.firstOrNull { it.id == wallpaper.categoryId }?.name
+            ?: wallpaper.category
+
     fun canEdit(collection: WallpaperCollection): Boolean =
         isDemo || (session != null && session.userId == collection.ownerId)
 
@@ -157,6 +181,7 @@ class MainViewModel(
 ) : ViewModel() {
     private var actionJob: Job? = null
     private var refreshJob: Job? = null
+    private var studioJob: Job? = null
     private val _state = MutableStateFlow(
         UiState(
             favorites = prefs.favorites(),
@@ -244,6 +269,7 @@ class MainViewModel(
                     _state.update { state -> state.copy(message = error.userMessage()) }
                     _state.value.collectionItems
                 }
+                val categories = loadCategoriesOrEmpty(_state.value.categories)
                 cache.writeWallpapers(items)
                 cache.writeCollections(collections)
                 _state.update {
@@ -255,6 +281,7 @@ class MainViewModel(
                             LoadState.Content(collections)
                         },
                         wallpapers = items,
+                        categories = categories,
                         collectionItems = collections,
                         isDemo = !api.isConfigured,
                         offline = false,
@@ -341,6 +368,7 @@ class MainViewModel(
                         message = "Sesión iniciada como ${session.email}.",
                     )
                 }
+                loadStudio()
             } catch (error: Exception) {
                 _state.update {
                     it.copy(
@@ -355,7 +383,14 @@ class MainViewModel(
     fun signOut() {
         prefs.clearSession()
         val fallback = _state.value.collectionItems.filter { it.isPublic }
-        _state.update { it.copy(session = null, collectionItems = fallback, message = "Sesión cerrada.") }
+        _state.update {
+            it.copy(
+                session = null,
+                adminWallpapers = emptyList(),
+                collectionItems = fallback,
+                message = "Sesión cerrada.",
+            )
+        }
         viewModelScope.launch {
             val collections = loadCollectionsOrEmpty(fallback)
             _state.update { it.copy(collectionItems = collections) }
@@ -366,18 +401,28 @@ class MainViewModel(
         uri: Uri,
         title: String,
         category: String,
+        categoryId: String?,
         tags: List<String>,
         collectionId: String?,
     ) {
         viewModelScope.launch {
             _state.update { it.copy(uploading = true) }
             try {
-                val created = api.uploadWallpaper(uri, title, category, tags, collectionId)
+                val created = api.uploadWallpaper(
+                    uri = uri,
+                    title = title,
+                    category = category,
+                    categoryId = categoryId,
+                    tags = tags,
+                    collectionId = collectionId,
+                )
                 val collections = loadCollectionsOrEmpty(_state.value.collectionItems)
                 _state.update {
                     it.copy(
                         uploading = false,
-                        wallpapers = listOf(created) + it.wallpapers,
+                        wallpapers = listOf(created) + it.wallpapers.filterNot { w -> w.id == created.id },
+                        adminWallpapers = listOf(created) +
+                            it.adminWallpapers.filterNot { w -> w.id == created.id },
                         collectionItems = collections,
                         uploadSuccessCount = it.uploadSuccessCount + 1,
                         message = "Wallpaper publicado.",
@@ -390,6 +435,693 @@ class MainViewModel(
                         uploading = false,
                         message = error.uploadMessage(),
                     )
+                }
+            }
+        }
+    }
+
+    /**
+     * Carga la lista completa del Estudio, incluyendo fondos archivados.
+     */
+    fun loadStudio() {
+        val current = _state.value
+        if (current.isDemo) {
+            _state.update { it.copy(adminWallpapers = it.wallpapers) }
+            return
+        }
+        if (current.session == null) return
+        studioJob?.cancel()
+        studioJob = viewModelScope.launch {
+            _state.update { it.copy(studioBusy = true) }
+            try {
+                val walls = api.loadAdminWallpapers()
+                val categories = loadCategoriesOrEmpty(_state.value.categories)
+                _state.update {
+                    it.copy(
+                        adminWallpapers = walls,
+                        categories = categories,
+                        studioBusy = false,
+                    )
+                }
+            } catch (error: CancellationException) {
+                throw error
+            } catch (error: Exception) {
+                _state.update {
+                    it.copy(
+                        studioBusy = false,
+                        message = error.userMessage(),
+                    )
+                }
+            }
+        }
+    }
+
+    fun createCategory(name: String) {
+        val clean = name.trim().take(40)
+        if (clean.isBlank()) {
+            _state.update { it.copy(message = "Poné un nombre para la categoría.") }
+            return
+        }
+        val position = (_state.value.categories.maxOfOrNull { it.position } ?: -1) + 1
+        if (_state.value.isDemo) {
+            val created = WallpaperCategory(
+                id = "local-category-${UUID.randomUUID()}",
+                name = clean,
+                position = position,
+            )
+            _state.update {
+                it.copy(
+                    categories = it.categories + created,
+                    message = "Categoría \"$clean\" creada.",
+                )
+            }
+            return
+        }
+        viewModelScope.launch {
+            _state.update { it.copy(studioBusy = true) }
+            try {
+                val created = api.createCategory(clean, position)
+                _state.update {
+                    it.copy(
+                        studioBusy = false,
+                        categories = (it.categories + created)
+                            .distinctBy { c -> c.id }
+                            .sortedWith(compareBy({ c -> c.position }, { c -> c.name })),
+                        message = "Categoría \"${created.name}\" creada.",
+                    )
+                }
+            } catch (error: Exception) {
+                _state.update {
+                    it.copy(studioBusy = false, message = error.userMessage())
+                }
+            }
+        }
+    }
+
+    fun updateCategory(categoryId: String, name: String) {
+        val category = _state.value.categories.firstOrNull { it.id == categoryId } ?: return
+        val clean = name.trim().take(40)
+        if (clean.isBlank()) {
+            _state.update { it.copy(message = "Poné un nombre para la categoría.") }
+            return
+        }
+        if (_state.value.isDemo) {
+            _state.update {
+                it.copy(
+                    categories = it.categories.map { c ->
+                        if (c.id == categoryId) c.copy(name = clean) else c
+                    },
+                    wallpapers = it.wallpapers.map { w ->
+                        if (w.categoryId == categoryId) w.copy(category = clean) else w
+                    },
+                    adminWallpapers = it.adminWallpapers.map { w ->
+                        if (w.categoryId == categoryId) w.copy(category = clean) else w
+                    },
+                    message = "Categoría actualizada.",
+                )
+            }
+            return
+        }
+        viewModelScope.launch {
+            _state.update { it.copy(studioBusy = true) }
+            try {
+                val updated = api.updateCategory(categoryId, clean, category.position)
+                _state.update {
+                    it.copy(
+                        studioBusy = false,
+                        categories = it.categories.map { c ->
+                            if (c.id == categoryId) updated else c
+                        },
+                        wallpapers = it.wallpapers.map { w ->
+                            if (w.categoryId == categoryId) w.copy(category = updated.name) else w
+                        },
+                        adminWallpapers = it.adminWallpapers.map { w ->
+                            if (w.categoryId == categoryId) w.copy(category = updated.name) else w
+                        },
+                        message = "Categoría renombrada.",
+                    )
+                }
+            } catch (error: Exception) {
+                _state.update {
+                    it.copy(studioBusy = false, message = error.userMessage())
+                }
+            }
+        }
+    }
+
+    fun deleteCategory(categoryId: String, reassignToId: String? = null) {
+        val category = _state.value.categories.firstOrNull { it.id == categoryId } ?: return
+        val affected = _state.value.studioWallpapers.filter { it.categoryId == categoryId }
+        val target = _state.value.categories.firstOrNull { it.id == reassignToId }
+        if (affected.isNotEmpty() && target == null) {
+            _state.update {
+                it.copy(
+                    message = "La categoría \"${category.name}\" tiene ${affected.size} fondos. " +
+                        "Reasignalos antes de borrarla.",
+                )
+            }
+            return
+        }
+        if (_state.value.isDemo) {
+            _state.update {
+                it.copy(
+                    categories = it.categories.filterNot { c -> c.id == categoryId },
+                    wallpapers = it.wallpapers.map { w ->
+                        if (w.categoryId == categoryId && target != null) {
+                            w.copy(categoryId = target.id, category = target.name)
+                        } else {
+                            w
+                        }
+                    },
+                    adminWallpapers = it.adminWallpapers.map { w ->
+                        if (w.categoryId == categoryId && target != null) {
+                            w.copy(categoryId = target.id, category = target.name)
+                        } else {
+                            w
+                        }
+                    },
+                    message = "Categoría \"${category.name}\" eliminada.",
+                )
+            }
+            return
+        }
+        viewModelScope.launch {
+            _state.update { it.copy(studioBusy = true) }
+            try {
+                if (target != null) {
+                    affected.forEach { wallpaper ->
+                        api.updateWallpaper(
+                            wallpaperId = wallpaper.id,
+                            title = wallpaper.title,
+                            category = target.name,
+                            categoryId = target.id,
+                            tags = wallpaper.tags,
+                            featured = wallpaper.featured,
+                        )
+                    }
+                }
+                api.deleteCategory(categoryId)
+                _state.update {
+                    it.copy(
+                        studioBusy = false,
+                        categories = it.categories.filterNot { c -> c.id == categoryId },
+                        wallpapers = it.wallpapers.map { w ->
+                            if (w.categoryId == categoryId && target != null) {
+                                w.copy(categoryId = target.id, category = target.name)
+                            } else {
+                                w
+                            }
+                        },
+                        adminWallpapers = it.adminWallpapers.map { w ->
+                            if (w.categoryId == categoryId && target != null) {
+                                w.copy(categoryId = target.id, category = target.name)
+                            } else {
+                                w
+                            }
+                        },
+                        message = "Categoría \"${category.name}\" eliminada.",
+                    )
+                }
+            } catch (error: Exception) {
+                _state.update {
+                    it.copy(studioBusy = false, message = error.userMessage())
+                }
+            }
+        }
+    }
+
+    fun updateWallpaper(
+        wallpaperId: String,
+        title: String,
+        category: String,
+        categoryId: String?,
+        tags: List<String>,
+        featured: Boolean,
+    ) {
+        val cleanTags = tags.map { it.trim() }.filter { it.isNotBlank() }.distinct()
+        if (_state.value.isDemo) {
+            val updated = _state.value.wallpapers.firstOrNull { it.id == wallpaperId }
+                ?.copy(
+                    title = title,
+                    category = category,
+                    categoryId = categoryId,
+                    tags = cleanTags,
+                    featured = featured,
+                )
+                ?: return
+            _state.update {
+                it.copy(
+                    wallpapers = it.wallpapers.map { w -> if (w.id == wallpaperId) updated else w },
+                    adminWallpapers = it.adminWallpapers.map { w ->
+                        if (w.id == wallpaperId) updated else w
+                    },
+                    message = "Fondo actualizado.",
+                )
+            }
+            return
+        }
+        viewModelScope.launch {
+            _state.update { it.copy(studioBusy = true) }
+            try {
+                val updated = api.updateWallpaper(
+                    wallpaperId = wallpaperId,
+                    title = title,
+                    category = category,
+                    categoryId = categoryId,
+                    tags = cleanTags,
+                    featured = featured,
+                )
+                _state.update {
+                    it.copy(
+                        studioBusy = false,
+                        wallpapers = it.wallpapers.map { w ->
+                            if (w.id == wallpaperId) updated else w
+                        },
+                        adminWallpapers = it.adminWallpapers.map { w ->
+                            if (w.id == wallpaperId) updated else w
+                        },
+                        message = "Fondo actualizado.",
+                    )
+                }
+            } catch (error: Exception) {
+                _state.update {
+                    it.copy(studioBusy = false, message = error.userMessage())
+                }
+            }
+        }
+    }
+
+    fun replaceWallpaperImage(wallpaperId: String, uri: Uri) {
+        val wallpaper = _state.value.studioWallpapers.firstOrNull { it.id == wallpaperId } ?: return
+        if (_state.value.isDemo) {
+            _state.update {
+                val updated = wallpaper.copy(imageUrl = uri.toString(), thumbUrl = "")
+                it.copy(
+                    wallpapers = it.wallpapers.map { w -> if (w.id == wallpaperId) updated else w },
+                    adminWallpapers = it.adminWallpapers.map { w ->
+                        if (w.id == wallpaperId) updated else w
+                    },
+                    message = "Imagen actualizada.",
+                )
+            }
+            return
+        }
+        viewModelScope.launch {
+            _state.update { it.copy(studioBusy = true) }
+            try {
+                val updated = api.replaceWallpaperImage(wallpaper, uri)
+                _state.update {
+                    it.copy(
+                        studioBusy = false,
+                        wallpapers = it.wallpapers.map { w ->
+                            if (w.id == wallpaperId) updated else w
+                        },
+                        adminWallpapers = it.adminWallpapers.map { w ->
+                            if (w.id == wallpaperId) updated else w
+                        },
+                        message = "Imagen reemplazada.",
+                    )
+                }
+            } catch (error: Exception) {
+                _state.update {
+                    it.copy(studioBusy = false, message = error.userMessage())
+                }
+            }
+        }
+    }
+
+    fun archiveWallpaper(wallpaperId: String, archived: Boolean) {
+        if (_state.value.isDemo) {
+            _state.update {
+                val adminUpdated = it.adminWallpapers.map { w ->
+                    if (w.id == wallpaperId) {
+                        w.copy(archivedAt = if (archived) "local" else "")
+                    } else {
+                        w
+                    }
+                }
+                it.copy(
+                    adminWallpapers = adminUpdated,
+                    wallpapers = if (archived) {
+                        it.wallpapers.filterNot { w -> w.id == wallpaperId }
+                    } else {
+                        it.wallpapers + adminUpdated.filter { w ->
+                            w.id == wallpaperId && !w.isArchived
+                        }
+                    },
+                    message = if (archived) "Fondo archivado." else "Fondo restaurado.",
+                )
+            }
+            return
+        }
+        viewModelScope.launch {
+            _state.update { it.copy(studioBusy = true) }
+            try {
+                api.archiveWallpaper(wallpaperId, archived)
+                _state.update {
+                    val adminUpdated = it.adminWallpapers.map { w ->
+                        if (w.id == wallpaperId) {
+                            w.copy(archivedAt = if (archived) "archivado" else "")
+                        } else {
+                            w
+                        }
+                    }
+                    it.copy(
+                        studioBusy = false,
+                        adminWallpapers = adminUpdated,
+                        wallpapers = if (archived) {
+                            it.wallpapers.filterNot { w -> w.id == wallpaperId }
+                        } else {
+                            it.wallpapers + adminUpdated.filter { w ->
+                                w.id == wallpaperId && !w.isArchived
+                            }
+                        },
+                        message = if (archived) "Fondo archivado." else "Fondo restaurado.",
+                    )
+                }
+            } catch (error: Exception) {
+                _state.update {
+                    it.copy(studioBusy = false, message = error.userMessage())
+                }
+            }
+        }
+    }
+
+    fun deleteWallpaper(wallpaperId: String) {
+        val wallpaper = _state.value.studioWallpapers.firstOrNull { it.id == wallpaperId }
+            ?: _state.value.wallpapers.firstOrNull { it.id == wallpaperId }
+            ?: return
+        if (_state.value.isDemo) {
+            _state.update {
+                it.copy(
+                    wallpapers = it.wallpapers.filterNot { w -> w.id == wallpaperId },
+                    adminWallpapers = it.adminWallpapers.filterNot { w -> w.id == wallpaperId },
+                    collectionItems = it.collectionItems.map { c ->
+                        c.copy(wallpaperIds = c.wallpaperIds - wallpaperId)
+                    },
+                    message = "Fondo eliminado definitivamente.",
+                )
+            }
+            return
+        }
+        viewModelScope.launch {
+            _state.update { it.copy(studioBusy = true) }
+            try {
+                api.deleteWallpaper(wallpaper)
+                _state.update {
+                    it.copy(
+                        studioBusy = false,
+                        wallpapers = it.wallpapers.filterNot { w -> w.id == wallpaperId },
+                        adminWallpapers = it.adminWallpapers.filterNot { w -> w.id == wallpaperId },
+                        collectionItems = it.collectionItems.map { c ->
+                            c.copy(wallpaperIds = c.wallpaperIds - wallpaperId)
+                        },
+                        message = "Fondo eliminado definitivamente.",
+                    )
+                }
+            } catch (error: Exception) {
+                _state.update {
+                    it.copy(studioBusy = false, message = error.userMessage())
+                }
+            }
+        }
+    }
+
+    fun updateCollection(
+        collectionId: String,
+        name: String,
+        description: String,
+        isPublic: Boolean,
+    ) {
+        val clean = name.trim()
+        if (clean.isBlank()) {
+            _state.update { it.copy(message = "Poné un nombre para la colección.") }
+            return
+        }
+        if (_state.value.isDemo) {
+            _state.update {
+                val updated = it.collectionItems.map { c ->
+                    if (c.id == collectionId) {
+                        c.copy(name = clean, description = description.trim(), isPublic = isPublic)
+                    } else {
+                        c
+                    }
+                }
+                prefs.saveLocalCollections(updated)
+                it.copy(collectionItems = updated, message = "Colección actualizada.")
+            }
+            return
+        }
+        viewModelScope.launch {
+            _state.update { it.copy(collectionBusy = true) }
+            try {
+                val updated = api.updateCollection(
+                    id = collectionId,
+                    name = clean,
+                    description = description,
+                    isPublic = isPublic,
+                )
+                _state.update {
+                    it.copy(
+                        collectionBusy = false,
+                        collectionItems = it.collectionItems.map { c ->
+                            if (c.id == collectionId) {
+                                c.copy(
+                                    name = updated.name,
+                                    description = updated.description,
+                                    isPublic = updated.isPublic,
+                                )
+                            } else {
+                                c
+                            }
+                        },
+                        message = "Colección actualizada.",
+                    )
+                }
+            } catch (error: Exception) {
+                _state.update {
+                    it.copy(collectionBusy = false, message = error.userMessage())
+                }
+            }
+        }
+    }
+
+    fun reorderCollection(collectionId: String, wallpaperIds: List<String>) {
+        if (_state.value.isDemo) {
+            _state.update {
+                val updated = it.collectionItems.map { c ->
+                    if (c.id == collectionId) c.copy(wallpaperIds = wallpaperIds) else c
+                }
+                prefs.saveLocalCollections(updated)
+                it.copy(collectionItems = updated, message = "Orden actualizado.")
+            }
+            return
+        }
+        viewModelScope.launch {
+            _state.update { it.copy(collectionBusy = true) }
+            try {
+                api.reorderCollection(collectionId, wallpaperIds)
+                _state.update {
+                    it.copy(
+                        collectionBusy = false,
+                        collectionItems = it.collectionItems.map { c ->
+                            if (c.id == collectionId) c.copy(wallpaperIds = wallpaperIds) else c
+                        },
+                        message = "Orden actualizado.",
+                    )
+                }
+            } catch (error: Exception) {
+                _state.update {
+                    it.copy(collectionBusy = false, message = error.userMessage())
+                }
+            }
+        }
+    }
+
+    fun addTag(tag: String, wallpaperIds: List<String>) {
+        val clean = tag.trim().take(40)
+        if (clean.isBlank() || wallpaperIds.isEmpty()) {
+            _state.update {
+                it.copy(message = "Elegí un nombre y al menos un fondo.")
+            }
+            return
+        }
+        val selected = wallpaperIds.toSet()
+        if (_state.value.isDemo) {
+            _state.update {
+                val updated = it.wallpapers.map { w ->
+                    if (w.id in selected) {
+                        w.copy(tags = (w.tags + clean).distinctBy { t -> t.lowercase() })
+                    } else {
+                        w
+                    }
+                }
+                it.copy(
+                    wallpapers = updated,
+                    adminWallpapers = it.adminWallpapers.map { w ->
+                        if (w.id in selected) {
+                            w.copy(tags = (w.tags + clean).distinctBy { t -> t.lowercase() })
+                        } else {
+                            w
+                        }
+                    },
+                    message = "Tag \"$clean\" aplicado.",
+                )
+            }
+            return
+        }
+        viewModelScope.launch {
+            _state.update { it.copy(studioBusy = true) }
+            try {
+                api.addTag(clean, wallpaperIds)
+                _state.update {
+                    it.copy(
+                        studioBusy = false,
+                        wallpapers = it.wallpapers.map { w ->
+                            if (w.id in selected) {
+                                w.copy(tags = (w.tags + clean).distinctBy { t -> t.lowercase() })
+                            } else {
+                                w
+                            }
+                        },
+                        adminWallpapers = it.adminWallpapers.map { w ->
+                            if (w.id in selected) {
+                                w.copy(tags = (w.tags + clean).distinctBy { t -> t.lowercase() })
+                            } else {
+                                w
+                            }
+                        },
+                        message = "Tag \"$clean\" aplicado.",
+                    )
+                }
+            } catch (error: Exception) {
+                _state.update {
+                    it.copy(studioBusy = false, message = error.userMessage())
+                }
+            }
+        }
+    }
+
+    fun renameTag(oldTag: String, newTag: String) {
+        val old = oldTag.trim()
+        val new = newTag.trim().take(40)
+        if (old.isBlank() || new.isBlank()) {
+            _state.update { it.copy(message = "Elegí el tag que querés reemplazar.") }
+            return
+        }
+        val rename: (List<String>) -> List<String> = { tags ->
+            tags.map { if (it.equals(old, ignoreCase = true)) new else it }
+                .distinctBy { it.lowercase() }
+        }
+        if (_state.value.isDemo) {
+            _state.update {
+                it.copy(
+                    wallpapers = it.wallpapers.map { w ->
+                        if (w.tags.any { t -> t.equals(old, ignoreCase = true) }) {
+                            w.copy(tags = rename(w.tags))
+                        } else {
+                            w
+                        }
+                    },
+                    adminWallpapers = it.adminWallpapers.map { w ->
+                        if (w.tags.any { t -> t.equals(old, ignoreCase = true) }) {
+                            w.copy(tags = rename(w.tags))
+                        } else {
+                            w
+                        }
+                    },
+                    message = "Tag \"$old\" renombrado a \"$new\".",
+                )
+            }
+            return
+        }
+        viewModelScope.launch {
+            _state.update { it.copy(studioBusy = true) }
+            try {
+                api.renameTag(old, new)
+                _state.update {
+                    it.copy(
+                        studioBusy = false,
+                        wallpapers = it.wallpapers.map { w ->
+                            if (w.tags.any { t -> t.equals(old, ignoreCase = true) }) {
+                                w.copy(tags = rename(w.tags))
+                            } else {
+                                w
+                            }
+                        },
+                        adminWallpapers = it.adminWallpapers.map { w ->
+                            if (w.tags.any { t -> t.equals(old, ignoreCase = true) }) {
+                                w.copy(tags = rename(w.tags))
+                            } else {
+                                w
+                            }
+                        },
+                        message = "Tag \"$old\" renombrado a \"$new\".",
+                    )
+                }
+            } catch (error: Exception) {
+                _state.update {
+                    it.copy(studioBusy = false, message = error.userMessage())
+                }
+            }
+        }
+    }
+
+    fun deleteTag(tag: String) {
+        val clean = tag.trim()
+        if (clean.isBlank()) return
+        val remove: (List<String>) -> List<String> = { tags ->
+            tags.filterNot { it.equals(clean, ignoreCase = true) }
+        }
+        if (_state.value.isDemo) {
+            _state.update {
+                it.copy(
+                    wallpapers = it.wallpapers.map { w ->
+                        if (w.tags.any { t -> t.equals(clean, ignoreCase = true) }) {
+                            w.copy(tags = remove(w.tags))
+                        } else {
+                            w
+                        }
+                    },
+                    adminWallpapers = it.adminWallpapers.map { w ->
+                        if (w.tags.any { t -> t.equals(clean, ignoreCase = true) }) {
+                            w.copy(tags = remove(w.tags))
+                        } else {
+                            w
+                        }
+                    },
+                    message = "Tag \"$clean\" eliminado.",
+                )
+            }
+            return
+        }
+        viewModelScope.launch {
+            _state.update { it.copy(studioBusy = true) }
+            try {
+                api.deleteTag(clean)
+                _state.update {
+                    it.copy(
+                        studioBusy = false,
+                        wallpapers = it.wallpapers.map { w ->
+                            if (w.tags.any { t -> t.equals(clean, ignoreCase = true) }) {
+                                w.copy(tags = remove(w.tags))
+                            } else {
+                                w
+                            }
+                        },
+                        adminWallpapers = it.adminWallpapers.map { w ->
+                            if (w.tags.any { t -> t.equals(clean, ignoreCase = true) }) {
+                                w.copy(tags = remove(w.tags))
+                            } else {
+                                w
+                            }
+                        },
+                        message = "Tag \"$clean\" eliminado.",
+                    )
+                }
+            } catch (error: Exception) {
+                _state.update {
+                    it.copy(studioBusy = false, message = error.userMessage())
                 }
             }
         }
@@ -767,6 +1499,13 @@ class MainViewModel(
         fallback: List<WallpaperCollection>,
     ): List<WallpaperCollection> =
         runCatching { api.loadCollections() }.getOrElse { fallback }
+
+    private suspend fun loadCategoriesOrEmpty(
+        fallback: List<WallpaperCategory>,
+    ): List<WallpaperCategory> =
+        runCatching {
+            api.loadCategories().sortedWith(compareBy({ c -> c.position }, { c -> c.name }))
+        }.getOrElse { fallback }
 
     companion object {
         private const val KEY_QUERY = "query"

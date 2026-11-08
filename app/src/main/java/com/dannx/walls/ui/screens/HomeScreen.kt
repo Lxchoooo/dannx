@@ -129,9 +129,9 @@ fun HomeScreen(
 
     val showHero = state.query.isBlank() && state.category == null && state.tag == null &&
         featured.isNotEmpty()
-    val categories = remember(state.wallpapers) {
-        listOf("Todos", "Destacados") +
-            (DefaultCategories + state.wallpapers.map { it.category }).distinct().sorted()
+    val categories = remember(state.wallpapers, state.categories) {
+        val names = state.categoryNames.ifEmpty { DefaultCategories }
+        listOf("Todos", "Destacados") + names.distinct().sorted()
     }
     // Se recrea cuando cambia la cantidad de destacados para que el carrusel
     // siempre conozca el total actual.
