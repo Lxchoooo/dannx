@@ -88,10 +88,10 @@ interface LocalStore {
  * Contrato de la cache en disco del feed.
  */
 interface FeedCacheStore {
-    fun readWallpapers(): List<Wallpaper>
-    fun writeWallpapers(items: List<Wallpaper>)
-    fun readCollections(): List<WallpaperCollection>
-    fun writeCollections(items: List<WallpaperCollection>)
+    suspend fun readWallpapers(): List<Wallpaper>
+    suspend fun writeWallpapers(items: List<Wallpaper>)
+    suspend fun readCollections(): List<WallpaperCollection>
+    suspend fun writeCollections(items: List<WallpaperCollection>)
 }
 
 /**

@@ -1,8 +1,10 @@
 package com.dannx.walls
 
 import androidx.lifecycle.SavedStateHandle
+import com.dannx.walls.data.AdminSession
 import com.dannx.walls.data.DannXError
 import com.dannx.walls.data.Wallpaper
+import com.dannx.walls.data.WallpaperCollection
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.StandardTestDispatcher
@@ -205,6 +207,119 @@ class MainViewModelTest {
         assertEquals("Ciudad", saved.get<String>("category"))
         assertEquals("luces", saved.get<String>("tag"))
     }
+
+    @Test
+    fun `a failed refresh keeps the current feed when the cache is empty`() =
+        runTest(dispatcher) {
+            repository.wallpapers = listOf(wallpaper("1"))
+            val model = viewModel()
+            advanceUntilIdle()
+
+            cache.writeWallpapers(emptyList())
+            repository.failWith = DannXError.Offline("sin red")
+            repository.failTimes = 5
+            model.refresh()
+            advanceUntilIdle()
+
+            val state = model.state.value
+            assertTrue(state.feed is LoadState.Content)
+            assertEquals("1", state.wallpapers.single().id)
+            assertTrue(state.offline)
+        }
+
+    @Test
+    fun `an expired session hides private collections but keeps the feed`() =
+        runTest(dispatcher) {
+            store.saveSession("admin@test", "token", null, "u1")
+            repository.session = AdminSession("admin@test", "token", "u1")
+            repository.wallpapers = listOf(wallpaper("1"))
+            repository.collections = listOf(
+                WallpaperCollection(id = "private", name = "Privada", isPublic = false),
+                WallpaperCollection(id = "public", name = "Pública", isPublic = true),
+            )
+            val model = viewModel()
+            advanceUntilIdle()
+
+            assertEquals(2, model.state.value.collectionItems.size)
+
+            repository.failWith = DannXError.SessionExpired
+            repository.failTimes = 5
+            model.refresh()
+            advanceUntilIdle()
+
+            val state = model.state.value
+            assertEquals(null, state.session)
+            assertTrue(state.collectionItems.none { !it.isPublic })
+            assertTrue(state.feed is LoadState.Content)
+            assertEquals("1", state.wallpapers.single().id)
+        }
+
+    @Test
+    fun `sign out removes private collections from the state and the cache`() =
+        runTest(dispatcher) {
+            store.saveSession("admin@test", "token", null, "u1")
+            repository.session = AdminSession("admin@test", "token", "u1")
+            repository.collections = listOf(
+                WallpaperCollection(id = "private", name = "Privada", isPublic = false),
+                WallpaperCollection(id = "public", name = "Pública", isPublic = true),
+            )
+            val model = viewModel()
+            advanceUntilIdle()
+            assertEquals(2, model.state.value.collectionItems.size)
+
+            repository.collections = listOf(
+                WallpaperCollection(id = "public", name = "Pública", isPublic = true),
+            )
+            model.signOut()
+            advanceUntilIdle()
+
+            val state = model.state.value
+            assertEquals(null, state.session)
+            assertEquals(listOf("public"), state.collectionItems.map { it.id })
+            assertEquals(listOf("public"), cache.readCollections().map { it.id })
+        }
+
+    @Test
+    fun `an archived wallpaper can be edited from the studio`() = runTest(dispatcher) {
+        store.saveSession("admin@test", "token", null, "u1")
+        repository.session = AdminSession("admin@test", "token", "u1")
+        repository.wallpapers = listOf(wallpaper("visible"))
+        repository.adminWallpapers = listOf(
+            wallpaper("archived").copy(archivedAt = "2026-01-01"),
+        )
+        val model = viewModel()
+        advanceUntilIdle()
+
+        model.loadStudio()
+        advanceUntilIdle()
+        assertTrue(model.state.value.adminWallpapers.any { it.id == "archived" })
+
+        model.updateWallpaper(
+            wallpaperId = "archived",
+            title = "Título nuevo",
+            category = "Abstracto",
+            categoryId = null,
+            tags = emptyList(),
+            featured = false,
+        )
+        advanceUntilIdle()
+
+        val updated = model.state.value.adminWallpapers.first { it.id == "archived" }
+        assertEquals("Título nuevo", updated.title)
+        assertEquals("Fondo actualizado.", model.state.value.message)
+    }
+
+    @Test
+    fun `reserved category names are rejected before calling the server`() =
+        runTest(dispatcher) {
+            val model = viewModel()
+            advanceUntilIdle()
+
+            model.createCategory("Todos")
+            advanceUntilIdle()
+
+            assertTrue(model.state.value.message.orEmpty().contains("reservado"))
+        }
 
     private fun wallpaper(id: String) = Wallpaper(
         id = id,

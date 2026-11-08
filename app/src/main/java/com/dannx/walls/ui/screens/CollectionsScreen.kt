@@ -113,33 +113,34 @@ fun CollectionsScreen(
             }
         }
 
-        when (val collections = state.collections) {
-            is LoadState.Loading -> {
+        when {
+            state.collections is LoadState.Loading && state.collectionItems.isEmpty() -> {
                 item {
                     FeedSkeleton()
                 }
             }
 
-            is LoadState.Error -> {
+            state.collections is LoadState.Error && state.collectionItems.isEmpty() -> {
                 item {
-                    ErrorState(message = collections.message, onRetry = onRefresh)
+                    ErrorState(
+                        message = (state.collections as LoadState.Error).message,
+                        onRetry = onRefresh,
+                    )
                 }
             }
 
-            else -> {
-                if (collections is LoadState.Content && collections.data.isEmpty()) {
-                    item {
-                        EmptyState(
-                            title = stringResource(R.string.state_empty_collections_title),
-                            message = stringResource(R.string.state_empty_collections_body),
-                            icon = Icons.Rounded.CollectionsBookmark,
-                        )
-                    }
+            state.collectionItems.isEmpty() -> {
+                item {
+                    EmptyState(
+                        title = stringResource(R.string.state_empty_collections_title),
+                        message = stringResource(R.string.state_empty_collections_body),
+                        icon = Icons.Rounded.CollectionsBookmark,
+                    )
                 }
             }
         }
 
-        if (state.collections is LoadState.Content && state.collectionItems.isNotEmpty()) {
+        if (state.collectionItems.isNotEmpty()) {
             items(items = state.collectionItems, key = { it.id }) { collection ->
                 CollectionCard(
                     state = state,
@@ -169,7 +170,7 @@ private fun CollectionCard(
     onClick: () -> Unit,
 ) {
     val wallpapers = state.wallpapers
-    val cover = remember(collection.id, wallpapers) {
+    val cover = remember(collection.id, collection.wallpaperIds, wallpapers) {
         collection.wallpaperIds.firstNotNullOfOrNull { id ->
             wallpapers.firstOrNull { it.id == id }
         }

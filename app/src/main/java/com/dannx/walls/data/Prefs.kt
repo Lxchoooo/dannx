@@ -77,10 +77,14 @@ class Prefs(context: Context) : LocalStore {
         refresh: String?,
         id: String?,
     ) {
-        adminEmail = email
-        accessToken = access
-        refreshToken = refresh
-        userId = id
+        // Una sola transacción para que una interrupción no deje una sesión
+        // mezclada entre dos inicios de sesión.
+        sessionPrefs.edit().apply {
+            putString(KEY_ADMIN_EMAIL, email)
+            if (access == null) remove(KEY_ACCESS_TOKEN) else putString(KEY_ACCESS_TOKEN, access)
+            if (refresh == null) remove(KEY_REFRESH_TOKEN) else putString(KEY_REFRESH_TOKEN, refresh)
+            if (id == null) remove(KEY_USER_ID) else putString(KEY_USER_ID, id)
+        }.apply()
     }
 
     override fun clearSession() {

@@ -18,6 +18,7 @@ import com.dannx.walls.util.WallpaperTarget
  */
 class FakeRepository : WallpapersRepository {
     var wallpapers: List<Wallpaper> = emptyList()
+    var adminWallpapers: List<Wallpaper>? = null
     var categories: List<WallpaperCategory> = emptyList()
     var collections: List<WallpaperCollection> = emptyList()
     var failWith: Throwable? = null
@@ -37,7 +38,7 @@ class FakeRepository : WallpapersRepository {
         return wallpapers
     }
 
-    override suspend fun loadAdminWallpapers(): List<Wallpaper> = wallpapers
+    override suspend fun loadAdminWallpapers(): List<Wallpaper> = adminWallpapers ?: wallpapers
 
     override suspend fun loadCategories(): List<WallpaperCategory> = categories
 
@@ -205,15 +206,15 @@ class FakeCache : FeedCacheStore {
     private var wallpapers: List<Wallpaper> = emptyList()
     private var collections: List<WallpaperCollection> = emptyList()
 
-    override fun readWallpapers(): List<Wallpaper> = wallpapers
+    override suspend fun readWallpapers(): List<Wallpaper> = wallpapers
 
-    override fun writeWallpapers(items: List<Wallpaper>) {
+    override suspend fun writeWallpapers(items: List<Wallpaper>) {
         wallpapers = items
     }
 
-    override fun readCollections(): List<WallpaperCollection> = collections
+    override suspend fun readCollections(): List<WallpaperCollection> = collections
 
-    override fun writeCollections(items: List<WallpaperCollection>) {
+    override suspend fun writeCollections(items: List<WallpaperCollection>) {
         collections = items
     }
 }

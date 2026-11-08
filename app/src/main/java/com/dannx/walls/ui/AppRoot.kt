@@ -21,6 +21,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.CollectionsBookmark
 import androidx.compose.material.icons.rounded.Explore
 import androidx.compose.material.icons.rounded.FavoriteBorder
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
@@ -35,6 +36,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -52,6 +54,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.dannx.walls.LoadState
 import com.dannx.walls.MainViewModel
 import com.dannx.walls.UiState
 import com.dannx.walls.ui.components.DebugFpsOverlay
@@ -334,10 +337,13 @@ private fun MainApp(
                 val id = entry.arguments?.getString("id")
                 val collection = state.collectionItems.firstOrNull { it.id == id }
                 if (collection == null) {
-                    LaunchedEffect(id) {
-                        navController.popBackStack()
+                    if (state.collections is LoadState.Loading) {
+                        RouteLoading()
+                    } else {
+                        LaunchedEffect(id) {
+                            navController.popBackStack()
+                        }
                     }
-                    Box(Modifier.fillMaxSize())
                 } else {
                     CollectionDetailScreen(
                         state = state,
@@ -413,10 +419,13 @@ private fun MainApp(
                 val id = entry.arguments?.getString("id")
                 val wallpaper = state.wallpapers.firstOrNull { it.id == id }
                 if (wallpaper == null) {
-                    LaunchedEffect(id) {
-                        navController.popBackStack()
+                    if (state.feed is LoadState.Loading) {
+                        RouteLoading()
+                    } else {
+                        LaunchedEffect(id) {
+                            navController.popBackStack()
+                        }
                     }
-                    Box(Modifier.fillMaxSize())
                 } else {
                     DetailScreen(
                         wallpaper = wallpaper,
@@ -425,7 +434,8 @@ private fun MainApp(
                         canManageCollections = state.isDemo || state.session != null,
                         collectionBusy = state.collectionBusy,
                         actionState = actionState,
-                        downloadPrompt = state.downloadPrompt,
+                        downloadPrompt = state.downloadPrompt
+                            ?.takeIf { it.wallpaperId == wallpaper.id },
                         alreadyDownloaded = wallpaper.id in state.downloadedIds,
                         offline = state.offline,
                         openEditorOnApply = state.openEditorOnApply,
@@ -461,10 +471,13 @@ private fun MainApp(
                 val id = entry.arguments?.getString("id")
                 val wallpaper = state.wallpapers.firstOrNull { it.id == id }
                 if (wallpaper == null) {
-                    LaunchedEffect(id) {
-                        navController.popBackStack()
+                    if (state.feed is LoadState.Loading) {
+                        RouteLoading()
+                    } else {
+                        LaunchedEffect(id) {
+                            navController.popBackStack()
+                        }
                     }
-                    Box(Modifier.fillMaxSize())
                 } else {
                     WallpaperEditorScreen(
                         wallpaper = wallpaper,
@@ -479,6 +492,13 @@ private fun MainApp(
         }
             DebugFpsOverlay(Modifier.fillMaxSize())
         }
+    }
+}
+
+@Composable
+private fun RouteLoading() {
+    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        CircularProgressIndicator()
     }
 }
 

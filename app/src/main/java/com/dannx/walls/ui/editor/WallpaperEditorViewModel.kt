@@ -64,33 +64,44 @@ internal class WallpaperEditorViewModel(
         if (loadJob?.isActive == true) return
         loadJob = viewModelScope.launch {
             _state.update { it.copy(loading = true, loadError = null, loadProgress = null) }
+            var preview: Bitmap? = null
+            var grain: Bitmap? = null
+            var thumbs: List<EditorFilterThumb> = emptyList()
             try {
                 val file = ensureSourceFile()
-                val preview = withContext(Dispatchers.Default) {
+                val decoded = withContext(Dispatchers.Default) {
                     runCatching { EditorImage.decodePreview(file) }
                         .getOrElse {
                             file.delete()
                             throw it
                         }
                 }
-                val grain = withContext(Dispatchers.Default) { EditorImage.createGrainTile() }
-                val thumbs = withContext(Dispatchers.Default) {
-                    EditorImage.createFilterThumbs(preview)
+                preview = decoded
+                grain = withContext(Dispatchers.Default) { EditorImage.createGrainTile() }
+                thumbs = withContext(Dispatchers.Default) {
+                    EditorImage.createFilterThumbs(decoded)
                 }
                 sourceFile = file
                 _state.update {
                     it.copy(
                         loading = false,
                         loadProgress = null,
-                        preview = preview,
+                        preview = decoded,
                         grain = grain,
                         thumbs = thumbs,
                     )
                 }
+                // El estado ya es dueño de los bitmaps; si se cancela después,
+                // no hay que reciclarlos desde este bloque.
+                preview = null
+                grain = null
+                thumbs = emptyList()
                 scheduleBlurPreview()
             } catch (error: CancellationException) {
+                recycle(preview, grain, thumbs)
                 throw error
             } catch (error: OutOfMemoryError) {
+                recycle(preview, grain, thumbs)
                 _state.update {
                     it.copy(
                         loading = false,
@@ -99,6 +110,7 @@ internal class WallpaperEditorViewModel(
                     )
                 }
             } catch (error: Exception) {
+                recycle(preview, grain, thumbs)
                 _state.update {
                     it.copy(
                         loading = false,
@@ -108,6 +120,16 @@ internal class WallpaperEditorViewModel(
                 }
             }
         }
+    }
+
+    private fun recycle(
+        preview: Bitmap?,
+        grain: Bitmap?,
+        thumbs: List<EditorFilterThumb>,
+    ) {
+        preview?.recycle()
+        grain?.recycle()
+        thumbs.forEach { it.bitmap.recycle() }
     }
 
     fun updateCrop(crop: EditorCrop) {
@@ -243,11 +265,18 @@ internal class WallpaperEditorViewModel(
 
     private suspend fun ensureSourceFile(): File {
         val folder = File(appContext.cacheDir, "editor").apply { mkdirs() }
-        val safeId = wallpaper.id
+        // La URL entra en la clave: si se reemplaza la imagen, no se reutiliza
+        // el archivo viejo del mismo fondo.
+        val cacheKey = "${wallpaper.id}-${wallpaper.imageUrl.hashCode()}"
+        val safeId = cacheKey
             .replace(Regex("[^A-Za-z0-9._-]"), "_")
-            .take(80)
+            .take(96)
         val file = File(folder, "$safeId.original")
-        if (file.exists() && file.length() > 0L) return file
+        if (file.exists() && file.length() > 0L) {
+            file.setLastModified(System.currentTimeMillis())
+            pruneSourceCache(folder, keep = file)
+            return file
+        }
         files.downloadToFile(wallpaper, file) { downloaded, total ->
             val progress = if (total > 0L) {
                 ((downloaded * 100L) / total).toInt().coerceIn(0, 100)
@@ -256,7 +285,21 @@ internal class WallpaperEditorViewModel(
             }
             _state.update { it.copy(loadProgress = progress) }
         }
+        file.setLastModified(System.currentTimeMillis())
+        pruneSourceCache(folder, keep = file)
         return file
+    }
+
+    /**
+     * La caché de originales puede ocupar mucho: cada archivo es la imagen
+     * completa. Se conservan solo los últimos usados.
+     */
+    private fun pruneSourceCache(folder: File, keep: File) {
+        val files = folder.listFiles()
+            ?.filter { it.isFile && it.name.endsWith(".original") && it != keep }
+            ?.sortedByDescending { it.lastModified() }
+            ?: return
+        files.drop(MAX_CACHED_SOURCES - 1).forEach { it.delete() }
     }
 
     private fun scheduleBlurPreview() {
@@ -298,6 +341,8 @@ internal class WallpaperEditorViewModel(
     }
 
     companion object {
+        private const val MAX_CACHED_SOURCES = 3
+
         fun factory(
             application: Application,
             wallpaper: Wallpaper,

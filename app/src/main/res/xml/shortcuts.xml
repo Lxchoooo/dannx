@@ -26,17 +26,4 @@
             <extra android:name="dannx.extra.TAB" android:value="favorites" />
         </intent>
     </shortcut>
-    <shortcut
-        android:shortcutId="studio"
-        android:enabled="true"
-        android:icon="@drawable/shortcut_studio"
-        android:shortcutShortLabel="@string/shortcut_studio"
-        android:shortcutLongLabel="@string/shortcut_studio">
-        <intent
-            android:action="com.dannx.walls.action.OPEN_TAB"
-            android:targetPackage="com.dannx.walls"
-            android:targetClass="com.dannx.walls.MainActivity">
-            <extra android:name="dannx.extra.TAB" android:value="studio" />
-        </intent>
-    </shortcut>
 </shortcuts>

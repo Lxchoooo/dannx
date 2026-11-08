@@ -3,7 +3,6 @@
     <string name="app_name">DannX</string>
     <string name="shortcut_collections">Collections</string>
     <string name="shortcut_favorites">Favorites</string>
-    <string name="shortcut_studio">Studio</string>
 
     <string name="onboarding_skip">Skip</string>
     <string name="onboarding_next">Next</string>

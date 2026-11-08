@@ -6,7 +6,10 @@ import com.dannx.walls.BuildConfig
 import java.time.Instant
 import java.util.UUID
 import java.util.concurrent.TimeUnit
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
@@ -33,6 +36,7 @@ class WallsApi(
         encodeDefaults = true
         coerceInputValues = true
     }
+    private val refreshMutex = Mutex()
 
     override val isConfigured: Boolean =
         baseUrl.startsWith("https://") && anonKey.isNotBlank()
@@ -72,25 +76,34 @@ class WallsApi(
         if (!isConfigured) {
             return@withContext defaultCategories()
         }
-        runCatching {
-            getList<CategoryDto>("categories?select=*&order=position.asc,name.asc")
-                .map { it.toCategory() }
-        }.getOrElse { emptyList() }
+        getList<CategoryDto>("categories?select=*&order=position.asc,name.asc")
+            .map { it.toCategory() }
     }
 
     override suspend fun loadCollections(): List<WallpaperCollection> = withContext(Dispatchers.IO) {
         if (!isConfigured) {
             return@withContext prefs.localCollections()
         }
-        val collections = getList<CollectionDto>(
-            "collections?select=*&order=created_at.desc",
-        )
+        // Con sesión se leen también las colecciones privadas del usuario. Sin
+        // sesión se mantiene la lectura pública anónima.
+        val authenticated = prefs.accessToken != null
+        val collections = if (authenticated) {
+            getListAuthorized<CollectionDto>("collections?select=*&order=created_at.desc")
+        } else {
+            getList<CollectionDto>("collections?select=*&order=created_at.desc")
+        }
         if (collections.isEmpty()) {
             return@withContext emptyList()
         }
-        val items = getList<CollectionItemDto>(
-            "collection_items?select=*&order=position.asc,created_at.asc",
-        )
+        val items = if (authenticated) {
+            getListAuthorized<CollectionItemDto>(
+                "collection_items?select=*&order=position.asc,created_at.asc",
+            )
+        } else {
+            getList<CollectionItemDto>(
+                "collection_items?select=*&order=position.asc,created_at.asc",
+            )
+        }
         val byCollection = items.groupBy { it.collectionId }
         collections.map { collection ->
             collection.toCollection(byCollection[collection.id].orEmpty())
@@ -114,11 +127,31 @@ class WallsApi(
             AdminSession(resolved, auth.accessToken, auth.user?.id.orEmpty())
         }
 
-    override suspend fun refreshSession(): AdminSession? {
+    override suspend fun refreshSession(): AdminSession? =
+        refreshMutex.withLock { refreshSessionOnce() }
+
+    /**
+     * Renueva el token solo si nadie lo renovó ya. Dos respuestas 401
+     * simultáneas comparten una única rotación del refresh token.
+     */
+    private suspend fun renewSession(failedToken: String): AdminSession? =
+        refreshMutex.withLock {
+            val current = prefs.accessToken
+            if (current != null && current != failedToken) {
+                return@withLock AdminSession(
+                    email = prefs.adminEmail.orEmpty(),
+                    token = current,
+                    userId = prefs.userId.orEmpty(),
+                )
+            }
+            refreshSessionOnce()
+        }
+
+    private suspend fun refreshSessionOnce(): AdminSession? {
         if (!isConfigured) return null
         val refresh = prefs.refreshToken ?: return null
         return withContext(Dispatchers.IO) {
-            runCatching {
+            try {
                 val auth = authenticate(
                     path = "token?grant_type=refresh_token",
                     payload = json.encodeToString(RefreshRequest(refresh)),
@@ -127,7 +160,15 @@ class WallsApi(
                 val id = auth.user?.id ?: prefs.userId.orEmpty()
                 prefs.saveSession(email, auth.accessToken, auth.refreshToken, id)
                 AdminSession(email, auth.accessToken, id)
-            }.getOrNull()
+            } catch (error: CancellationException) {
+                throw error
+            } catch (error: DannXError.SessionExpired) {
+                // El refresh token ya no sirve: no dejamos una sesión fantasma.
+                prefs.clearSession()
+                null
+            } catch (_: Exception) {
+                null
+            }
         }
     }
 
@@ -256,13 +297,9 @@ class WallsApi(
             val updated = json.decodeFromString<List<WallpaperDto>>(body)
                 .firstOrNull()
                 ?.toWallpaper(baseUrl)
-                ?: wallpaper.copy(
-                    imageUrl = "$baseUrl/storage/v1/object/public/wallpapers/$fileName",
-                    thumbUrl = "",
-                    storagePath = fileName,
-                    width = prepared.width,
-                    height = prepared.height,
-                )
+                ?: throw DannXError.Parse("El servidor no confirmó la nueva imagen.")
+            // La imagen anterior solo se borra cuando la ficha ya apunta a la
+            // nueva. Si el PATCH no confirmó, la ficha sigue usando la vieja.
             if (oldPath.isNotBlank() && oldPath != fileName) {
                 runCatching { deleteObject(token, oldPath) }
             }
@@ -647,13 +684,34 @@ class WallsApi(
             if (!response.isSuccessful) {
                 throw errorFor(response.code, body)
             }
-            try {
-                json.decodeFromString<List<T>>(body)
-            } catch (error: Throwable) {
-                throw DannXError.Parse(error.message.orEmpty())
-            }
+            decodeList(body)
         }
     }
+
+    /**
+     * Lectura con el token del usuario. Renueva la sesión una vez si venció.
+     */
+    private suspend inline fun <reified T> getListAuthorized(path: String): List<T> {
+        val body = executeAuthorized(
+            build = { token ->
+                Request.Builder()
+                    .url("$baseUrl/rest/v1/$path")
+                    .header("apikey", anonKey)
+                    .header("Authorization", "Bearer $token")
+                    .header("Accept", "application/json")
+                    .get()
+                    .build()
+            },
+        )
+        return decodeList(body)
+    }
+
+    private inline fun <reified T> decodeList(body: String): List<T> =
+        try {
+            json.decodeFromString<List<T>>(body)
+        } catch (error: Throwable) {
+            throw DannXError.Parse(error.message.orEmpty())
+        }
 
     private fun authenticate(path: String, payload: String): AuthResponse {
         val request = Request.Builder()
@@ -687,7 +745,7 @@ class WallsApi(
         if (first.code != 401) {
             return first.readBody(allowConflict)
         }
-        val renewed = refreshSession()
+        val renewed = renewSession(currentToken)
         if (renewed == null) {
             prefs.clearSession()
             throw DannXError.SessionExpired

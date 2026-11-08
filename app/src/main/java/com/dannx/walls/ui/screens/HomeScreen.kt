@@ -244,7 +244,7 @@ fun HomeScreen(
             }
         }
 
-        if (state.refreshing && state.feed is LoadState.Content) {
+        if (state.refreshing && state.wallpapers.isNotEmpty()) {
             item(span = { GridItemSpan(maxLineSpan) }) {
                 LinearWavyProgressIndicator(
                     modifier = Modifier.fillMaxWidth(),
@@ -257,7 +257,8 @@ fun HomeScreen(
                 contentPadding = PaddingValues(end = 20.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                items(categories, key = { it }) { label ->
+                items(count = categories.size, key = { index -> "category-$index" }) { index ->
+                    val label = categories[index]
                     val selected = (state.category ?: "Todos") == label
                     FilterChip(
                         selected = selected,
@@ -378,20 +379,23 @@ fun HomeScreen(
             }
         }
 
-        when (val feed = state.feed) {
-            is LoadState.Loading -> {
+        when {
+            state.feed is LoadState.Loading && state.wallpapers.isEmpty() -> {
                 item(span = { GridItemSpan(maxLineSpan) }) {
                     FeedSkeleton()
                 }
             }
 
-            is LoadState.Error -> {
+            state.feed is LoadState.Error && state.wallpapers.isEmpty() -> {
                 item(span = { GridItemSpan(maxLineSpan) }) {
-                    ErrorState(message = feed.message, onRetry = onRefresh)
+                    ErrorState(
+                        message = (state.feed as LoadState.Error).message,
+                        onRetry = onRefresh,
+                    )
                 }
             }
 
-            is LoadState.Empty -> {
+            state.wallpapers.isEmpty() -> {
                 item(span = { GridItemSpan(maxLineSpan) }) {
                     EmptyState(
                         title = stringResource(R.string.state_empty_feed_title),
@@ -400,21 +404,19 @@ fun HomeScreen(
                 }
             }
 
-            is LoadState.Content -> {
-                if (filtered.isEmpty()) {
-                    item(span = { GridItemSpan(maxLineSpan) }) {
-                        EmptyState(
-                            title = stringResource(R.string.state_empty_filter_title),
-                            message = stringResource(R.string.state_empty_filter_body),
-                            actionLabel = stringResource(R.string.state_clear_filters),
-                            onAction = onClearFilters,
-                        )
-                    }
+            filtered.isEmpty() -> {
+                item(span = { GridItemSpan(maxLineSpan) }) {
+                    EmptyState(
+                        title = stringResource(R.string.state_empty_filter_title),
+                        message = stringResource(R.string.state_empty_filter_body),
+                        actionLabel = stringResource(R.string.state_clear_filters),
+                        onAction = onClearFilters,
+                    )
                 }
             }
         }
 
-        if (state.feed is LoadState.Content && filtered.isNotEmpty()) {
+        if (filtered.isNotEmpty()) {
             itemsIndexed(
                 items = filtered,
                 key = { _, wallpaper -> wallpaper.id },

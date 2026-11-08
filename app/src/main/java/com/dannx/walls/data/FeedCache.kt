@@ -4,6 +4,8 @@ import android.content.Context
 import java.io.File
 import java.nio.file.Files
 import java.nio.file.StandardCopyOption
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
@@ -16,53 +18,62 @@ class FeedCache(context: Context) : FeedCacheStore {
     private val folder = context.cacheDir.resolve("feed-cache").apply { mkdirs() }
     private val json = Json { ignoreUnknownKeys = true; encodeDefaults = true }
 
-    override fun readWallpapers(): List<Wallpaper> {
+    override suspend fun readWallpapers(): List<Wallpaper> = withContext(Dispatchers.IO) {
         val file = folder.resolve(WALLPAPERS_FILE)
-        if (!file.exists()) return emptyList()
-        return runCatching {
+        if (!file.exists()) return@withContext emptyList()
+        runCatching {
             json.decodeFromString<List<CachedWallpaper>>(file.readText())
                 .filter { it.id.isNotBlank() && it.imageUrl.isNotBlank() }
                 .map { it.toWallpaper() }
         }.getOrDefault(emptyList())
     }
 
-    override fun writeWallpapers(items: List<Wallpaper>) {
-        runCatching {
-            val payload = items.map { CachedWallpaper.from(it) }
-            writeAtomically(folder.resolve(WALLPAPERS_FILE), json.encodeToString(payload))
+    override suspend fun writeWallpapers(items: List<Wallpaper>) {
+        withContext(Dispatchers.IO) {
+            runCatching {
+                val payload = items.map { CachedWallpaper.from(it) }
+                writeAtomically(folder.resolve(WALLPAPERS_FILE), json.encodeToString(payload))
+            }
         }
     }
 
-    override fun readCollections(): List<WallpaperCollection> {
+    override suspend fun readCollections(): List<WallpaperCollection> = withContext(Dispatchers.IO) {
         val file = folder.resolve(COLLECTIONS_FILE)
-        if (!file.exists()) return emptyList()
-        return runCatching {
+        if (!file.exists()) return@withContext emptyList()
+        runCatching {
             json.decodeFromString<List<WallpaperCollection>>(file.readText())
         }.getOrDefault(emptyList())
     }
 
-    override fun writeCollections(items: List<WallpaperCollection>) {
-        runCatching {
-            writeAtomically(folder.resolve(COLLECTIONS_FILE), json.encodeToString(items))
+    override suspend fun writeCollections(items: List<WallpaperCollection>) {
+        withContext(Dispatchers.IO) {
+            runCatching {
+                writeAtomically(folder.resolve(COLLECTIONS_FILE), json.encodeToString(items))
+            }
         }
     }
 
     /**
      * Escribe primero en un archivo temporal y lo reemplaza de una vez, para
-     * que un cierre a mitad de escritura no deje el caché corrupto.
+     * que un cierre a mitad de escritura no deje el caché corrupto. El nombre
+     * temporal es único para que dos escrituras simultáneas no se pisen.
      */
     private fun writeAtomically(file: File, content: String) {
-        val temp = File(file.parentFile, "${file.name}.tmp")
-        temp.writeText(content)
+        val temp = File.createTempFile("${file.name}.", ".tmp", file.parentFile)
         try {
-            Files.move(
-                temp.toPath(),
-                file.toPath(),
-                StandardCopyOption.REPLACE_EXISTING,
-                StandardCopyOption.ATOMIC_MOVE,
-            )
-        } catch (_: Exception) {
-            Files.move(temp.toPath(), file.toPath(), StandardCopyOption.REPLACE_EXISTING)
+            temp.writeText(content)
+            try {
+                Files.move(
+                    temp.toPath(),
+                    file.toPath(),
+                    StandardCopyOption.REPLACE_EXISTING,
+                    StandardCopyOption.ATOMIC_MOVE,
+                )
+            } catch (_: Exception) {
+                Files.move(temp.toPath(), file.toPath(), StandardCopyOption.REPLACE_EXISTING)
+            }
+        } finally {
+            temp.delete()
         }
     }
 

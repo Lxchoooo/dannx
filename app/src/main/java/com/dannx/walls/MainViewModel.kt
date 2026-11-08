@@ -185,6 +185,7 @@ class MainViewModel(
     private var actionJob: Job? = null
     private var refreshJob: Job? = null
     private var studioJob: Job? = null
+    private var uploadJob: Job? = null
     private val _state = MutableStateFlow(
         UiState(
             favorites = prefs.favorites(),
@@ -210,16 +211,18 @@ class MainViewModel(
         if (isOnline()) {
             refresh()
         } else {
-            loadFromCache()
+            viewModelScope.launch { loadFromCache() }
         }
     }
 
     /**
-     * Muestra lo guardado en disco cuando no hay red.
+     * Muestra lo guardado en disco cuando no hay red. Sin sesión nunca se
+     * muestran colecciones privadas cacheadas.
      */
-    private fun loadFromCache() {
+    private suspend fun loadFromCache() {
         val cachedWallpapers = cache.readWallpapers()
         val cachedCollections = cache.readCollections()
+            .filter { _state.value.session != null || it.isPublic }
         _state.update {
             it.copy(
                 feed = if (cachedWallpapers.isEmpty()) {
@@ -230,7 +233,11 @@ class MainViewModel(
                 } else {
                     LoadState.Content(cachedWallpapers)
                 },
-                collections = LoadState.Content(cachedCollections),
+                collections = if (cachedCollections.isEmpty()) {
+                    LoadState.Empty
+                } else {
+                    LoadState.Content(cachedCollections)
+                },
                 wallpapers = cachedWallpapers,
                 collectionItems = cachedCollections,
                 offline = true,
@@ -268,6 +275,8 @@ class MainViewModel(
                     api.loadCollections()
                 } catch (error: CancellationException) {
                     throw error
+                } catch (error: DannXError.SessionExpired) {
+                    throw error
                 } catch (error: Exception) {
                     _state.update { state -> state.copy(message = error.userMessage()) }
                     _state.value.collectionItems
@@ -295,25 +304,45 @@ class MainViewModel(
                 throw error
             } catch (error: Exception) {
                 val kind = error.kind()
+                val expired = error is DannXError.SessionExpired
+                val current = _state.value
                 val cachedWallpapers = cache.readWallpapers()
                 val cachedCollections = cache.readCollections()
+                val currentCollections = if (expired) {
+                    current.collectionItems.filter { it.isPublic }
+                } else {
+                    current.collectionItems
+                }
+                val safeCachedCollections = if (expired || current.session == null) {
+                    cachedCollections.filter { it.isPublic }
+                } else {
+                    cachedCollections
+                }
+                val fallbackWallpapers = current.wallpapers.ifEmpty { cachedWallpapers }
+                val fallbackCollections = currentCollections.ifEmpty { safeCachedCollections }
                 _state.update {
                     it.copy(
-                        feed = if (cachedWallpapers.isEmpty()) {
+                        feed = if (fallbackWallpapers.isEmpty()) {
                             LoadState.Error(error.userMessage(), kind)
                         } else {
-                            LoadState.Content(cachedWallpapers)
+                            LoadState.Content(fallbackWallpapers)
                         },
-                        collections = if (cachedCollections.isEmpty()) {
-                            LoadState.Content(emptyList())
+                        collections = if (fallbackCollections.isEmpty()) {
+                            LoadState.Empty
                         } else {
-                            LoadState.Content(cachedCollections)
+                            LoadState.Content(fallbackCollections)
                         },
-                        wallpapers = cachedWallpapers,
-                        collectionItems = cachedCollections,
-                        offline = cachedWallpapers.isNotEmpty() && kind == ErrorKind.OFFLINE,
+                        wallpapers = fallbackWallpapers,
+                        collectionItems = fallbackCollections,
+                        session = if (expired) null else it.session,
+                        adminWallpapers = if (expired) emptyList() else it.adminWallpapers,
+                        message = if (expired) error.userMessage() else it.message,
+                        offline = fallbackWallpapers.isNotEmpty() && kind == ErrorKind.OFFLINE,
                         refreshing = false,
                     )
+                }
+                if (expired) {
+                    cache.writeCollections(fallbackCollections.filter { it.isPublic })
                 }
             }
         }
@@ -368,36 +397,67 @@ class MainViewModel(
                         authBusy = false,
                         session = session,
                         collectionItems = collections,
+                        collections = if (collections.isEmpty()) {
+                            LoadState.Empty
+                        } else {
+                            LoadState.Content(collections)
+                        },
                         message = "Sesión iniciada como ${session.email}.",
+                        messageAction = null,
                     )
                 }
-                loadStudio()
+                // StudioScreen observa el cambio de sesión y dispara la carga
+                // del Estudio una sola vez.
             } catch (error: Exception) {
-                _state.update {
-                    it.copy(
-                        authBusy = false,
-                        message = error.userMessage(),
-                    )
-                }
+                _state.update { it.afterError(error) }
             }
         }
     }
 
     fun signOut() {
         studioJob?.cancel()
+        refreshJob?.cancel()
+        uploadJob?.cancel()
         prefs.clearSession()
+        savedState[KEY_UPLOAD_URI] = null
         val fallback = _state.value.collectionItems.filter { it.isPublic }
         _state.update {
             it.copy(
                 session = null,
                 adminWallpapers = emptyList(),
                 collectionItems = fallback,
+                collections = if (fallback.isEmpty()) {
+                    LoadState.Empty
+                } else {
+                    LoadState.Content(fallback)
+                },
+                selectedUploadUri = null,
+                uploading = false,
+                refreshing = false,
+                authBusy = false,
+                studioBusy = false,
+                collectionBusy = false,
                 message = "Sesión cerrada.",
+                messageAction = null,
+                downloadPrompt = null,
             )
         }
         viewModelScope.launch {
+            // La caché puede contener colecciones privadas de la sesión que se
+            // acaba de cerrar: se limpia antes de volver a cargar las públicas.
+            cache.writeCollections(emptyList())
             val collections = loadCollectionsOrEmpty(fallback)
-            _state.update { it.copy(collectionItems = collections) }
+            cache.writeCollections(collections.filter { it.isPublic })
+            _state.update {
+                it.copy(
+                    collectionItems = collections,
+                    collections = if (collections.isEmpty()) {
+                        LoadState.Empty
+                    } else {
+                        LoadState.Content(collections)
+                    },
+                )
+            }
         }
     }
 
@@ -409,7 +469,7 @@ class MainViewModel(
         tags: List<String>,
         collectionId: String?,
     ) {
-        viewModelScope.launch {
+        uploadJob = viewModelScope.launch {
             _state.update { it.copy(uploading = true) }
             try {
                 val created = api.uploadWallpaper(
@@ -422,24 +482,31 @@ class MainViewModel(
                 )
                 val collections = loadCollectionsOrEmpty(_state.value.collectionItems)
                 _state.update {
+                    val updatedWallpapers = listOf(created) +
+                        it.wallpapers.filterNot { w -> w.id == created.id }
                     it.copy(
                         uploading = false,
-                        wallpapers = listOf(created) + it.wallpapers.filterNot { w -> w.id == created.id },
+                        feed = LoadState.Content(updatedWallpapers),
+                        wallpapers = updatedWallpapers,
                         adminWallpapers = listOf(created) +
                             it.adminWallpapers.filterNot { w -> w.id == created.id },
                         collectionItems = collections,
+                        collections = if (collections.isEmpty()) {
+                            LoadState.Empty
+                        } else {
+                            LoadState.Content(collections)
+                        },
                         uploadSuccessCount = it.uploadSuccessCount + 1,
                         message = "Wallpaper publicado.",
+                        messageAction = null,
                     )
                 }
+            } catch (error: CancellationException) {
+                _state.update { it.copy(uploading = false) }
+                throw error
             } catch (error: Exception) {
                 Log.w("DannX", "No se pudo subir el wallpaper", error)
-                _state.update {
-                    it.copy(
-                        uploading = false,
-                        message = error.uploadMessage(),
-                    )
-                }
+                _state.update { it.afterError(error, error.uploadMessage()) }
             }
         }
     }
@@ -470,12 +537,7 @@ class MainViewModel(
             } catch (error: CancellationException) {
                 throw error
             } catch (error: Exception) {
-                _state.update {
-                    it.copy(
-                        studioBusy = false,
-                        message = error.userMessage(),
-                    )
-                }
+                _state.update { it.afterError(error) }
             }
         }
     }
@@ -484,6 +546,10 @@ class MainViewModel(
         val clean = name.trim().take(40)
         if (clean.isBlank()) {
             _state.update { it.copy(message = "Poné un nombre para la categoría.") }
+            return
+        }
+        if (isReservedCategoryName(clean)) {
+            _state.update { it.copy(message = "Ese nombre está reservado. Elegí otro.") }
             return
         }
         val position = (_state.value.categories.maxOfOrNull { it.position } ?: -1) + 1
@@ -516,7 +582,7 @@ class MainViewModel(
                 }
             } catch (error: Exception) {
                 _state.update {
-                    it.copy(studioBusy = false, message = error.userMessage())
+                    it.afterError(error)
                 }
             }
         }
@@ -527,6 +593,10 @@ class MainViewModel(
         val clean = name.trim().take(40)
         if (clean.isBlank()) {
             _state.update { it.copy(message = "Poné un nombre para la categoría.") }
+            return
+        }
+        if (isReservedCategoryName(clean)) {
+            _state.update { it.copy(message = "Ese nombre está reservado. Elegí otro.") }
             return
         }
         if (_state.value.isDemo) {
@@ -567,7 +637,7 @@ class MainViewModel(
                 }
             } catch (error: Exception) {
                 _state.update {
-                    it.copy(studioBusy = false, message = error.userMessage())
+                    it.afterError(error)
                 }
             }
         }
@@ -648,7 +718,7 @@ class MainViewModel(
                 }
             } catch (error: Exception) {
                 _state.update {
-                    it.copy(studioBusy = false, message = error.userMessage())
+                    it.afterError(error)
                 }
             }
         }
@@ -662,9 +732,13 @@ class MainViewModel(
         tags: List<String>,
         featured: Boolean,
     ) {
-        val cleanTags = tags.map { it.trim() }.filter { it.isNotBlank() }.distinct()
+        val cleanTags = tags.map { it.trim() }
+            .filter { it.isNotBlank() }
+            .distinctBy { it.lowercase() }
         if (_state.value.isDemo) {
-            val updated = _state.value.wallpapers.firstOrNull { it.id == wallpaperId }
+            // En demo los archivados solo están en studioWallpapers. Antes se
+            // buscaban en wallpapers y editarlos no hacía nada.
+            val updated = _state.value.studioWallpapers.firstOrNull { it.id == wallpaperId }
                 ?.copy(
                     title = title,
                     category = category,
@@ -709,7 +783,7 @@ class MainViewModel(
                 }
             } catch (error: Exception) {
                 _state.update {
-                    it.copy(studioBusy = false, message = error.userMessage())
+                    it.afterError(error)
                 }
             }
         }
@@ -748,7 +822,7 @@ class MainViewModel(
                 }
             } catch (error: Exception) {
                 _state.update {
-                    it.copy(studioBusy = false, message = error.userMessage())
+                    it.afterError(error)
                 }
             }
         }
@@ -805,7 +879,7 @@ class MainViewModel(
                 }
             } catch (error: Exception) {
                 _state.update {
-                    it.copy(studioBusy = false, message = error.userMessage())
+                    it.afterError(error)
                 }
             }
         }
@@ -845,7 +919,7 @@ class MainViewModel(
                 }
             } catch (error: Exception) {
                 _state.update {
-                    it.copy(studioBusy = false, message = error.userMessage())
+                    it.afterError(error)
                 }
             }
         }
@@ -904,7 +978,7 @@ class MainViewModel(
                 }
             } catch (error: Exception) {
                 _state.update {
-                    it.copy(collectionBusy = false, message = error.userMessage())
+                    it.afterError(error)
                 }
             }
         }
@@ -936,7 +1010,7 @@ class MainViewModel(
                 }
             } catch (error: Exception) {
                 _state.update {
-                    it.copy(collectionBusy = false, message = error.userMessage())
+                    it.afterError(error)
                 }
             }
         }
@@ -1000,7 +1074,7 @@ class MainViewModel(
                 }
             } catch (error: Exception) {
                 _state.update {
-                    it.copy(studioBusy = false, message = error.userMessage())
+                    it.afterError(error)
                 }
             }
         }
@@ -1065,7 +1139,7 @@ class MainViewModel(
                 }
             } catch (error: Exception) {
                 _state.update {
-                    it.copy(studioBusy = false, message = error.userMessage())
+                    it.afterError(error)
                 }
             }
         }
@@ -1125,7 +1199,7 @@ class MainViewModel(
                 }
             } catch (error: Exception) {
                 _state.update {
-                    it.copy(studioBusy = false, message = error.userMessage())
+                    it.afterError(error)
                 }
             }
         }
@@ -1173,12 +1247,7 @@ class MainViewModel(
                     )
                 }
             } catch (error: Exception) {
-                _state.update {
-                    it.copy(
-                        collectionBusy = false,
-                        message = error.userMessage(),
-                    )
-                }
+                _state.update { it.afterError(error) }
             }
         }
     }
@@ -1229,12 +1298,7 @@ class MainViewModel(
                     )
                 }
             } catch (error: Exception) {
-                _state.update {
-                    it.copy(
-                        collectionBusy = false,
-                        message = error.userMessage(),
-                    )
-                }
+                _state.update { it.afterError(error) }
             }
         }
     }
@@ -1277,12 +1341,7 @@ class MainViewModel(
                     )
                 }
             } catch (error: Exception) {
-                _state.update {
-                    it.copy(
-                        collectionBusy = false,
-                        message = error.userMessage(),
-                    )
-                }
+                _state.update { it.afterError(error) }
             }
         }
     }
@@ -1316,12 +1375,7 @@ class MainViewModel(
                     )
                 }
             } catch (error: Exception) {
-                _state.update {
-                    it.copy(
-                        collectionBusy = false,
-                        message = error.userMessage(),
-                    )
-                }
+                _state.update { it.afterError(error) }
             }
         }
     }
@@ -1374,6 +1428,7 @@ class MainViewModel(
                 _state.update {
                     it.copy(
                         message = error.userMessage(),
+                        messageAction = null,
                     )
                 }
             }
@@ -1387,7 +1442,7 @@ class MainViewModel(
             try {
                 val applied = actions.setAsWallpaper(wallpaper, target)
                 _state.update {
-                    it.copy(message = appliedMessage(applied))
+                    it.copy(message = appliedMessage(applied), messageAction = null)
                 }
             } catch (error: CancellationException) {
                 _actionState.value = ActionState()
@@ -1406,7 +1461,7 @@ class MainViewModel(
      * mismo mensaje que el flujo anterior.
      */
     fun onWallpaperApplied(target: WallpaperTarget) {
-        _state.update { it.copy(message = appliedMessage(target)) }
+        _state.update { it.copy(message = appliedMessage(target), messageAction = null) }
     }
 
     private fun appliedMessage(target: WallpaperTarget): String = when (target) {
@@ -1472,15 +1527,18 @@ class MainViewModel(
                 liteMode = false,
                 openEditorOnApply = true,
                 message = "Ajustes restablecidos.",
+                messageAction = null,
             )
         }
     }
 
     /** Borra la copia local del feed; se vuelve a bajar al actualizar. */
     fun clearCache() {
-        cache.writeWallpapers(emptyList())
-        cache.writeCollections(emptyList())
-        _state.update { it.copy(message = "Caché borrada.") }
+        viewModelScope.launch {
+            cache.writeWallpapers(emptyList())
+            cache.writeCollections(emptyList())
+            _state.update { it.copy(message = "Caché borrada.", messageAction = null) }
+        }
     }
 
     /**
@@ -1494,7 +1552,28 @@ class MainViewModel(
     private fun restoreSession() {
         if (!api.isConfigured) return
         viewModelScope.launch {
-            val session = api.refreshSession() ?: return@launch
+            val session = api.refreshSession()
+            if (session == null) {
+                // Si el refresh token fue rechazado, la implementación borra
+                // las preferencias; en ese caso tampoco dejamos la sesión
+                // vieja en pantalla ni colecciones privadas cacheadas.
+                if (prefs.session() == null) {
+                    _state.update {
+                        val publicCollections = it.collectionItems.filter { c -> c.isPublic }
+                        it.copy(
+                            session = null,
+                            adminWallpapers = emptyList(),
+                            collectionItems = publicCollections,
+                            collections = if (publicCollections.isEmpty()) {
+                                LoadState.Empty
+                            } else {
+                                LoadState.Content(publicCollections)
+                            },
+                        )
+                    }
+                }
+                return@launch
+            }
             _state.update { it.copy(session = session) }
         }
     }
@@ -1502,14 +1581,68 @@ class MainViewModel(
     private suspend fun loadCollectionsOrEmpty(
         fallback: List<WallpaperCollection>,
     ): List<WallpaperCollection> =
-        runCatching { api.loadCollections() }.getOrElse { fallback }
+        try {
+            api.loadCollections()
+        } catch (error: CancellationException) {
+            throw error
+        } catch (error: DannXError.SessionExpired) {
+            throw error
+        } catch (error: Exception) {
+            fallback
+        }
 
     private suspend fun loadCategoriesOrEmpty(
         fallback: List<WallpaperCategory>,
     ): List<WallpaperCategory> =
-        runCatching {
+        try {
             api.loadCategories().sortedWith(compareBy({ c -> c.position }, { c -> c.name }))
-        }.getOrElse { fallback }
+        } catch (error: CancellationException) {
+            throw error
+        } catch (error: DannXError.SessionExpired) {
+            throw error
+        } catch (error: Exception) {
+            fallback
+        }
+
+    private fun isReservedCategoryName(name: String): Boolean =
+        name.equals("Todos", ignoreCase = true) ||
+            name.equals("Destacados", ignoreCase = true)
+
+    /**
+     * Deja la app en un estado coherente después de un error. Si la sesión
+     * venció, se oculta el Estudio y se quitan las colecciones privadas.
+     */
+    private fun UiState.afterError(
+        error: Throwable,
+        message: String = error.userMessage(),
+    ): UiState {
+        val expired = error is DannXError.SessionExpired
+        val publicCollections = if (expired) {
+            collectionItems.filter { it.isPublic }
+        } else {
+            collectionItems
+        }
+        return copy(
+            message = message,
+            messageAction = null,
+            session = if (expired) null else session,
+            adminWallpapers = if (expired) emptyList() else adminWallpapers,
+            collectionItems = publicCollections,
+            collections = if (expired) {
+                if (publicCollections.isEmpty()) {
+                    LoadState.Empty
+                } else {
+                    LoadState.Content(publicCollections)
+                }
+            } else {
+                collections
+            },
+            uploading = false,
+            authBusy = false,
+            collectionBusy = false,
+            studioBusy = false,
+        )
+    }
 
     companion object {
         private const val KEY_QUERY = "query"
