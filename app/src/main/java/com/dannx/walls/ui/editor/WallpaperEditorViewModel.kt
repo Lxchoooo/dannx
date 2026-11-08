@@ -90,6 +90,14 @@ internal class WallpaperEditorViewModel(
                 scheduleBlurPreview()
             } catch (error: CancellationException) {
                 throw error
+            } catch (error: OutOfMemoryError) {
+                _state.update {
+                    it.copy(
+                        loading = false,
+                        loadProgress = null,
+                        loadError = "No hay memoria suficiente. Cerrá otras apps y probá de nuevo.",
+                    )
+                }
             } catch (error: Exception) {
                 _state.update {
                     it.copy(
@@ -204,6 +212,15 @@ internal class WallpaperEditorViewModel(
                 finalBitmap?.recycle()
                 _state.update { it.copy(applying = false, applyProgress = 0) }
                 throw error
+            } catch (error: OutOfMemoryError) {
+                finalBitmap?.recycle()
+                _state.update {
+                    it.copy(
+                        applying = false,
+                        applyProgress = 0,
+                        applyError = "No hay memoria suficiente. Cerrá otras apps y probá de nuevo.",
+                    )
+                }
             } catch (error: Exception) {
                 finalBitmap?.recycle()
                 _state.update {
