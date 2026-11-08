@@ -162,9 +162,12 @@ class WallsApi(
                 AdminSession(email, auth.accessToken, id)
             } catch (error: CancellationException) {
                 throw error
-            } catch (error: DannXError.SessionExpired) {
-                // El refresh token ya no sirve: no dejamos una sesión fantasma.
-                prefs.clearSession()
+            } catch (error: DannXError) {
+                // Un rechazo del refresh token puede llegar como 400/401/403.
+                // Los errores de red o del servidor no borran la sesión.
+                if (error !is DannXError.Offline && error !is DannXError.Server) {
+                    prefs.clearSession()
+                }
                 null
             } catch (_: Exception) {
                 null
