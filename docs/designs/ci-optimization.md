@@ -277,9 +277,12 @@ No change: artifact names and the rolling release remain the same.
     on a branch or a manual dispatch, not by breaking `main`.
 *   **Build**: `debug` must stay green on push/PR; `checks` and `build` must be
     green on `main`; `publish` must produce the rolling release.
-*   **Tag path**: create a test tag only when a release is intended; confirm
-    `publish` downloads the artifact and creates the tag release after both
-    jobs.
+*   **Tag path**: a tag publishes a versioned release, so it is created only
+    when a release is intended. The mechanism was verified once with a
+    throwaway tag `v0.0.0-ci-test` (run `42509692612`): `debug` was skipped,
+    `checks` and `build` passed, and `publish` created the release with
+    `DannX.apk`. The release and the tag were deleted afterwards, and the
+    rolling release was marked latest again.
 *   **Timing**: record per-step durations for at least three consecutive
     `main` runs. Report medians; do not compare a cold-cache run with a warm one.
     Target: full path median ≤ 210 s, debug median ≤ 90 s.
