@@ -27,3 +27,16 @@ otras apps.
 - Las escrituras en la base están limitadas por reglas del servidor a una sola
   cuenta de administrador.
 - La firma de release vive como secreto de GitHub, no en el repositorio.
+- El registro público de Supabase está deshabilitado: la app solo inicia sesión
+  con la cuenta administradora.
+- El esquema y las políticas viven en `docs/migraciones/`; `supabase/setup.sql`
+  queda como referencia histórica. El workflow de migraciones verifica que
+  `collections.is_public` exista, que RLS esté activo en colecciones e ítems y
+  que las políticas usen esa columna.
+- `main` no acepta borrados ni force-push y exige los checks `checks` y `debug`
+  (con bypass para el rol admin). Las actions están fijadas a SHA y el repo
+  exige SHA pinning.
+- No hay deploy keys con escritura; los push usan tokens de GitHub.
+- Los tokens de sesión viven en preferencias privadas excluidas de los backups
+  del dispositivo.
+- El APK de release no incluye logs de depuración.
