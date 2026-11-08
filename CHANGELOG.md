@@ -37,6 +37,8 @@ reservado a administradores y no se detalla en la documentación.
 - El editor marca su estado y sus filtros como inmutables para reducir
   recomposiciones.
 - El `versionName` de los builds locales pasa a 1.3.0.
+- Actualizados `core-splashscreen` 1.2.0, `kotlinx-coroutines-test` 1.11.0 y
+  las actions `setup-java` 6.2.0 y `download-artifact` 8.0.2.
 
 ## v1.3.0
 

@@ -2,7 +2,7 @@
 agp = "9.1.0"
 kotlin = "2.4.21"
 coreKtx = "1.19.1"
-coreSplashscreen = "1.0.1"
+coreSplashscreen = "1.2.0"
 activityCompose = "1.13.0"
 lifecycle = "2.11.0"
 navigation = "2.10.2"
@@ -14,7 +14,7 @@ serialization = "1.12.0"
 coil = "2.7.0"
 profileinstaller = "1.4.1"
 junit = "4.13.2"
-coroutines = "1.10.2"
+coroutines = "1.11.0"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
