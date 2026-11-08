@@ -56,7 +56,7 @@ internal object EditorPresets {
     private fun matrixArray(block: ColorMatrix.() -> Unit): FloatArray {
         val matrix = ColorMatrix()
         matrix.block()
-        return FloatArray(20).also { matrix.getArray(it) }
+        return matrix.array.copyOf(20)
     }
 
     private fun scaleMatrix(red: Float, green: Float, blue: Float): FloatArray =
