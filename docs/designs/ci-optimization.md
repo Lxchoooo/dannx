@@ -342,3 +342,14 @@ APK non-updatable and change release semantics. Rejected under NG7.
 *   **Q3**: Is a scheduled cold-cache check worth the runner minutes, or is a
     manual dispatch sufficient? Start with manual dispatch on cache-affecting
     changes.
+
+## Actualización: debug en PRs y Gradle 9.9 (2026-11-08)
+
+*   El job `debug` corre **solo en pull requests**. En `main` ya no se genera un
+    APK de prueba por push: `checks`, `build` y la release rolling cubren ese
+    camino, y se ahorra un runner por cada push. G1 sigue midiendo el modo
+    rápido, pero ahora sobre PRs.
+*   Gradle pasó de 9.4.1 a 9.9.0. La primera corrida llenó la caché del wrapper
+    (`checks` 183 s, `build` 174 s); con la caché tibia, `checks` volvió a 117 s
+    y el camino completo quedó en ~3 min, dentro de G2.
+*   `download-artifact` pasó a v8 y `setup-java` a v6.2.0, fijados a SHA.

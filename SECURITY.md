@@ -33,9 +33,9 @@ otras apps.
   queda como referencia histórica. El workflow de migraciones verifica que
   `collections.is_public` exista, que RLS esté activo en colecciones e ítems y
   que las políticas usen esa columna.
-- `main` no acepta borrados ni force-push y exige los checks `checks` y `debug`
-  (con bypass para el rol admin). Las actions están fijadas a SHA y el repo
-  exige SHA pinning.
+- `main` no acepta borrados ni force-push; los PRs exigen los checks `checks` y
+  `debug` (con bypass para el rol admin). `debug` corre solo en PRs. Las
+  actions están fijadas a SHA y el repo exige SHA pinning.
 - No hay deploy keys con escritura; los push usan tokens de GitHub.
 - Los tokens de sesión viven en preferencias privadas excluidas de los backups
   del dispositivo.
