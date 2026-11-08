@@ -1,7 +1,7 @@
 # CI and Repository Optimization for Faster Builds
 
 *   **Author:** Lxchoooo
-*   **Status:** Revised after Stage 5 review
+*   **Status:** Implemented; goals confirmed by measurement
 *   **Date:** 2026-11-08
 
 ---
@@ -16,9 +16,10 @@ The repository already went through one optimization round: fast debug build on
 push/PR, full build on tags and `main`, `paths-ignore`, Gradle build cache,
 timeouts, concurrency cancellation, newer action majors, and a single release
 invocation that excludes `lintVitalRelease`. This document records the measured
-state, resolves the Stage 5 review, and designs the next change: split the full
-path into a parallel correctness gate and a release build, with publication
-gated on both.
+state, resolves the Stage 5 review (see
+`reviews/ci-optimization-stage5.md`), and documents the change that followed:
+the full path is split into a parallel correctness gate and a release build,
+with publication gated on both. Six post-change runs confirm both timing goals.
 
 ## Measured baseline
 
@@ -42,7 +43,7 @@ dominates the rest. On one repeat run with a warm build cache the Gradle step
 measured 57 s, but the run-to-run range is wider than any remaining CI-only
 lever.
 
-### Full path (`release` job)
+### Full path (`release` job, pre-split)
 
 | Phase | Measured |
 | --- | --- |
@@ -66,26 +67,34 @@ keep a monotonically increasing version code so Android accepts the update.
 Release builds therefore cannot be warm-cached by design without changing
 versioning semantics.
 
-### First post-change measurement
+### Post-change measurements (six runs)
 
-Source: run `42490677444` on `bf264fe` (2026-11-08), the workflow-only commit
-that introduced the split. The app source was unchanged from the previous run,
-so the app build cache was warm; treat this as a lower bound, not as the
-number for a typical Kotlin change.
+Source: the six `main` pushes after the split, run `42490677444` (`bf264fe`) to
+run `42495162848` (`16f7e55`), all on 2026-11-08 and all green. The sample mixes
+workflow-only and app-source commits. Times are job wall-clock; end-to-end runs
+from the first job start to the end of `publish`.
 
-| Job | Total | Main step | Notes |
-| --- | --- | --- | --- |
-| `debug` | 42 s | `assembleDebug` 24 s | Warm app cache; a code change will be slower |
-| `checks` | 146 s | `lintDebug testDebugUnitTest` 117 s | Compile 28 s, tests 2 s, lint ~37 s |
-| `build` | 159 s | `assembleRelease` 133 s | R8 58 s on this run |
-| `publish` | 10 s | download + rolling release | After both gates passed |
+| Run | Commit | `debug` | `checks` | `build` | `publish` | End-to-end |
+| --- | --- | --- | --- | --- | --- | --- |
+| `42490677444` | `bf264fe` | 42 s | 146 s | 159 s | 10 s | 172 s |
+| `42491881254` | `6b763d2` | 101 s | 116 s | 130 s | 11 s | 143 s |
+| `42492350266` | `c6cbeab` | 81 s | 40 s | 169 s | 9 s | 180 s |
+| `42494457091` | `d580555` | 89 s | 127 s | 122 s | 10 s | 139 s |
+| `42494743934` | `df4cd15` | 95 s | 31 s | 149 s | 12 s | 162 s |
+| `42495162848` | `16f7e55` | 73 s | 111 s | 189 s | 11 s | 202 s |
+| **Median** | | **85 s** | **114 s** | **154 s** | **11 s** | **168 s** |
 
-End-to-end from the first job start to the end of `publish`: ~169 s, versus
-~276 s on the pre-split code-change run. The comparison mixes a code-change
-baseline with a warm-cache workflow-only sample, so the true saving for a
-one-file Kotlin change still needs two more samples. The structural saving is
-real: lint and tests no longer sit on the release critical path, and
-publication cannot start until both jobs pass.
+Gradle-step medians: `assembleDebug` 62 s, `lintDebug testDebugUnitTest` 91 s,
+`assembleRelease` 132 s. The `build` job is the critical path in five of the six
+runs; in `42494457091` `checks` edged it out by 5 s, so publication started 7 s
+after the build job ended. End-to-end median is 168 s against the 276 s
+pre-split baseline (~108 s, 39% less); the 139–202 s spread is runner and cache
+variance, not a trend, and `assembleRelease` (101–167 s) dominates it.
+
+Both timing goals are met: `debug` median 85 s (≤ 90 s) with a 62 s Gradle step
+(≤ 70 s), and the full path median 168 s (≤ 210 s). The structural saving holds:
+lint and tests no longer sit on the release critical path, and publication still
+waits for both gates.
 
 ## Goals
 
@@ -95,9 +104,8 @@ publication cannot start until both jobs pass.
     target was not supported by the measured setup floor and is withdrawn.
 *   **G2**: Cut the full path from ~276 s to ≤ 210 s (3.5 min) by running lint
     and tests in parallel with `assembleRelease`, while keeping lint and tests
-    as hard gates for publication. Do not drop either check. First sample:
-    ~169 s on a warm app cache; still needs two code-change samples before it is
-    treated as confirmed.
+    as hard gates for publication. Do not drop either check. Confirmed by six
+    post-change runs: median 168 s end-to-end (range 139–202 s).
 *   **G3**: Keep every existing safety property: no signing material in the
     repository, no secrets in build logs, `minSdk 29` / `targetSdk 36`
     unchanged, release signing flow unchanged.
@@ -168,7 +176,7 @@ main/tag/manual ──> release job
                     → remove keystore
 ```
 
-Proposed full path:
+Full path after the change (implemented):
 
 ```text
 main/tag/manual ──> checks job (parallel)          ──┐
@@ -190,7 +198,7 @@ and `checks` + `build` gate `publish`.
 
 | Lever | Expected effect | Status |
 | --- | --- | --- |
-| Parallel `checks` vs `build` | Remove lint and tests from the release critical path; first sample ~169 s total, expected ~200–210 s on a real code change | **Implemented in this change** |
+| Parallel `checks` vs `build` | Remove lint and tests from the release critical path; median 168 s end-to-end across six post-change runs (range 139–202 s) against the 276 s baseline | **Implemented and measured** |
 | Pin `ubuntu-24.04` | Determinism; near-zero timing effect | **Implemented** |
 | Configuration cache | ~0 s across ephemeral runners; not worth a hand-rolled `.gradle` cache | **Rejected** |
 | `setup-gradle` home-cache cleanup | May reduce cache size; adds scan time to every saving job | Not adopted until measured |
@@ -209,7 +217,8 @@ removes the correctness gate from the critical path.
 ### 1. `.github/workflows/android.yml` — split the full path
 
 *   Pin every job to `ubuntu-24.04`.
-*   Keep `debug` as-is (except the runner pin).
+*   Keep `debug` as-is (except the runner pin and the keystore restore
+    documented in 3b).
 *   Add a `checks` job: `./gradlew lintDebug testDebugUnitTest`, upload lint and
     test reports. Runs on PR, `main`, tags and manual dispatch.
 *   Add a `build` job: restore keystore, `./gradlew assembleRelease -x
@@ -322,8 +331,9 @@ APK non-updatable and change release semantics. Rejected under NG7.
 
 ## Open questions
 
-*   **Q1**: Does the split actually save ≥ 50 s on the full path across three
-    runs? If not, revert to the single job.
+*   **Q1 (answered)**: Yes. Six post-change runs give a 168 s median end-to-end
+    against the 276 s baseline, so the split stays. Remaining variance comes
+    from R8 and runner speed, not from the split.
 *   **Q2**: Does `actions/download-artifact@v7` add measurable time to
     `publish`? It should be a few seconds; measure before optimizing further.
 *   **Q3**: Is a scheduled cold-cache check worth the runner minutes, or is a
