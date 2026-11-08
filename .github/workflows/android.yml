@@ -24,10 +24,10 @@ env:
   SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY || vars.SUPABASE_ANON_KEY }}
 
 jobs:
-  # Modo rápido: solo APK de prueba en cada push y en cada PR.
+  # Modo rápido: APK de prueba en cada push y en cada PR.
   debug:
     if: github.ref_type != 'tag'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v7
@@ -50,13 +50,56 @@ jobs:
           if-no-files-found: error
           retention-days: 7
 
-  # Modo completo: en tag v*, en cada merge a main o disparado a mano.
-  release:
-    if: github.ref_type == 'tag' || github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main'
-    runs-on: ubuntu-latest
+  # Compuerta de corrección: lint y tests. Corre en paralelo con el build
+  # release; la publicación espera a que este job termine bien.
+  checks:
+    if: >-
+      github.event_name == 'pull_request' ||
+      github.ref == 'refs/heads/main' ||
+      github.ref_type == 'tag' ||
+      github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - uses: gradle/actions/setup-gradle@v6
+
+      - name: Lint and unit tests
+        run: ./gradlew lintDebug testDebugUnitTest
+
+      - name: Upload lint report
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: lint-report
+          path: app/build/reports/lint-results-debug.html
+          if-no-files-found: ignore
+          retention-days: 7
+
+      - name: Upload test report
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: test-report
+          path: app/build/reports/tests/testDebugUnitTest
+          if-no-files-found: ignore
+          retention-days: 7
+
+  # Build release sin lint ni tests: esas compuertas viven en `checks`.
+  # lintVitalRelease se excluye porque lintDebug ya es la compuerta completa.
+  build:
+    if: >-
+      github.ref == 'refs/heads/main' ||
+      github.ref_type == 'tag' ||
+      github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-24.04
     timeout-minutes: 30
-    permissions:
-      contents: write
     steps:
       - uses: actions/checkout@v7
 
@@ -78,26 +121,14 @@ jobs:
           echo "$ANDROID_KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/release-keystore.p12"
           echo "ANDROID_KEYSTORE_PATH=$RUNNER_TEMP/release-keystore.p12" >> "$GITHUB_ENV"
 
-      # Una sola invocación: ahorra una fase de configuración completa.
-      # lintDebug reemplaza a lintVitalRelease (que assembleRelease ejecuta
-      # solo para errores fatales); el lint completo sigue siendo obligatorio.
-      - name: Lint, tests and release APK
+      - name: Build release APK
         env:
           ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
           VERSION_NAME: ${{ github.ref_type == 'tag' && github.ref_name || '' }}
           VERSION_CODE: ${{ github.run_number }}
-        run: ./gradlew lintDebug testDebugUnitTest assembleRelease -x lintVitalRelease
-
-      - name: Upload lint report
-        if: always()
-        uses: actions/upload-artifact@v7
-        with:
-          name: lint-report
-          path: app/build/reports/lint-results-debug.html
-          if-no-files-found: ignore
-          retention-days: 7
+        run: ./gradlew assembleRelease -x lintVitalRelease
 
       - name: Upload compose reports
         if: always()
@@ -117,12 +148,40 @@ jobs:
           if-no-files-found: error
           retention-days: 7
 
+      - name: Remove keystore
+        if: always()
+        run: rm -f "$RUNNER_TEMP/release-keystore.p12"
+
+      - name: Remove keystore env
+        if: always()
+        run: echo "ANDROID_KEYSTORE_PATH=" >> "$GITHUB_ENV"
+
+  # Publica solo después de que lint/tests y el build release hayan pasado.
+  publish:
+    needs: [checks, build]
+    if: github.ref == 'refs/heads/main' || github.ref_type == 'tag'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      actions: read
+      contents: write
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Download release APK
+        uses: actions/download-artifact@v7
+        with:
+          name: DannX-release-${{ github.run_number }}
+          path: release
+
       - name: Publish APK on tag
         if: github.ref_type == 'tag'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          cp app/build/outputs/apk/release/app-release.apk DannX.apk
+          APK=$(find release -name 'app-release.apk' -print -quit)
+          test -n "$APK"
+          cp "$APK" DannX.apk
           gh release create "$GITHUB_REF_NAME" DannX.apk \
             --title "DannX $GITHUB_REF_NAME" \
             --notes "Compilado y firmado por GitHub Actions." \
@@ -133,7 +192,9 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          cp app/build/outputs/apk/release/app-release.apk DannX.apk
+          APK=$(find release -name 'app-release.apk' -print -quit)
+          test -n "$APK"
+          cp "$APK" DannX.apk
           NOTES="Compilado y firmado por GitHub Actions desde main."
           if gh release view latest >/dev/null 2>&1; then
             gh release upload latest DannX.apk --clobber
@@ -144,11 +205,3 @@ jobs:
               --title "DannX · última versión" \
               --notes "$NOTES"
           fi
-
-      - name: Remove keystore
-        if: always()
-        run: rm -f "$RUNNER_TEMP/release-keystore.p12"
-
-      - name: Remove keystore env
-        if: always()
-        run: echo "ANDROID_KEYSTORE_PATH=" >> "$GITHUB_ENV"
