@@ -72,10 +72,9 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
@@ -208,8 +207,7 @@ fun DetailScreen(
             .onSizeChanged { containerSize = it },
     ) {
         val context = LocalContext.current
-        val configuration = LocalConfiguration.current
-        val density = LocalDensity.current
+        val windowSize = LocalWindowInfo.current.containerSize
         // Se pide exactamente la misma miniatura que usa la grilla, con su
         // misma clave de memoria. Si no está cacheada, no se descarga: solo se
         // ve el fondo neutro hasta que llega la imagen completa.
@@ -226,15 +224,11 @@ fun DetailScreen(
         val imageRequest = remember(
             wallpaper.id,
             wallpaper.imageUrl,
-            configuration.screenWidthDp,
-            configuration.screenHeightDp,
-            density,
+            windowSize,
         ) {
-            val width = with(density) { configuration.screenWidthDp.dp.roundToPx() }
-            val height = with(density) { configuration.screenHeightDp.dp.roundToPx() }
             ImageRequest.Builder(context)
                 .data(wallpaper.imageUrl)
-                .size(width, height)
+                .size(windowSize.width, windowSize.height)
                 .build()
         }
         Box(
@@ -483,12 +477,18 @@ fun DetailScreen(
                         color = Color.White,
                     )
                     Spacer(Modifier.width(10.dp))
-                    Text(
-                        text = stringResource(R.string.apply_in_progress),
-                        style = MaterialTheme.typography.labelLarge,
-                        color = Color.White.copy(alpha = 0.9f),
-                        modifier = Modifier.weight(1f),
-                    )
+                    Column(Modifier.weight(1f)) {
+                        Text(
+                            text = stringResource(R.string.apply_in_progress),
+                            style = MaterialTheme.typography.labelLarge,
+                            color = Color.White.copy(alpha = 0.9f),
+                        )
+                        Text(
+                            text = stringResource(R.string.apply_in_progress_hint),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = Color.White.copy(alpha = 0.7f),
+                        )
+                    }
                     TextButton(onClick = onCancelAction) {
                         Text(
                             text = stringResource(R.string.action_cancel),

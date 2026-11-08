@@ -1,6 +1,7 @@
 package com.dannx.walls.data
 
 import android.content.Context
+import androidx.core.content.edit
 
 /** Forma de elegir entre tema claro y oscuro. */
 enum class ThemeMode { SYSTEM, LIGHT, DARK }
@@ -35,19 +36,19 @@ class AppearancePrefs(context: Context) : AppearanceStore {
     override fun openEditorOnApply(): Boolean = prefs.getBoolean(KEY_OPEN_EDITOR, true)
 
     override fun saveThemeMode(mode: ThemeMode) {
-        prefs.edit().putString(KEY_THEME, mode.name).apply()
+        prefs.edit { putString(KEY_THEME, mode.name) }
     }
 
     override fun saveLiteMode(enabled: Boolean) {
-        prefs.edit().putBoolean(KEY_LITE, enabled).apply()
+        prefs.edit { putBoolean(KEY_LITE, enabled) }
     }
 
     override fun saveOpenEditorOnApply(enabled: Boolean) {
-        prefs.edit().putBoolean(KEY_OPEN_EDITOR, enabled).apply()
+        prefs.edit { putBoolean(KEY_OPEN_EDITOR, enabled) }
     }
 
     override fun reset() {
-        prefs.edit().clear().apply()
+        prefs.edit { clear() }
     }
 
     private companion object {

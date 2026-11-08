@@ -39,6 +39,10 @@ reservado a administradores y no se detalla en la documentación.
 - El `versionName` de los builds locales pasa a 1.3.0.
 - Actualizados `core-splashscreen` 1.2.0, `kotlinx-coroutines-test` 1.11.0 y
   las actions `setup-java` 6.2.0 y `download-artifact` 8.0.2.
+- Se limpiaron los avisos de lint: extensiones KTX en preferencias, URIs y
+  bitmaps, tamaños de ventana en Compose y una llamada a `super` innecesaria.
+- La pantalla de detalle muestra la ayuda “puede tardar un momento” mientras
+  aplica un fondo.
 
 ## v1.3.0
 

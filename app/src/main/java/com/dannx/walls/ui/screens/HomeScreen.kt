@@ -54,9 +54,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -144,8 +145,8 @@ fun HomeScreen(
     }
     // En pantallas bajas el hero no debe comerse todo el alto: se limita a
     // poco más de la mitad de la ventana.
-    val heroHeight = with(LocalConfiguration.current) {
-        min(HeroHeight.value, screenHeightDp * 0.55f).dp
+    val heroHeight = with(LocalDensity.current) {
+        min(HeroHeight.toPx(), LocalWindowInfo.current.containerSize.height * 0.55f).toDp()
     }
 
     LazyVerticalGrid(

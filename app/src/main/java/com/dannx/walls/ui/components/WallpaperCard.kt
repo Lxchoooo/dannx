@@ -39,7 +39,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
@@ -70,11 +70,9 @@ internal val HeroHeight = 400.dp
  */
 @Composable
 internal fun screenImageSize(height: androidx.compose.ui.unit.Dp): IntSize {
-    val configuration = LocalConfiguration.current
-    val density = LocalDensity.current
-    val widthPx = with(density) { configuration.screenWidthDp.dp.toPx() }
-    val heightPx = with(density) { height.toPx() }
-    return IntSize(widthPx.toInt(), heightPx.toInt())
+    val widthPx = LocalWindowInfo.current.containerSize.width
+    val heightPx = with(LocalDensity.current) { height.toPx() }
+    return IntSize(widthPx, heightPx.toInt())
 }
 
 /**

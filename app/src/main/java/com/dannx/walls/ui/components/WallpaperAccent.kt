@@ -11,6 +11,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.graphics.drawable.toBitmapOrNull
+import androidx.core.graphics.get
 import coil.imageLoader
 import coil.request.ImageRequest
 import coil.request.SuccessResult
@@ -55,7 +56,7 @@ private fun averageColor(bitmap: Bitmap): Color {
     while (y < bitmap.height) {
         var x = stepX / 2
         while (x < bitmap.width) {
-            val pixel = bitmap.getPixel(x, y)
+            val pixel = bitmap[x, y]
             val alpha = (pixel ushr 24) and 0xFF
             if (alpha > 40) {
                 red += (pixel shr 16) and 0xFF

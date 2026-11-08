@@ -14,6 +14,8 @@ import android.graphics.Rect
 import android.graphics.RectF
 import android.graphics.Shader
 import androidx.compose.runtime.Immutable
+import androidx.core.graphics.createBitmap
+import androidx.core.graphics.scale
 import com.dannx.walls.util.CropRect
 import com.dannx.walls.util.calculateInSampleSize
 import com.dannx.walls.util.centerCropRect
@@ -74,13 +76,12 @@ internal object EditorImage {
             source.copy(Bitmap.Config.ARGB_8888, false)
                 ?: throw IOException("No se pudo preparar el desenfoque.")
         } else {
-            Bitmap.createScaledBitmap(source, width, height, true)
-                ?: throw IOException("No se pudo preparar el desenfoque.")
+            source.scale(width, height, true)
         }
         val pixels = IntArray(width * height)
         small.getPixels(pixels, 0, width, 0, 0, width, height)
         boxBlur(pixels, width, height, max(1, min(width, height) / 40))
-        val output = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+        val output = createBitmap(width, height, Bitmap.Config.ARGB_8888)
         output.setPixels(pixels, 0, width, 0, 0, width, height)
         if (small !== source) {
             small.recycle()
@@ -95,7 +96,7 @@ internal object EditorImage {
             val value = random.nextInt(256)
             pixels[index] = Color.argb(255, value, value, value)
         }
-        return Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888).apply {
+        return createBitmap(size, size, Bitmap.Config.ARGB_8888).apply {
             setPixels(pixels, 0, size, 0, 0, size, size)
         }
     }
@@ -103,7 +104,7 @@ internal object EditorImage {
     fun createFilterThumbs(source: Bitmap): List<EditorFilterThumb> {
         val sourceRect = centerCropRect(source.width, source.height, ThumbWidth, ThumbHeight)
         return EditorPresets.all.map { preset ->
-            val bitmap = Bitmap.createBitmap(ThumbWidth, ThumbHeight, Bitmap.Config.ARGB_8888)
+            val bitmap = createBitmap(ThumbWidth, ThumbHeight, Bitmap.Config.ARGB_8888)
             val canvas = Canvas(bitmap)
             val paint = Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG).apply {
                 if (preset.id != "original") {
@@ -174,7 +175,7 @@ internal object EditorImage {
         onProgress(8)
         val region = decodeCropRegion(file, targetWidth, targetHeight, settings.crop)
         onProgress(30)
-        val output = Bitmap.createBitmap(
+        val output = createBitmap(
             targetWidth.coerceAtLeast(1),
             targetHeight.coerceAtLeast(1),
             Bitmap.Config.ARGB_8888,
@@ -314,7 +315,7 @@ internal object EditorImage {
         if (decoded.width == targetWidth && decoded.height == targetHeight) {
             return decoded
         }
-        val scaled = Bitmap.createScaledBitmap(decoded, targetWidth, targetHeight, true)
+        val scaled = decoded.scale(targetWidth, targetHeight, true)
         if (scaled !== decoded) {
             decoded.recycle()
         }

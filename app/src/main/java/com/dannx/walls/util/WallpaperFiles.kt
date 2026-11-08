@@ -10,12 +10,13 @@ import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.BitmapRegionDecoder
 import android.graphics.Rect
-import android.net.Uri
 import android.os.Environment
 import android.provider.MediaStore
 import android.util.DisplayMetrics
 import android.view.WindowManager
 import androidx.core.content.FileProvider
+import androidx.core.graphics.scale
+import androidx.core.net.toUri
 import com.dannx.walls.data.Wallpaper
 import com.dannx.walls.data.WallpaperActions
 import java.io.File
@@ -174,7 +175,7 @@ class WallpaperFiles(private val context: Context) : WallpaperActions {
      * Abre un archivo guardado en la galería con la app de imágenes del sistema.
      */
     fun open(uri: String) {
-        val parsed = Uri.parse(uri)
+        val parsed = uri.toUri()
         val intent = Intent(Intent.ACTION_VIEW).apply {
             setDataAndType(parsed, context.contentResolver.getType(parsed) ?: "image/*")
             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
@@ -189,7 +190,7 @@ class WallpaperFiles(private val context: Context) : WallpaperActions {
      * Indica si el archivo guardado sigue existiendo en el dispositivo.
      */
     override fun exists(uri: String): Boolean = runCatching {
-        context.contentResolver.openFileDescriptor(Uri.parse(uri), "r")?.use { true } ?: false
+        context.contentResolver.openFileDescriptor(uri.toUri(), "r")?.use { true } ?: false
     }.getOrDefault(false)
 
     private fun galleryFileName(wallpaper: Wallpaper, extension: String): String {
@@ -352,7 +353,7 @@ class WallpaperFiles(private val context: Context) : WallpaperActions {
     }
 
     override fun share(image: SharedImage, title: String) {
-        val uri = Uri.parse(image.uri)
+        val uri = image.uri.toUri()
         val send = Intent(Intent.ACTION_SEND).apply {
             type = image.mime
             putExtra(Intent.EXTRA_STREAM, uri)
@@ -406,7 +407,7 @@ internal fun decodeCroppedBitmap(
     if (cropped.width == targetWidth && cropped.height == targetHeight) {
         return cropped
     }
-    val scaled = Bitmap.createScaledBitmap(cropped, targetWidth, targetHeight, true)
+    val scaled = cropped.scale(targetWidth, targetHeight, true)
     if (scaled != cropped) {
         cropped.recycle()
     }

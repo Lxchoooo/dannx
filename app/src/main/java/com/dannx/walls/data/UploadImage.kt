@@ -5,6 +5,7 @@ import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.ImageDecoder
 import android.net.Uri
+import androidx.core.graphics.scale
 import java.io.File
 import kotlin.math.max
 
@@ -127,8 +128,7 @@ private fun convertToJpeg(
             if (quality > 60) {
                 quality -= 12
             } else {
-                val next = Bitmap.createScaledBitmap(
-                    current,
+                val next = current.scale(
                     (current.width * 0.8f).toInt().coerceAtLeast(1),
                     (current.height * 0.8f).toInt().coerceAtLeast(1),
                     true,

@@ -2,7 +2,6 @@ package com.dannx.walls.ui.screens
 
 import android.content.Context
 import android.content.Intent
-import android.net.Uri
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -37,6 +36,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.core.net.toUri
 import com.dannx.walls.BuildConfig
 import com.dannx.walls.UiState
 import com.dannx.walls.data.ThemeMode
@@ -265,6 +265,6 @@ private fun ThemeMode.label(): String = when (this) {
 
 private fun openUrl(context: Context, url: String) {
     runCatching {
-        context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
+        context.startActivity(Intent(Intent.ACTION_VIEW, url.toUri()))
     }
 }

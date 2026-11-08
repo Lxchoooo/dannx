@@ -339,7 +339,6 @@ internal class WallpaperEditorViewModel(
             current.grain?.recycle()
             current.thumbs.forEach { it.bitmap.recycle() }
         }
-        super.onCleared()
     }
 
     companion object {

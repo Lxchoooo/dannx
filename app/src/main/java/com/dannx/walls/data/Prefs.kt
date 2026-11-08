@@ -1,6 +1,7 @@
 package com.dannx.walls.data
 
 import android.content.Context
+import androidx.core.content.edit
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
@@ -23,18 +24,18 @@ class Prefs(context: Context) : LocalStore {
         val legacyAccess = prefs.getString(KEY_ACCESS_TOKEN, null)
         val legacyRefresh = prefs.getString(KEY_REFRESH_TOKEN, null)
         if (legacyAccess == null && legacyRefresh == null) return
-        sessionPrefs.edit()
-            .putString(KEY_ACCESS_TOKEN, legacyAccess)
-            .putString(KEY_REFRESH_TOKEN, legacyRefresh)
-            .putString(KEY_ADMIN_EMAIL, prefs.getString(KEY_ADMIN_EMAIL, null))
-            .putString(KEY_USER_ID, prefs.getString(KEY_USER_ID, null))
-            .apply()
-        prefs.edit()
-            .remove(KEY_ACCESS_TOKEN)
-            .remove(KEY_REFRESH_TOKEN)
-            .remove(KEY_ADMIN_EMAIL)
-            .remove(KEY_USER_ID)
-            .apply()
+        sessionPrefs.edit {
+            putString(KEY_ACCESS_TOKEN, legacyAccess)
+            putString(KEY_REFRESH_TOKEN, legacyRefresh)
+            putString(KEY_ADMIN_EMAIL, prefs.getString(KEY_ADMIN_EMAIL, null))
+            putString(KEY_USER_ID, prefs.getString(KEY_USER_ID, null))
+        }
+        prefs.edit {
+            remove(KEY_ACCESS_TOKEN)
+            remove(KEY_REFRESH_TOKEN)
+            remove(KEY_ADMIN_EMAIL)
+            remove(KEY_USER_ID)
+        }
     }
 
     override fun favorites(): Set<String> =
@@ -45,25 +46,25 @@ class Prefs(context: Context) : LocalStore {
         if (!updated.add(id)) {
             updated.remove(id)
         }
-        prefs.edit().putStringSet(KEY_FAVORITES, updated).apply()
+        prefs.edit { putStringSet(KEY_FAVORITES, updated) }
         return updated
     }
 
     var accessToken: String?
         get() = sessionPrefs.getString(KEY_ACCESS_TOKEN, null)
-        set(value) = sessionPrefs.edit().putString(KEY_ACCESS_TOKEN, value).apply()
+        set(value) = sessionPrefs.edit { putString(KEY_ACCESS_TOKEN, value) }
 
     var refreshToken: String?
         get() = sessionPrefs.getString(KEY_REFRESH_TOKEN, null)
-        set(value) = sessionPrefs.edit().putString(KEY_REFRESH_TOKEN, value).apply()
+        set(value) = sessionPrefs.edit { putString(KEY_REFRESH_TOKEN, value) }
 
     var adminEmail: String?
         get() = sessionPrefs.getString(KEY_ADMIN_EMAIL, null)
-        set(value) = sessionPrefs.edit().putString(KEY_ADMIN_EMAIL, value).apply()
+        set(value) = sessionPrefs.edit { putString(KEY_ADMIN_EMAIL, value) }
 
     var userId: String?
         get() = sessionPrefs.getString(KEY_USER_ID, null)
-        set(value) = sessionPrefs.edit().putString(KEY_USER_ID, value).apply()
+        set(value) = sessionPrefs.edit { putString(KEY_USER_ID, value) }
 
     override fun session(): AdminSession? {
         val email = adminEmail ?: return null
@@ -79,21 +80,21 @@ class Prefs(context: Context) : LocalStore {
     ) {
         // Una sola transacción para que una interrupción no deje una sesión
         // mezclada entre dos inicios de sesión.
-        sessionPrefs.edit().apply {
+        sessionPrefs.edit {
             putString(KEY_ADMIN_EMAIL, email)
             if (access == null) remove(KEY_ACCESS_TOKEN) else putString(KEY_ACCESS_TOKEN, access)
             if (refresh == null) remove(KEY_REFRESH_TOKEN) else putString(KEY_REFRESH_TOKEN, refresh)
             if (id == null) remove(KEY_USER_ID) else putString(KEY_USER_ID, id)
-        }.apply()
+        }
     }
 
     override fun clearSession() {
-        sessionPrefs.edit()
-            .remove(KEY_ACCESS_TOKEN)
-            .remove(KEY_REFRESH_TOKEN)
-            .remove(KEY_ADMIN_EMAIL)
-            .remove(KEY_USER_ID)
-            .apply()
+        sessionPrefs.edit {
+            remove(KEY_ACCESS_TOKEN)
+            remove(KEY_REFRESH_TOKEN)
+            remove(KEY_ADMIN_EMAIL)
+            remove(KEY_USER_ID)
+        }
     }
 
     override fun localCollections(): List<WallpaperCollection> {
@@ -105,9 +106,7 @@ class Prefs(context: Context) : LocalStore {
     }
 
     override fun saveLocalCollections(items: List<WallpaperCollection>) {
-        prefs.edit()
-            .putString(KEY_LOCAL_COLLECTIONS, json.encodeToString(items))
-            .apply()
+        prefs.edit { putString(KEY_LOCAL_COLLECTIONS, json.encodeToString(items)) }
     }
 
     override fun downloadedUri(wallpaperId: String): String? =
@@ -118,15 +117,13 @@ class Prefs(context: Context) : LocalStore {
 
     override fun rememberDownload(wallpaperId: String, uri: String) {
         val updated = downloads().toMutableMap().apply { put(wallpaperId, uri) }
-        prefs.edit()
-            .putString(KEY_DOWNLOADS, json.encodeToString(updated))
-            .apply()
+        prefs.edit { putString(KEY_DOWNLOADS, json.encodeToString(updated)) }
     }
 
     override fun onboardingDone(): Boolean = prefs.getBoolean(KEY_ONBOARDING_DONE, false)
 
     override fun completeOnboarding() {
-        prefs.edit().putBoolean(KEY_ONBOARDING_DONE, true).apply()
+        prefs.edit { putBoolean(KEY_ONBOARDING_DONE, true) }
     }
 
     private fun downloads(): Map<String, String> {
