@@ -382,6 +382,25 @@ as $$
       );
 $$;
 
+-- Renombra o reubica una categoría. El trigger rename_category_text
+-- sincroniza el texto de los fondos dentro de la misma transacción.
+create or replace function public.update_category(
+    p_id uuid,
+    p_name text,
+    p_position int
+)
+returns void
+language sql
+security invoker
+set search_path = public, pg_temp
+as $$
+    update public.categories
+    set name = btrim(p_name), position = p_position
+    where id = p_id
+      and public.is_admin()
+      and btrim(p_name) <> '';
+$$;
+
 -- Reordena todos los elementos de una colección en una sola sentencia.
 create or replace function public.reorder_collection(
     p_collection_id uuid,
@@ -419,6 +438,9 @@ grant execute on function public.rename_wallpaper_tag(text, text) to authenticat
 
 revoke all on function public.delete_wallpaper_tag(text) from public;
 grant execute on function public.delete_wallpaper_tag(text) to authenticated;
+
+revoke all on function public.update_category(uuid, text, int) from public;
+grant execute on function public.update_category(uuid, text, int) to authenticated;
 
 revoke all on function public.reorder_collection(uuid, uuid[]) from public;
 grant execute on function public.reorder_collection(uuid, uuid[]) to authenticated;

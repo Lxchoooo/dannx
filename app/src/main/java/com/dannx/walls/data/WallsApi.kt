@@ -412,6 +412,34 @@ class WallsApi(
     ): WallpaperCategory = withContext(Dispatchers.IO) {
         ensureConfigured()
         val cleanName = name.trim().take(40)
+        try {
+            callRpc(
+                "update_category",
+                json.encodeToString(
+                    UpdateCategoryPayload(
+                        id = id,
+                        name = cleanName,
+                        position = position,
+                    ),
+                ),
+            )
+            WallpaperCategory(id = id, name = cleanName, position = position)
+        } catch (error: DannXError) {
+            if (!error.isMissingRpc()) throw error
+            updateCategorySequential(id, cleanName, position)
+        }
+    }
+
+    /**
+     * Compatibilidad mientras la migración del Estudio no esté aplicada. La
+     * versión con función actualiza la categoría y deja que el trigger
+     * sincronice el texto de los fondos en la misma transacción.
+     */
+    private suspend fun updateCategorySequential(
+        id: String,
+        name: String,
+        position: Int,
+    ): WallpaperCategory {
         val body = executeAuthorized(
             build = { token ->
                 Request.Builder()
@@ -421,7 +449,7 @@ class WallsApi(
                     .header("Prefer", "return=representation")
                     .patch(
                         json.encodeToString(
-                            CategoryUpdate(name = cleanName, position = position),
+                            CategoryUpdate(name = name, position = position),
                         ).toRequestBody(JSON_MEDIA),
                     )
                     .build()
@@ -435,13 +463,13 @@ class WallsApi(
                     .header("Authorization", "Bearer $token")
                     .header("Prefer", "return=minimal")
                     .patch(
-                        json.encodeToString(CategoryNameUpdate(cleanName))
+                        json.encodeToString(CategoryNameUpdate(name))
                             .toRequestBody(JSON_MEDIA),
                     )
                     .build()
             },
         )
-        json.decodeFromString<List<CategoryDto>>(body).firstOrNull()
+        return json.decodeFromString<List<CategoryDto>>(body).firstOrNull()
             ?.toCategory()
             ?: throw DannXError.Parse("El servidor no devolvió la categoría actualizada.")
     }

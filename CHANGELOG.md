@@ -37,10 +37,10 @@ reservado a administradores y no se detalla en la documentación.
 
 ### Correcciones
 
-- Las operaciones de etiquetas y el reordenamiento de colecciones usan una
-  función atómica de la base de datos cuando la migración del Estudio está
-  aplicada. Si la función todavía no existe, la app conserva el recorrido
-  anterior para no romper la compatibilidad.
+- Las operaciones de etiquetas, el renombrado de categorías y el reordenamiento
+  de colecciones usan una función atómica de la base de datos cuando la
+  migración del Estudio está aplicada. Si la función todavía no existe, la app
+  conserva el recorrido anterior para no romper la compatibilidad.
 - Los APK de debug de CI se firman con la misma clave que release cuando el
   secreto está disponible, y usan el mismo `versionCode` del run para poder
   instalarse encima sin desinstalar.

@@ -129,6 +129,13 @@ data class ReorderCollectionPayload(
 )
 
 @Serializable
+data class UpdateCategoryPayload(
+    @SerialName("p_id") val id: String,
+    @SerialName("p_name") val name: String,
+    @SerialName("p_position") val position: Int,
+)
+
+@Serializable
 data class CollectionDto(
     val id: String,
     val name: String = "",
