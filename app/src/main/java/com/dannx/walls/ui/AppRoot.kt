@@ -41,6 +41,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
@@ -54,8 +55,10 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import androidx.annotation.StringRes
 import com.dannx.walls.LoadState
 import com.dannx.walls.MainViewModel
+import com.dannx.walls.R
 import com.dannx.walls.UiState
 import com.dannx.walls.ui.components.DebugFpsOverlay
 import com.dannx.walls.ui.editor.WallpaperEditorScreen
@@ -72,14 +75,14 @@ import com.dannx.walls.util.WallpaperFiles
 
 private data class TopLevelTab(
     val route: String,
-    val label: String,
+    @StringRes val labelRes: Int,
     val icon: ImageVector,
 )
 
 private val tabs = listOf(
-    TopLevelTab("home", "Explorar", Icons.Rounded.Explore),
-    TopLevelTab("collections", "Colecciones", Icons.Rounded.CollectionsBookmark),
-    TopLevelTab("favorites", "Favoritos", Icons.Rounded.FavoriteBorder),
+    TopLevelTab("home", R.string.home_section_explore, Icons.Rounded.Explore),
+    TopLevelTab("collections", R.string.collections_title, Icons.Rounded.CollectionsBookmark),
+    TopLevelTab("favorites", R.string.favorites_title, Icons.Rounded.FavoriteBorder),
 )
 
 @Composable
@@ -529,7 +532,7 @@ private fun TopLevelScaffold(
                             Icon(tab.icon, contentDescription = null)
                         },
                         label = {
-                            Text(tab.label)
+                            Text(stringResource(tab.labelRes))
                         },
                     )
                 }

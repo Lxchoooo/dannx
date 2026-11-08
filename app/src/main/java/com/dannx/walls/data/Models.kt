@@ -5,6 +5,12 @@ import java.text.Normalizer
 import java.util.Locale
 import kotlinx.serialization.Serializable
 
+/** Valor interno del chip “Todos”. No se muestra tal cual en la interfaz. */
+const val CategoryAll = "__all__"
+
+/** Valor interno del chip “Destacados”. No se muestra tal cual en la interfaz. */
+const val CategoryFeatured = "__featured__"
+
 @Immutable
 data class Wallpaper(
     val id: String,
@@ -94,8 +100,8 @@ fun filterWallpapers(
     val term = normalize(query)
     return items.filter { wallpaper ->
         val matchesCategory = when (category) {
-            null, "Todos" -> true
-            "Destacados" -> wallpaper.featured
+            null, CategoryAll, "Todos" -> true
+            CategoryFeatured, "Destacados" -> wallpaper.featured
             else -> wallpaper.category.equals(category, ignoreCase = true)
         }
         val matchesTag = tag == null ||

@@ -6,6 +6,7 @@ import androidx.compose.runtime.Immutable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import com.dannx.walls.R
 import com.dannx.walls.data.Wallpaper
 import com.dannx.walls.util.WallpaperFiles
 import com.dannx.walls.util.WallpaperTarget
@@ -14,7 +15,6 @@ import java.io.File
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -28,7 +28,7 @@ internal data class EditorUiState(
     val loadProgress: Int? = null,
     val loadError: String? = null,
     val preview: Bitmap? = null,
-    val blurredPreview: Bitmap? = null,
+    val blurLevels: List<Bitmap> = emptyList(),
     val grain: Bitmap? = null,
     val thumbs: List<EditorFilterThumb> = emptyList(),
     val settings: EditorSettings = EditorSettings(),
@@ -54,7 +54,7 @@ internal class WallpaperEditorViewModel(
     val state: StateFlow<EditorUiState> = _state.asStateFlow()
 
     private var loadJob: Job? = null
-    private var blurJob: Job? = null
+    private var blurLevelsJob: Job? = null
     private var applyJob: Job? = null
     private var sourceFile: File? = null
 
@@ -89,6 +89,7 @@ internal class WallpaperEditorViewModel(
                         loading = false,
                         loadProgress = null,
                         preview = decoded,
+                        blurLevels = emptyList(),
                         grain = grain,
                         thumbs = thumbs,
                     )
@@ -98,7 +99,7 @@ internal class WallpaperEditorViewModel(
                 preview = null
                 grain = null
                 thumbs = emptyList()
-                scheduleBlurPreview()
+                ensureBlurLevels()
             } catch (error: CancellationException) {
                 recycle(preview, grain, thumbs)
                 throw error
@@ -108,7 +109,7 @@ internal class WallpaperEditorViewModel(
                     it.copy(
                         loading = false,
                         loadProgress = null,
-                        loadError = "No hay memoria suficiente. Cerrá otras apps y probá de nuevo.",
+                        loadError = appContext.getString(R.string.editor_error_memory),
                     )
                 }
             } catch (error: Exception) {
@@ -117,7 +118,7 @@ internal class WallpaperEditorViewModel(
                     it.copy(
                         loading = false,
                         loadProgress = null,
-                        loadError = "No se pudo abrir la imagen. Revisá tu conexión y probá de nuevo.",
+                        loadError = appContext.getString(R.string.editor_error_open),
                     )
                 }
             }
@@ -176,7 +177,8 @@ internal class WallpaperEditorViewModel(
         _state.update { current ->
             current.copy(settings = current.settings.copy(blur = value.coerceIn(0f, 1f)))
         }
-        scheduleBlurPreview()
+        // La pila se calcula una sola vez: mover el slider ya no hace trabajo.
+        ensureBlurLevels()
     }
 
     fun setShowOriginal(show: Boolean) {
@@ -191,7 +193,6 @@ internal class WallpaperEditorViewModel(
                 applyError = null,
             )
         }
-        scheduleBlurPreview()
     }
 
     fun apply(target: WallpaperTarget) {
@@ -243,7 +244,7 @@ internal class WallpaperEditorViewModel(
                     it.copy(
                         applying = false,
                         applyProgress = 0,
-                        applyError = "No hay memoria suficiente. Cerrá otras apps y probá de nuevo.",
+                        applyError = appContext.getString(R.string.editor_error_memory),
                     )
                 }
             } catch (error: Exception) {
@@ -252,7 +253,7 @@ internal class WallpaperEditorViewModel(
                     it.copy(
                         applying = false,
                         applyProgress = 0,
-                        applyError = "No se pudo aplicar el fondo. Probá de nuevo.",
+                        applyError = appContext.getString(R.string.editor_error_apply),
                     )
                 }
             }
@@ -304,41 +305,44 @@ internal class WallpaperEditorViewModel(
         files.drop(MAX_CACHED_SOURCES - 1).forEach { it.delete() }
     }
 
-    private fun scheduleBlurPreview() {
-        blurJob?.cancel()
-        val preview = _state.value.preview
-        val blur = _state.value.settings.blur
-        if (preview == null || blur <= 0f) {
-            _state.update { it.copy(blurredPreview = null) }
-            return
-        }
-        blurJob = viewModelScope.launch {
-            delay(120)
-            val blurred = withContext(Dispatchers.Default) {
-                runCatching { EditorImage.createBlurred(preview) }.getOrNull()
-            } ?: return@launch
-            if (_state.value.settings.blur > 0f) {
-                _state.update { it.copy(blurredPreview = blurred) }
-            } else {
-                blurred.recycle()
+    /**
+     * Construye la pila de desenfoques la primera vez que hace falta. La
+     * intensidad solo elige niveles al dibujar, así que no se recalcula al
+     * mover el slider.
+     */
+    private fun ensureBlurLevels() {
+        if (_state.value.settings.blur <= 0f) return
+        if (_state.value.blurLevels.isNotEmpty()) return
+        if (blurLevelsJob?.isActive == true) return
+        val preview = _state.value.preview ?: return
+        blurLevelsJob = viewModelScope.launch {
+            val levels = withContext(Dispatchers.Default) {
+                runCatching { EditorImage.createBlurLevels(preview) }.getOrNull()
             }
+            if (levels.isNullOrEmpty()) return@launch
+            val current = _state.value
+            if (current.preview !== preview ||
+                current.settings.blur <= 0f ||
+                current.blurLevels.isNotEmpty()
+            ) {
+                levels.forEach { it.recycle() }
+                return@launch
+            }
+            _state.update { it.copy(blurLevels = levels) }
         }
     }
 
     override fun onCleared() {
-        val hadActiveJobs = loadJob?.isActive == true ||
-            blurJob?.isActive == true ||
-            applyJob?.isActive == true
         loadJob?.cancel()
-        blurJob?.cancel()
+        blurLevelsJob?.cancel()
         applyJob?.cancel()
-        if (!hadActiveJobs) {
-            val current = _state.value
-            current.preview?.recycle()
-            current.blurredPreview?.recycle()
-            current.grain?.recycle()
-            current.thumbs.forEach { it.bitmap.recycle() }
-        }
+        // El estado es el único dueño de estos bitmaps: los jobs reciclan los
+        // suyos si se cancelan antes de entregarlos.
+        val current = _state.value
+        current.preview?.recycle()
+        current.blurLevels.forEach { it.recycle() }
+        current.grain?.recycle()
+        current.thumbs.forEach { it.bitmap.recycle() }
     }
 
     companion object {

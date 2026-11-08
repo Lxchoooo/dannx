@@ -58,6 +58,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalWindowInfo
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -67,6 +68,8 @@ import com.dannx.walls.R
 import com.dannx.walls.LoadState
 import com.dannx.walls.UiState
 import com.dannx.walls.ui.components.DebugRecompositionCounters
+import com.dannx.walls.data.CategoryAll
+import com.dannx.walls.data.CategoryFeatured
 import com.dannx.walls.data.DefaultCategories
 import com.dannx.walls.data.Wallpaper
 import com.dannx.walls.ui.components.EmptyState
@@ -132,7 +135,7 @@ fun HomeScreen(
         featured.isNotEmpty()
     val categories = remember(state.wallpapers, state.categories) {
         val names = state.categoryNames.ifEmpty { DefaultCategories }
-        listOf("Todos", "Destacados") + names.distinct().sorted()
+        listOf(CategoryAll, CategoryFeatured) + names.distinct().sorted()
     }
     // Se recrea cuando cambia la cantidad de destacados para que el carrusel
     // siempre conozca el total actual.
@@ -210,17 +213,23 @@ fun HomeScreen(
                             },
                         )
                         Text(
-                            text = "Wallpapers que se sienten tuyos.",
+                            text = stringResource(R.string.home_tagline),
                             style = MaterialTheme.typography.bodyLarge,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
                     FilledTonalIconButton(onClick = onOpenSettings) {
-                        Icon(Icons.Rounded.Settings, contentDescription = "Ajustes")
+                        Icon(
+                            Icons.Rounded.Settings,
+                            contentDescription = stringResource(R.string.action_settings),
+                        )
                     }
                     Spacer(Modifier.width(8.dp))
                     FilledTonalIconButton(onClick = onRefresh) {
-                        Icon(Icons.Rounded.Refresh, contentDescription = "Actualizar feed")
+                        Icon(
+                            Icons.Rounded.Refresh,
+                            contentDescription = stringResource(R.string.action_refresh_feed),
+                        )
                     }
                 }
                 Spacer(Modifier.height(18.dp))
@@ -228,7 +237,7 @@ fun HomeScreen(
                     value = state.query,
                     onValueChange = onQueryChange,
                     modifier = Modifier.fillMaxWidth(),
-                    placeholder = { Text("Buscar fondos o tags") },
+                    placeholder = { Text(stringResource(R.string.home_search_hint)) },
                     leadingIcon = {
                         Icon(Icons.Rounded.Search, contentDescription = null)
                     },
@@ -259,12 +268,17 @@ fun HomeScreen(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 items(count = categories.size, key = { index -> "category-$index" }) { index ->
-                    val label = categories[index]
-                    val selected = (state.category ?: "Todos") == label
+                    val value = categories[index]
+                    val label = when (value) {
+                        CategoryAll -> stringResource(R.string.filter_all)
+                        CategoryFeatured -> stringResource(R.string.filter_featured)
+                        else -> value
+                    }
+                    val selected = (state.category ?: CategoryAll) == value
                     FilterChip(
                         selected = selected,
                         onClick = {
-                            onCategoryChange(if (label == "Todos") null else label)
+                            onCategoryChange(if (value == CategoryAll) null else value)
                         },
                         label = { Text(label) },
                         shape = CircleShape,
@@ -277,7 +291,7 @@ fun HomeScreen(
             item(span = { GridItemSpan(maxLineSpan) }) {
                 Column {
                     Text(
-                        text = "Etiquetas",
+                        text = stringResource(R.string.home_tags_title),
                         style = MaterialTheme.typography.labelLarge,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -290,7 +304,7 @@ fun HomeScreen(
                             FilterChip(
                                 selected = state.tag == null,
                                 onClick = { onTagChange(null) },
-                                label = { Text("Todas") },
+                                label = { Text(stringResource(R.string.filter_all_tags)) },
                                 shape = CircleShape,
                             )
                         }
@@ -317,7 +331,7 @@ fun HomeScreen(
                     modifier = Modifier.fillMaxWidth(),
                 ) {
                     Text(
-                        text = "Guardá los fondos que más te gusten y creá tu primera colección.",
+                        text = stringResource(R.string.home_demo_hint),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSecondaryContainer,
                         modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
@@ -362,12 +376,20 @@ fun HomeScreen(
                 verticalAlignment = Alignment.Bottom,
             ) {
                 Text(
-                    text = if (state.query.isBlank()) "Explorar" else "Resultados",
+                    text = if (state.query.isBlank()) {
+                        stringResource(R.string.home_section_explore)
+                    } else {
+                        stringResource(R.string.home_section_results)
+                    },
                     style = MaterialTheme.typography.headlineMedium,
                     modifier = Modifier.weight(1f),
                 )
                 Text(
-                    text = "${filtered.size} fondos",
+                    text = pluralStringResource(
+                        R.plurals.wallpapers_count,
+                        filtered.size,
+                        filtered.size,
+                    ),
                     style = MaterialTheme.typography.labelLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )

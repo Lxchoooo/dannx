@@ -5,6 +5,7 @@ import com.dannx.walls.data.AdminSession
 import com.dannx.walls.data.DannXError
 import com.dannx.walls.data.Wallpaper
 import com.dannx.walls.data.WallpaperCollection
+import com.dannx.walls.util.StringResolver
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.StandardTestDispatcher
@@ -26,6 +27,16 @@ class MainViewModelTest {
     private lateinit var store: FakeStore
     private lateinit var cache: FakeCache
     private lateinit var actions: FakeActions
+    private val strings = StringResolver { id, _ ->
+        when (id) {
+            R.string.error_offline -> "Sin conexión. Revisá tu internet y probá de nuevo."
+            R.string.msg_name_reserved -> "Ese nombre está reservado. Elegí otro."
+            R.string.msg_wallpaper_updated -> "Fondo actualizado."
+            R.string.msg_category_delete_blocked ->
+                "La categoría tiene fondos. Reasignalos antes de borrarla."
+            else -> "string"
+        }
+    }
 
     private fun viewModel(online: Boolean = true): MainViewModel = MainViewModel(
         savedState = SavedStateHandle(),
@@ -34,6 +45,7 @@ class MainViewModelTest {
         cache = cache,
         actions = actions,
         isOnline = { online },
+        strings = strings,
     )
 
     @Before

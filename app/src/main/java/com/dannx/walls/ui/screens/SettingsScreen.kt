@@ -35,9 +35,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
 import com.dannx.walls.BuildConfig
+import com.dannx.walls.R
 import com.dannx.walls.UiState
 import com.dannx.walls.data.ThemeMode
 
@@ -63,12 +65,12 @@ fun SettingsScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Ajustes") },
+                title = { Text(stringResource(R.string.settings_title)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(
                             Icons.AutoMirrored.Rounded.ArrowBack,
-                            contentDescription = "Volver",
+                            contentDescription = stringResource(R.string.action_back),
                         )
                     }
                 },
@@ -85,13 +87,13 @@ fun SettingsScreen(
             ),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            item { SectionTitle("Apariencia") }
+            item { SectionTitle(stringResource(R.string.settings_appearance)) }
             item {
                 Card(Modifier.fillMaxWidth()) {
                     Column(Modifier.padding(16.dp)) {
-                        Text("Tema", style = MaterialTheme.typography.titleMedium)
+                        Text(stringResource(R.string.settings_theme), style = MaterialTheme.typography.titleMedium)
                         Text(
-                            "Elegí cómo se ve la app.",
+                            stringResource(R.string.settings_theme_hint),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
@@ -105,7 +107,7 @@ fun SettingsScreen(
                                         index = index,
                                         count = ThemeMode.entries.size,
                                     ),
-                                    label = { Text(mode.label()) },
+                                    label = { Text(stringResource(mode.labelRes())) },
                                 )
                             }
                         }
@@ -119,9 +121,9 @@ fun SettingsScreen(
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Column(Modifier.weight(1f)) {
-                            Text("Modo lite", style = MaterialTheme.typography.titleMedium)
+                            Text(stringResource(R.string.settings_lite), style = MaterialTheme.typography.titleMedium)
                             Text(
-                                "Menos animaciones para gastar menos batería.",
+                                stringResource(R.string.settings_lite_hint),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
@@ -143,11 +145,11 @@ fun SettingsScreen(
                     ) {
                         Column(Modifier.weight(1f)) {
                             Text(
-                                "Abrir editor al aplicar",
+                                stringResource(R.string.settings_open_editor),
                                 style = MaterialTheme.typography.titleMedium,
                             )
                             Text(
-                                "Ajustá el encuadre y los colores antes de poner el fondo.",
+                                stringResource(R.string.settings_open_editor_hint),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
@@ -161,7 +163,7 @@ fun SettingsScreen(
                 }
             }
 
-            item { SectionTitle("Almacenamiento") }
+            item { SectionTitle(stringResource(R.string.settings_storage)) }
             item {
                 Card(Modifier.fillMaxWidth()) {
                     Row(
@@ -169,40 +171,42 @@ fun SettingsScreen(
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Column(Modifier.weight(1f)) {
-                            Text("Caché del feed", style = MaterialTheme.typography.titleMedium)
+                            Text(stringResource(R.string.settings_cache), style = MaterialTheme.typography.titleMedium)
                             Text(
-                                "Se descarga de nuevo al actualizar.",
+                                stringResource(R.string.settings_cache_hint),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                         }
-                        TextButton(onClick = onClearCache) { Text("Borrar") }
+                        TextButton(onClick = onClearCache) {
+                            Text(stringResource(R.string.action_clear))
+                        }
                     }
                 }
             }
 
-            item { SectionTitle("Créditos") }
+            item { SectionTitle(stringResource(R.string.settings_credits)) }
             item {
                 Card(Modifier.fillMaxWidth()) {
                     Column(Modifier.padding(16.dp)) {
                         Text("DannX", style = MaterialTheme.typography.titleMedium)
                         Text(
-                            "Versión ${BuildConfig.VERSION_NAME}",
+                            stringResource(R.string.settings_version, BuildConfig.VERSION_NAME),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                         Spacer(Modifier.height(10.dp))
                         Text(
-                            "Hecho por Lxchoooo.",
+                            stringResource(R.string.settings_made_by),
                             style = MaterialTheme.typography.bodyMedium,
                         )
                         Text(
-                            "Código abierto con licencia MIT.",
+                            stringResource(R.string.settings_license),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                         TextButton(onClick = { openUrl(context, RELEASES_URL) }) {
-                            Text("Buscar actualizaciones")
+                            Text(stringResource(R.string.settings_check_updates))
                             Spacer(Modifier.width(6.dp))
                             Icon(
                                 Icons.Rounded.OpenInNew,
@@ -223,12 +227,12 @@ fun SettingsScreen(
                 }
             }
 
-            item { SectionTitle("Avanzado") }
+            item { SectionTitle(stringResource(R.string.settings_advanced)) }
             item {
                 Card(Modifier.fillMaxWidth()) {
                     Column(Modifier.padding(horizontal = 8.dp, vertical = 8.dp)) {
                         TextButton(onClick = onResetAppearance) {
-                            Text("Restablecer ajustes")
+                            Text(stringResource(R.string.settings_reset))
                         }
                         if (state.session != null) {
                             TextButton(
@@ -237,7 +241,7 @@ fun SettingsScreen(
                                     contentColor = MaterialTheme.colorScheme.error,
                                 ),
                             ) {
-                                Text("Cerrar sesión")
+                                Text(stringResource(R.string.settings_sign_out))
                             }
                         }
                     }
@@ -257,10 +261,10 @@ private fun SectionTitle(text: String) {
     )
 }
 
-private fun ThemeMode.label(): String = when (this) {
-    ThemeMode.SYSTEM -> "Sistema"
-    ThemeMode.LIGHT -> "Claro"
-    ThemeMode.DARK -> "Oscuro"
+private fun ThemeMode.labelRes(): Int = when (this) {
+    ThemeMode.SYSTEM -> R.string.theme_system
+    ThemeMode.LIGHT -> R.string.theme_light
+    ThemeMode.DARK -> R.string.theme_dark
 }
 
 private fun openUrl(context: Context, url: String) {

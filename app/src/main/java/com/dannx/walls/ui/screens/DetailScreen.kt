@@ -78,6 +78,7 @@ import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.core.view.WindowCompat
 import coil.compose.AsyncImage
@@ -324,7 +325,10 @@ fun DetailScreen(
                     contentColor = Color.White,
                 ),
             ) {
-                Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "Volver")
+                Icon(
+                    Icons.AutoMirrored.Rounded.ArrowBack,
+                    contentDescription = stringResource(R.string.action_back),
+                )
             }
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 if (canManageCollections) {
@@ -337,7 +341,7 @@ fun DetailScreen(
                     ) {
                         Icon(
                             Icons.Rounded.BookmarkAdd,
-                            contentDescription = "Guardar en colección",
+                            contentDescription = stringResource(R.string.detail_save_collection),
                         )
                     }
                 }
@@ -355,9 +359,9 @@ fun DetailScreen(
                             Icons.Rounded.FavoriteBorder
                         },
                         contentDescription = if (isFavorite) {
-                            "Quitar de favoritos"
+                            stringResource(R.string.action_remove_favorite)
                         } else {
-                            "Añadir a favoritos"
+                            stringResource(R.string.action_add_favorite)
                         },
                     )
                 }
@@ -385,7 +389,7 @@ fun DetailScreen(
             )
             Spacer(Modifier.height(4.dp))
             Text(
-                text = "por ${wallpaper.author}",
+                text = stringResource(R.string.detail_by_author, wallpaper.author),
                 style = MaterialTheme.typography.bodyMedium,
                 color = Color.White.copy(alpha = 0.72f),
             )
@@ -451,7 +455,7 @@ fun DetailScreen(
                 ) {
                     Icon(Icons.Rounded.Wallpaper, contentDescription = null)
                     Spacer(Modifier.width(8.dp))
-                    Text("Aplicar")
+                    Text(stringResource(R.string.action_apply))
                 }
                 FilledIconButton(
                     onClick = onShare,
@@ -462,7 +466,10 @@ fun DetailScreen(
                         contentColor = Color.White,
                     ),
                 ) {
-                    Icon(Icons.Rounded.Share, contentDescription = "Compartir")
+                    Icon(
+                        Icons.Rounded.Share,
+                        contentDescription = stringResource(R.string.action_share),
+                    )
                 }
             }
             if (actionState.active == UiAction.APPLY) {
@@ -601,12 +608,12 @@ private fun CollectionPickerDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Guardar en colección") },
+        title = { Text(stringResource(R.string.detail_save_collection)) },
         text = {
             Column {
                 if (collections.isEmpty()) {
                     Text(
-                        text = "Todavía no tenés colecciones. Creá una para agrupar tus fondos.",
+                        text = stringResource(R.string.detail_no_collections),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -634,7 +641,11 @@ private fun CollectionPickerDialog(
                                         style = MaterialTheme.typography.titleMedium,
                                     )
                                     Text(
-                                        text = "${collection.wallpaperIds.size} fondos",
+                                        text = pluralStringResource(
+                                            R.plurals.wallpapers_count,
+                                            collection.wallpaperIds.size,
+                                            collection.wallpaperIds.size,
+                                        ),
                                         style = MaterialTheme.typography.bodySmall,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     )
@@ -647,13 +658,13 @@ private fun CollectionPickerDialog(
                 TextButton(onClick = onCreateNew, enabled = !busy) {
                     Icon(Icons.Rounded.BookmarkAdd, contentDescription = null)
                     Spacer(Modifier.width(8.dp))
-                    Text("Crear nueva colección")
+                    Text(stringResource(R.string.collection_create_new))
                 }
             }
         },
         confirmButton = {
             TextButton(onClick = onDismiss) {
-                Text("Cerrar")
+                Text(stringResource(R.string.action_close))
             }
         },
     )
@@ -671,15 +682,15 @@ private fun NewCollectionDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Nueva colección") },
+        title = { Text(stringResource(R.string.collection_new)) },
         text = {
             Column {
                 OutlinedTextField(
                     value = name,
                     onValueChange = { name = it },
                     modifier = Modifier.fillMaxWidth(),
-                    label = { Text("Nombre") },
-                    placeholder = { Text("Ej. Immortal Edition") },
+                    label = { Text(stringResource(R.string.field_name)) },
+                    placeholder = { Text(stringResource(R.string.collection_name_hint)) },
                     singleLine = true,
                 )
                 Spacer(Modifier.height(12.dp))
@@ -687,8 +698,8 @@ private fun NewCollectionDialog(
                     value = description,
                     onValueChange = { description = it },
                     modifier = Modifier.fillMaxWidth(),
-                    label = { Text("Descripción") },
-                    placeholder = { Text("Opcional") },
+                    label = { Text(stringResource(R.string.field_description)) },
+                    placeholder = { Text(stringResource(R.string.field_optional)) },
                     minLines = 2,
                 )
                 Spacer(Modifier.height(12.dp))
@@ -698,14 +709,18 @@ private fun NewCollectionDialog(
                 ) {
                     Column(Modifier.weight(1f)) {
                         Text(
-                            text = if (isPublic) "Pública" else "Privada",
+                            text = if (isPublic) {
+                                stringResource(R.string.collection_public)
+                            } else {
+                                stringResource(R.string.collection_private_badge)
+                            },
                             style = MaterialTheme.typography.titleMedium,
                         )
                         Text(
                             text = if (isPublic) {
-                                "Visible para todos en la app."
+                                stringResource(R.string.collection_public_hint)
                             } else {
-                                "Solo vos podés verla."
+                                stringResource(R.string.collection_private_hint)
                             },
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -727,13 +742,13 @@ private fun NewCollectionDialog(
                         color = MaterialTheme.colorScheme.onPrimary,
                     )
                 } else {
-                    Text("Crear")
+                    Text(stringResource(R.string.action_create))
                 }
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Cancelar")
+                Text(stringResource(R.string.action_cancel))
             }
         },
     )

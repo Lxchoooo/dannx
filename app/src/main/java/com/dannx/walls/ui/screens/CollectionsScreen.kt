@@ -50,6 +50,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import com.dannx.walls.R
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import coil.request.ImageRequest
@@ -82,11 +83,11 @@ fun CollectionsScreen(
         item {
             Column(Modifier.fillMaxWidth()) {
                 Text(
-                    text = "Colecciones",
+                    text = stringResource(R.string.collections_title),
                     style = MaterialTheme.typography.displayMedium,
                 )
                 Text(
-                    text = "Agrupa fondos por edición, serie o lo que imagines.",
+                    text = stringResource(R.string.collections_subtitle),
                     style = MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -99,12 +100,12 @@ fun CollectionsScreen(
                     ) {
                         Icon(Icons.Rounded.Add, contentDescription = null)
                         Spacer(Modifier.width(8.dp))
-                        Text("Crear colección")
+                        Text(stringResource(R.string.collections_create))
                     }
                 } else {
                     Spacer(Modifier.height(12.dp))
                     Text(
-                        text = "Iniciá sesión en Estudio para crear tus propias colecciones.",
+                        text = stringResource(R.string.collections_login_required),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -239,10 +240,10 @@ private fun CollectionCard(
                 horizontalArrangement = Arrangement.spacedBy(6.dp),
             ) {
                 if (!collection.isPublic) {
-                    Badge(icon = Icons.Rounded.Lock, label = "Privada")
+                    Badge(icon = Icons.Rounded.Lock, label = stringResource(R.string.collection_private_badge))
                 }
                 if (mine) {
-                    Badge(icon = null, label = "Tuya")
+                    Badge(icon = null, label = stringResource(R.string.collection_yours_badge))
                 }
             }
             Column(
@@ -260,12 +261,22 @@ private fun CollectionCard(
                 val total = collection.wallpaperIds.size
                 val visible = visibleWallpapers.size
                 val countText = if (visible == total) {
-                    "$total fondos"
+                    pluralStringResource(
+                        R.plurals.collection_meta,
+                        total,
+                        total,
+                        collection.ownerName,
+                    )
                 } else {
-                    "$visible de $total fondos"
+                    stringResource(
+                        R.string.collection_meta_visible,
+                        visible,
+                        total,
+                        collection.ownerName,
+                    )
                 }
                 Text(
-                    text = "$countText · ${collection.ownerName}",
+                    text = countText,
                     style = MaterialTheme.typography.labelLarge,
                     color = Color.White.copy(alpha = 0.82f),
                 )
@@ -315,15 +326,15 @@ private fun CreateCollectionDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Nueva colección") },
+        title = { Text(stringResource(R.string.collection_new)) },
         text = {
             Column {
                 OutlinedTextField(
                     value = name,
                     onValueChange = { name = it },
                     modifier = Modifier.fillMaxWidth(),
-                    label = { Text("Nombre") },
-                    placeholder = { Text("Ej. Immortal Edition") },
+                    label = { Text(stringResource(R.string.field_name)) },
+                    placeholder = { Text(stringResource(R.string.collection_name_hint)) },
                     singleLine = true,
                 )
                 Spacer(Modifier.height(12.dp))
@@ -331,8 +342,8 @@ private fun CreateCollectionDialog(
                     value = description,
                     onValueChange = { description = it },
                     modifier = Modifier.fillMaxWidth(),
-                    label = { Text("Descripción") },
-                    placeholder = { Text("Opcional") },
+                    label = { Text(stringResource(R.string.field_description)) },
+                    placeholder = { Text(stringResource(R.string.field_optional)) },
                     minLines = 2,
                 )
                 Spacer(Modifier.height(12.dp))
@@ -342,14 +353,18 @@ private fun CreateCollectionDialog(
                 ) {
                     Column(Modifier.weight(1f)) {
                         Text(
-                            if (isPublic) "Pública" else "Privada",
+                            if (isPublic) {
+                                stringResource(R.string.collection_public)
+                            } else {
+                                stringResource(R.string.collection_private_badge)
+                            },
                             style = MaterialTheme.typography.titleMedium,
                         )
                         Text(
                             text = if (isPublic) {
-                                "Visible para todos en la app."
+                                stringResource(R.string.collection_public_hint)
                             } else {
-                                "Solo vos podés verla."
+                                stringResource(R.string.collection_private_hint)
                             },
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -371,13 +386,13 @@ private fun CreateCollectionDialog(
                         color = MaterialTheme.colorScheme.onPrimary,
                     )
                 } else {
-                    Text("Crear")
+                    Text(stringResource(R.string.action_create))
                 }
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Cancelar")
+                Text(stringResource(R.string.action_cancel))
             }
         },
     )

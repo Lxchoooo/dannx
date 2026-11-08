@@ -90,6 +90,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -97,6 +98,8 @@ import androidx.compose.ui.unit.sp
 import androidx.core.view.WindowCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.annotation.StringRes
+import com.dannx.walls.R
 import com.dannx.walls.data.Wallpaper
 import com.dannx.walls.ui.components.ApplyWallpaperSheet
 import com.dannx.walls.util.WallpaperTarget
@@ -107,13 +110,13 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.withTimeoutOrNull
 
 private enum class EditorTool(
-    val label: String,
+    @StringRes val labelRes: Int,
     val icon: ImageVector,
 ) {
-    CROP("Encuadre", Icons.Rounded.Crop),
-    ADJUSTMENTS("Ajustes", Icons.Rounded.Tune),
-    FILTERS("Filtros", Icons.Rounded.FilterVintage),
-    BLUR("Desenfoque", Icons.Rounded.BlurOn),
+    CROP(R.string.editor_tool_crop, Icons.Rounded.Crop),
+    ADJUSTMENTS(R.string.editor_tool_adjust, Icons.Rounded.Tune),
+    FILTERS(R.string.editor_tool_filters, Icons.Rounded.FilterVintage),
+    BLUR(R.string.editor_tool_blur, Icons.Rounded.BlurOn),
 }
 
 private enum class EditorPreviewMode {
@@ -177,7 +180,7 @@ fun WallpaperEditorScreen(
         when {
             state.loading -> LoadingState(state.loadProgress)
             state.loadError != null -> ErrorState(
-                message = state.loadError ?: "No se pudo abrir la imagen.",
+                message = state.loadError ?: stringResource(R.string.editor_open_error),
                 onRetry = editorViewModel::load,
             )
             else -> EditorBody(
@@ -207,7 +210,7 @@ fun WallpaperEditorScreen(
             ) {
                 FloatingIconButton(
                     icon = Icons.AutoMirrored.Rounded.ArrowBack,
-                    contentDescription = "Volver",
+                    contentDescription = stringResource(R.string.action_back),
                     onClick = {
                         editorViewModel.cancelApply()
                         onBack()
@@ -243,7 +246,7 @@ private fun LoadingState(progress: Int?) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             CircularProgressIndicator()
             Spacer(Modifier.height(14.dp))
-            Text("Preparando la imagen…")
+            Text(stringResource(R.string.editor_preparing))
             if (progress != null) {
                 Spacer(Modifier.height(10.dp))
                 LinearProgressIndicator(
@@ -276,7 +279,7 @@ private fun ErrorState(message: String, onRetry: () -> Unit) {
             )
             Spacer(Modifier.height(14.dp))
             Button(onClick = onRetry) {
-                Text("Reintentar")
+                Text(stringResource(R.string.state_retry))
             }
         }
     }
@@ -304,7 +307,7 @@ private fun ApplyProgressOverlay(progress: Int) {
             ) {
                 CircularProgressIndicator()
                 Spacer(Modifier.height(14.dp))
-                Text("Generando el fondo…")
+                Text(stringResource(R.string.editor_generating))
                 Spacer(Modifier.height(10.dp))
                 LinearProgressIndicator(
                     progress = { progress.coerceIn(0, 100) / 100f },
@@ -604,7 +607,7 @@ private fun PreviewViewport(
                     width = size.width,
                     height = size.height,
                     source = preview,
-                    blurred = state.blurredPreview,
+                    blurLevels = state.blurLevels,
                     grain = state.grain,
                     settings = state.settings,
                     showOriginal = state.showOriginal,
@@ -640,7 +643,7 @@ private fun BoxScope.LockPreviewOverlay() {
             ),
         )
         Text(
-            text = "Lunes 8",
+            text = stringResource(R.string.editor_preview_day),
             color = Color.White.copy(alpha = 0.9f),
             style = MaterialTheme.typography.labelMedium.copy(
                 shadow = Shadow(
@@ -686,13 +689,13 @@ private fun EditorTopControls(
     ) {
         FloatingIconButton(
             icon = Icons.AutoMirrored.Rounded.ArrowBack,
-            contentDescription = "Volver",
+            contentDescription = stringResource(R.string.action_back),
             onClick = onBack,
         )
         Spacer(Modifier.weight(1f))
         FloatingIconButton(
             icon = Icons.Rounded.Refresh,
-            contentDescription = "Restablecer",
+            contentDescription = stringResource(R.string.editor_reset),
             enabled = resetEnabled,
             onClick = onReset,
         )
@@ -767,7 +770,7 @@ private fun BottomFloatingControls(
             contentColor = Color.White,
         ) {
             Text(
-                text = "Mantené la foto para comparar",
+                text = stringResource(R.string.editor_hold_compare),
                 modifier = Modifier.padding(horizontal = 12.dp, vertical = 5.dp),
                 style = MaterialTheme.typography.labelSmall,
             )
@@ -792,7 +795,7 @@ private fun BottomFloatingControls(
                 shape = RoundedCornerShape(50),
                 contentPadding = PaddingValues(horizontal = 22.dp, vertical = 10.dp),
             ) {
-                Text("Aplicar")
+                Text(stringResource(R.string.action_apply))
             }
         }
     }
@@ -817,7 +820,7 @@ private fun FloatingToolBar(
             EditorTool.entries.forEach { tool ->
                 ToolButton(
                     icon = tool.icon,
-                    label = tool.label,
+                    label = stringResource(tool.labelRes),
                     selected = false,
                     onClick = { onToolSelected(tool) },
                 )
@@ -830,7 +833,7 @@ private fun FloatingToolBar(
             )
             ToolButton(
                 icon = Icons.Rounded.Visibility,
-                label = "Vista",
+                label = stringResource(R.string.editor_preview),
                 selected = previewMode != EditorPreviewMode.NONE,
                 onClick = {
                     onPreviewModeChange(
@@ -905,17 +908,17 @@ private fun PreviewModeSelector(
             horizontalArrangement = Arrangement.spacedBy(4.dp),
         ) {
             PreviewModeChip(
-                label = "Fondo",
+                label = stringResource(R.string.editor_preview_wallpaper),
                 selected = mode == EditorPreviewMode.NONE,
                 onClick = { onModeChange(EditorPreviewMode.NONE) },
             )
             PreviewModeChip(
-                label = "Inicio",
+                label = stringResource(R.string.editor_preview_home),
                 selected = mode == EditorPreviewMode.HOME,
                 onClick = { onModeChange(EditorPreviewMode.HOME) },
             )
             PreviewModeChip(
-                label = "Bloqueo",
+                label = stringResource(R.string.editor_preview_lock),
                 selected = mode == EditorPreviewMode.LOCK,
                 onClick = { onModeChange(EditorPreviewMode.LOCK) },
             )
@@ -998,7 +1001,7 @@ private fun ToolPanel(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
-                    text = selected.label,
+                    text = stringResource(selected.labelRes),
                     style = MaterialTheme.typography.titleMedium,
                     modifier = Modifier.weight(1f),
                 )
@@ -1008,12 +1011,12 @@ private fun ToolPanel(
                     shape = RoundedCornerShape(50),
                     contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
                 ) {
-                    Text("Aplicar")
+                    Text(stringResource(R.string.action_apply))
                 }
                 IconButton(onClick = onClose) {
                     Icon(
                         imageVector = Icons.Rounded.Close,
-                        contentDescription = "Cerrar herramientas",
+                        contentDescription = stringResource(R.string.editor_close_tools),
                     )
                 }
             }
@@ -1072,7 +1075,7 @@ private fun ToolSelector(selected: EditorTool, onSelect: (EditorTool) -> Unit) {
             FilterChip(
                 selected = item == selected,
                 onClick = { onSelect(item) },
-                label = { Text(item.label) },
+                label = { Text(stringResource(item.labelRes)) },
             )
         }
     }
@@ -1081,7 +1084,7 @@ private fun ToolSelector(selected: EditorTool, onSelect: (EditorTool) -> Unit) {
 @Composable
 private fun CropPanel(crop: EditorCrop, onChange: (EditorCrop) -> Unit) {
     Text(
-        text = "Pellizcá con dos dedos para acercar y arrastrá para mover.",
+        text = stringResource(R.string.editor_pinch_hint),
         style = MaterialTheme.typography.bodyMedium,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
     )
@@ -1091,12 +1094,12 @@ private fun CropPanel(crop: EditorCrop, onChange: (EditorCrop) -> Unit) {
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
-            text = "Zoom ${(crop.zoom * 100f).roundToInt()}%",
+            text = stringResource(R.string.editor_zoom, (crop.zoom * 100f).roundToInt()),
             style = MaterialTheme.typography.titleSmall,
             modifier = Modifier.weight(1f),
         )
         TextButton(onClick = { onChange(EditorCrop()) }) {
-            Text("Centrar")
+            Text(stringResource(R.string.editor_center))
         }
     }
 }
@@ -1106,25 +1109,25 @@ private fun AdjustmentsPanel(
     adjustments: EditorAdjustments,
     onChange: (EditorAdjustments) -> Unit,
 ) {
-    EditorSlider("Brillo", adjustments.brightness, -1f..1f) {
+    EditorSlider(R.string.editor_brightness, adjustments.brightness, -1f..1f) {
         onChange(adjustments.copy(brightness = it))
     }
-    EditorSlider("Contraste", adjustments.contrast, -1f..1f) {
+    EditorSlider(R.string.editor_contrast, adjustments.contrast, -1f..1f) {
         onChange(adjustments.copy(contrast = it))
     }
-    EditorSlider("Saturación", adjustments.saturation, -1f..1f) {
+    EditorSlider(R.string.editor_saturation, adjustments.saturation, -1f..1f) {
         onChange(adjustments.copy(saturation = it))
     }
-    EditorSlider("Calidez", adjustments.warmth, -1f..1f) {
+    EditorSlider(R.string.editor_warmth, adjustments.warmth, -1f..1f) {
         onChange(adjustments.copy(warmth = it))
     }
-    EditorSlider("Matiz", adjustments.tint, -1f..1f) {
+    EditorSlider(R.string.editor_tint, adjustments.tint, -1f..1f) {
         onChange(adjustments.copy(tint = it))
     }
-    EditorSlider("Viñeta", adjustments.vignette, 0f..1f) {
+    EditorSlider(R.string.editor_vignette, adjustments.vignette, 0f..1f) {
         onChange(adjustments.copy(vignette = it))
     }
-    EditorSlider("Grano", adjustments.grain, 0f..1f) {
+    EditorSlider(R.string.editor_grain, adjustments.grain, 0f..1f) {
         onChange(adjustments.copy(grain = it))
     }
 }
@@ -1138,7 +1141,7 @@ private fun FiltersPanel(
     onIntensityChange: (Float) -> Unit,
 ) {
     if (thumbs.isEmpty()) {
-        Text("Preparando filtros…", style = MaterialTheme.typography.bodyMedium)
+        Text(stringResource(R.string.editor_preparing_filters), style = MaterialTheme.typography.bodyMedium)
         return
     }
     LazyRow(
@@ -1146,6 +1149,7 @@ private fun FiltersPanel(
     ) {
         items(thumbs, key = { it.preset.id }) { thumb ->
             val image = remember(thumb.bitmap) { thumb.bitmap.asImageBitmap() }
+            val presetName = stringResource(thumb.preset.nameRes)
             Column(
                 modifier = Modifier
                     .width(84.dp)
@@ -1154,7 +1158,7 @@ private fun FiltersPanel(
             ) {
                 Image(
                     bitmap = image,
-                    contentDescription = thumb.preset.name,
+                    contentDescription = presetName,
                     contentScale = ContentScale.Crop,
                     modifier = Modifier
                         .size(width = 84.dp, height = 140.dp)
@@ -1171,7 +1175,7 @@ private fun FiltersPanel(
                 )
                 Spacer(Modifier.height(5.dp))
                 Text(
-                    text = thumb.preset.name,
+                    text = presetName,
                     style = MaterialTheme.typography.labelSmall,
                     maxLines = 2,
                     textAlign = TextAlign.Center,
@@ -1181,24 +1185,24 @@ private fun FiltersPanel(
     }
     if (selectedId != "original") {
         Spacer(Modifier.height(8.dp))
-        EditorSlider("Intensidad", intensity, 0f..1f, onValueChange = onIntensityChange)
+        EditorSlider(R.string.editor_intensity, intensity, 0f..1f, onValueChange = onIntensityChange)
     }
 }
 
 @Composable
 private fun BlurPanel(blur: Float, onChange: (Float) -> Unit) {
     Text(
-        text = "Suaviza la imagen. Se calcula sobre una copia reducida para no gastar memoria.",
+        text = stringResource(R.string.editor_blur_help),
         style = MaterialTheme.typography.bodyMedium,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
     )
     Spacer(Modifier.height(12.dp))
-    EditorSlider("Intensidad", blur, 0f..1f, onValueChange = onChange)
+    EditorSlider(R.string.editor_intensity, blur, 0f..1f, onValueChange = onChange)
 }
 
 @Composable
 private fun EditorSlider(
-    label: String,
+    @StringRes labelRes: Int,
     value: Float,
     valueRange: ClosedFloatingPointRange<Float>,
     onValueChange: (Float) -> Unit,
@@ -1208,7 +1212,11 @@ private fun EditorSlider(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text(label, style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f))
+            Text(
+                stringResource(labelRes),
+                style = MaterialTheme.typography.titleSmall,
+                modifier = Modifier.weight(1f),
+            )
             Text(
                 text = "${(value * 100f).roundToInt()}%",
                 style = MaterialTheme.typography.labelMedium,

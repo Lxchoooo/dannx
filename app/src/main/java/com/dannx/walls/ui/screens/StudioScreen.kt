@@ -1,6 +1,7 @@
 package com.dannx.walls.ui.screens
 
 import android.net.Uri
+import androidx.annotation.StringRes
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
@@ -86,12 +87,15 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
+import com.dannx.walls.R
 import com.dannx.walls.UiState
 import com.dannx.walls.data.DefaultCategories
 import com.dannx.walls.data.Wallpaper
@@ -100,14 +104,14 @@ import com.dannx.walls.data.WallpaperCollection
 import com.dannx.walls.data.parseTags
 
 private enum class StudioSection(
-    val label: String,
+    @StringRes val labelRes: Int,
     val icon: ImageVector,
 ) {
-    PUBLISH("Publicar", Icons.Rounded.AddPhotoAlternate),
-    WALLS("Mis fondos", Icons.Rounded.Image),
-    CATEGORIES("Categorías", Icons.Rounded.Category),
-    TAGS("Tags", Icons.Rounded.LocalOffer),
-    COLLECTIONS("Colecciones", Icons.Rounded.Folder),
+    PUBLISH(R.string.studio_section_publish, Icons.Rounded.AddPhotoAlternate),
+    WALLS(R.string.studio_my_walls, Icons.Rounded.Image),
+    CATEGORIES(R.string.studio_categories, Icons.Rounded.Category),
+    TAGS(R.string.studio_section_tags, Icons.Rounded.LocalOffer),
+    COLLECTIONS(R.string.studio_collections, Icons.Rounded.Folder),
 }
 
 @Composable
@@ -187,7 +191,7 @@ fun StudioScreen(
                             modifier = Modifier.size(18.dp),
                         )
                         Spacer(Modifier.width(6.dp))
-                        Text("Volver", style = MaterialTheme.typography.labelLarge)
+                        Text(stringResource(R.string.action_back), style = MaterialTheme.typography.labelLarge)
                     }
                     Spacer(Modifier.weight(1f))
                     if (session != null) {
@@ -200,19 +204,22 @@ fun StudioScreen(
                             modifier = Modifier.padding(end = 8.dp),
                         )
                         FilledTonalIconButton(onClick = onSignOut) {
-                            Icon(Icons.Rounded.Logout, contentDescription = "Cerrar sesión")
+                            Icon(
+                                Icons.Rounded.Logout,
+                                contentDescription = stringResource(R.string.settings_sign_out),
+                            )
                         }
                     }
                 }
                 Text(
-                    text = "Estudio",
+                    text = stringResource(R.string.studio_title),
                     style = MaterialTheme.typography.displayMedium,
                 )
                 Text(
                     text = if (session == null) {
-                        "Publicá y administrá el catálogo desde un solo lugar."
+                        stringResource(R.string.studio_subtitle)
                     } else {
-                        "Administrá fondos, categorías, tags y colecciones."
+                        stringResource(R.string.studio_subtitle_admin)
                     },
                     style = MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -253,7 +260,7 @@ fun StudioScreen(
                                 )
                                 Spacer(Modifier.width(10.dp))
                                 Text(
-                                    text = "Guardando cambios...",
+                                    text = stringResource(R.string.studio_saving),
                                     style = MaterialTheme.typography.labelMedium,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
@@ -340,10 +347,9 @@ fun StudioScreen(
     }
     deleteWallpaper?.let { wallpaper ->
         ConfirmDialog(
-            title = "Borrar fondo",
-            text = "Se eliminará \"${wallpaper.title}\" y su imagen de forma permanente. " +
-                "También saldrá de las colecciones.",
-            confirm = "Borrar",
+            title = stringResource(R.string.studio_wallpaper_delete_title),
+            text = stringResource(R.string.studio_wallpaper_delete_body, wallpaper.title),
+            confirm = stringResource(R.string.studio_delete_confirm),
             onDismiss = { deleteWallpaper = null },
             onConfirm = {
                 onDeleteWallpaper(wallpaper.id)
@@ -395,9 +401,9 @@ fun StudioScreen(
     }
     collectionToDelete?.let { collection ->
         ConfirmDialog(
-            title = "Borrar colección",
-            text = "Se eliminará \"${collection.name}\". Los fondos seguirán publicados.",
-            confirm = "Borrar",
+            title = stringResource(R.string.studio_collection_delete_title),
+            text = stringResource(R.string.studio_collection_delete_body, collection.name),
+            confirm = stringResource(R.string.studio_delete_confirm),
             onDismiss = { collectionToDelete = null },
             onConfirm = {
                 onDeleteCollection(collection.id)
@@ -439,9 +445,9 @@ fun StudioScreen(
     }
     tagToDelete?.let { tag ->
         ConfirmDialog(
-            title = "Borrar tag",
-            text = "Se quitará \"$tag\" de todos los fondos que lo tengan.",
-            confirm = "Borrar",
+            title = stringResource(R.string.studio_tag_delete_title),
+            text = stringResource(R.string.studio_tag_delete_body, tag),
+            confirm = stringResource(R.string.studio_delete_confirm),
             onDismiss = { tagToDelete = null },
             onConfirm = {
                 onDeleteTag(tag)
@@ -474,7 +480,7 @@ private fun StudioTabs(
             FilterChip(
                 selected = selected == section,
                 onClick = { onSelect(section) },
-                label = { Text(section.label) },
+                label = { Text(stringResource(section.labelRes)) },
                 leadingIcon = {
                     Icon(
                         imageVector = section.icon,
@@ -506,19 +512,18 @@ private fun SetupCard(onRefresh: () -> Unit) {
             )
             Spacer(Modifier.height(12.dp))
             Text(
-                text = "Falta conectar el catálogo",
+                text = stringResource(R.string.studio_setup_title),
                 style = MaterialTheme.typography.headlineMedium,
             )
             Spacer(Modifier.height(6.dp))
             Text(
-                text = "La app funciona con fondos de ejemplo. Al conectar el catálogo, " +
-                    "el Estudio administra el feed real.",
+                text = stringResource(R.string.studio_setup_body),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             Spacer(Modifier.height(18.dp))
             Button(onClick = onRefresh, shape = CircleShape) {
-                Text("Reintentar conexión")
+                Text(stringResource(R.string.studio_retry_connection))
             }
         }
     }
@@ -548,13 +553,13 @@ private fun LoginCard(
                 )
                 Spacer(Modifier.width(8.dp))
                 Text(
-                    text = "Solo administradores",
+                    text = stringResource(R.string.studio_admin_only),
                     style = MaterialTheme.typography.titleMedium,
                 )
             }
             Spacer(Modifier.height(6.dp))
             Text(
-                text = "Iniciá sesión con tu cuenta de creador para administrar el catálogo.",
+                text = stringResource(R.string.studio_login_hint),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -563,7 +568,7 @@ private fun LoginCard(
                 value = email,
                 onValueChange = { email = it },
                 modifier = Modifier.fillMaxWidth(),
-                label = { Text("Correo") },
+                label = { Text(stringResource(R.string.studio_email)) },
                 leadingIcon = {
                     Icon(Icons.Rounded.Person, contentDescription = null)
                 },
@@ -576,7 +581,7 @@ private fun LoginCard(
                 value = password,
                 onValueChange = { password = it },
                 modifier = Modifier.fillMaxWidth(),
-                label = { Text("Contraseña") },
+                label = { Text(stringResource(R.string.studio_password)) },
                 leadingIcon = {
                     Icon(Icons.Rounded.Lock, contentDescription = null)
                 },
@@ -599,9 +604,9 @@ private fun LoginCard(
                         color = MaterialTheme.colorScheme.onPrimary,
                     )
                     Spacer(Modifier.width(10.dp))
-                    Text("Entrando...")
+                    Text(stringResource(R.string.studio_signing_in))
                 } else {
-                    Text("Entrar")
+                    Text(stringResource(R.string.studio_sign_in))
                 }
             }
         }
@@ -628,6 +633,7 @@ private fun PublishPanel(
     val haptics = LocalHapticFeedback.current
     val selectedCategory = categories.firstOrNull { it.id == selectedCategoryId }
         ?: categories.firstOrNull()
+    val defaultCategory = stringResource(R.string.field_default_category)
 
     val picker = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.PickVisualMedia(),
@@ -644,7 +650,7 @@ private fun PublishPanel(
     }
 
     Text(
-        text = "Nuevo fondo",
+        text = stringResource(R.string.studio_new_wallpaper),
         style = MaterialTheme.typography.headlineMedium,
     )
     Spacer(Modifier.height(12.dp))
@@ -682,9 +688,12 @@ private fun PublishPanel(
                             tint = MaterialTheme.colorScheme.primary,
                         )
                         Spacer(Modifier.height(8.dp))
-                        Text("Elegir imagen", style = MaterialTheme.typography.titleMedium)
                         Text(
-                            text = "JPG, PNG o WebP hasta 25 MB",
+                            text = stringResource(R.string.studio_choose_image),
+                            style = MaterialTheme.typography.titleMedium,
+                        )
+                        Text(
+                            text = stringResource(R.string.studio_image_hint),
                             style = MaterialTheme.typography.labelMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
@@ -692,7 +701,7 @@ private fun PublishPanel(
                 } else {
                     AsyncImage(
                         model = selectedUri,
-                        contentDescription = "Vista previa",
+                        contentDescription = stringResource(R.string.studio_preview),
                         contentScale = ContentScale.Crop,
                         modifier = Modifier.fillMaxSize(),
                     )
@@ -705,7 +714,7 @@ private fun PublishPanel(
                             )
                         },
                     ) {
-                        Text("Cambiar imagen")
+                        Text(stringResource(R.string.studio_change_image))
                     }
                 }
             }
@@ -714,13 +723,13 @@ private fun PublishPanel(
                 value = title,
                 onValueChange = { title = it },
                 modifier = Modifier.fillMaxWidth(),
-                label = { Text("Título") },
-                placeholder = { Text("Ej. Atardecer en la playa") },
+                label = { Text(stringResource(R.string.field_title)) },
+                placeholder = { Text(stringResource(R.string.studio_title_hint)) },
                 singleLine = true,
                 shape = MaterialTheme.shapes.medium,
             )
             Spacer(Modifier.height(14.dp))
-            Text("Categoría", style = MaterialTheme.typography.labelLarge)
+            Text(stringResource(R.string.field_category), style = MaterialTheme.typography.labelLarge)
             Spacer(Modifier.height(6.dp))
             LazyRow(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -740,20 +749,23 @@ private fun PublishPanel(
                 value = tagsText,
                 onValueChange = { tagsText = it },
                 modifier = Modifier.fillMaxWidth(),
-                label = { Text("Tags") },
-                placeholder = { Text("anime, noche, flores") },
+                label = { Text(stringResource(R.string.studio_section_tags)) },
+                placeholder = { Text(stringResource(R.string.studio_tags_hint)) },
                 supportingText = {
-                    Text("Sepáralos con comas. Los usás para filtrar en Explorar.")
+                    Text(stringResource(R.string.studio_tags_help))
                 },
                 singleLine = true,
                 shape = MaterialTheme.shapes.medium,
             )
             Spacer(Modifier.height(14.dp))
-            Text("Colección (opcional)", style = MaterialTheme.typography.labelLarge)
+            Text(
+                stringResource(R.string.studio_collection_optional),
+                style = MaterialTheme.typography.labelLarge,
+            )
             Spacer(Modifier.height(6.dp))
             if (myCollections.isEmpty()) {
                 Text(
-                    text = "Creá una colección desde esta sección para agrupar el fondo.",
+                    text = stringResource(R.string.studio_no_collections_hint),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -766,7 +778,7 @@ private fun PublishPanel(
                         FilterChip(
                             selected = selectedCollectionId.isBlank(),
                             onClick = { selectedCollectionId = "" },
-                            label = { Text("Sin colección") },
+                            label = { Text(stringResource(R.string.studio_no_collection)) },
                             shape = CircleShape,
                         )
                     }
@@ -788,7 +800,7 @@ private fun PublishPanel(
                         onUpload(
                             uri,
                             title,
-                            selectedCategory?.name ?: "Abstracto",
+                            selectedCategory?.name ?: defaultCategory,
                             selectedCategory?.id?.ifBlank { null },
                             parseTags(tagsText),
                             selectedCollectionId.ifBlank { null },
@@ -820,11 +832,11 @@ private fun PublishPanel(
                                 color = MaterialTheme.colorScheme.onPrimary,
                             )
                             Spacer(Modifier.width(10.dp))
-                            Text("Subiendo...")
+                            Text(stringResource(R.string.studio_uploading))
                         } else {
                             Icon(Icons.Rounded.CloudUpload, contentDescription = null)
                             Spacer(Modifier.width(8.dp))
-                            Text("Publicar fondo")
+                            Text(stringResource(R.string.studio_publish))
                         }
                     }
                 }
@@ -852,14 +864,22 @@ private fun LazyListScope.wallsPanel(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
-                    text = "Mis fondos",
+                    text = stringResource(R.string.studio_my_walls),
                     style = MaterialTheme.typography.headlineMedium,
                     modifier = Modifier.weight(1f),
                 )
                 FilterChip(
                     selected = showArchived,
                     onClick = onToggleArchived,
-                    label = { Text(if (showArchived) "Archivados" else "Publicados") },
+                    label = {
+                        Text(
+                            if (showArchived) {
+                                stringResource(R.string.studio_archived)
+                            } else {
+                                stringResource(R.string.studio_published)
+                            },
+                        )
+                    },
                     leadingIcon = {
                         Icon(
                             imageVector = if (showArchived) {
@@ -877,9 +897,18 @@ private fun LazyListScope.wallsPanel(
             Spacer(Modifier.height(4.dp))
             Text(
                 text = if (showArchived) {
-                    "$archivedCount archivados"
+                    pluralStringResource(
+                        R.plurals.studio_archived_count,
+                        archivedCount,
+                        archivedCount,
+                    )
                 } else {
-                    "${state.studioWallpapers.size - archivedCount} publicados"
+                    val publishedCount = state.studioWallpapers.size - archivedCount
+                    pluralStringResource(
+                        R.plurals.studio_published_count,
+                        publishedCount,
+                        publishedCount,
+                    )
                 },
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -892,9 +921,9 @@ private fun LazyListScope.wallsPanel(
         item(key = "walls-empty") {
             Text(
                 text = if (showArchived) {
-                    "No hay fondos archivados."
+                    stringResource(R.string.studio_walls_empty_archived)
                 } else {
-                    "Todavía no publicaste fondos."
+                    stringResource(R.string.studio_walls_empty)
                 },
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -971,7 +1000,7 @@ private fun StudioWallpaperRow(
                 }
                 if (wallpaper.isArchived) {
                     Text(
-                        text = "Archivado",
+                        text = stringResource(R.string.studio_archived_badge),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.tertiary,
                     )
@@ -980,10 +1009,16 @@ private fun StudioWallpaperRow(
             Column(horizontalAlignment = Alignment.End) {
                 Row {
                     IconButton(onClick = onEdit) {
-                        Icon(Icons.Rounded.Edit, contentDescription = "Editar")
+                        Icon(
+                            Icons.Rounded.Edit,
+                            contentDescription = stringResource(R.string.studio_edit),
+                        )
                     }
                     IconButton(onClick = onReplace) {
-                        Icon(Icons.Rounded.AddPhotoAlternate, contentDescription = "Imagen")
+                        Icon(
+                            Icons.Rounded.AddPhotoAlternate,
+                            contentDescription = stringResource(R.string.studio_image),
+                        )
                     }
                 }
                 Row {
@@ -995,16 +1030,16 @@ private fun StudioWallpaperRow(
                                 Icons.Rounded.Archive
                             },
                             contentDescription = if (wallpaper.isArchived) {
-                                "Restaurar"
+                                stringResource(R.string.studio_restore)
                             } else {
-                                "Archivar"
+                                stringResource(R.string.studio_archive)
                             },
                         )
                     }
                     IconButton(onClick = onDelete) {
                         Icon(
                             Icons.Rounded.Delete,
-                            contentDescription = "Borrar",
+                            contentDescription = stringResource(R.string.action_delete),
                             tint = MaterialTheme.colorScheme.error,
                         )
                     }
@@ -1030,10 +1065,13 @@ private fun CategoriesPanel(
             }
         }
     }
-    Text("Categorías", style = MaterialTheme.typography.headlineMedium)
+    Text(
+        stringResource(R.string.studio_categories),
+        style = MaterialTheme.typography.headlineMedium,
+    )
     Spacer(Modifier.height(6.dp))
     Text(
-        text = "Organizá los fondos en Explorar. Una categoría con fondos no se puede borrar sin reasignarlos.",
+        text = stringResource(R.string.studio_categories_help),
         style = MaterialTheme.typography.bodySmall,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
     )
@@ -1043,7 +1081,7 @@ private fun CategoriesPanel(
             value = name,
             onValueChange = { name = it },
             modifier = Modifier.weight(1f),
-            label = { Text("Nueva categoría") },
+            label = { Text(stringResource(R.string.studio_new_category)) },
             singleLine = true,
             shape = MaterialTheme.shapes.medium,
         )
@@ -1055,13 +1093,16 @@ private fun CategoriesPanel(
             },
             enabled = name.isNotBlank() && !state.studioBusy,
         ) {
-            Icon(Icons.Rounded.Add, contentDescription = "Crear categoría")
+            Icon(
+                Icons.Rounded.Add,
+                contentDescription = stringResource(R.string.studio_create_category),
+            )
         }
     }
     Spacer(Modifier.height(10.dp))
     if (state.categories.isEmpty()) {
         Text(
-            text = "Todavía no hay categorías. Creá la primera.",
+            text = stringResource(R.string.studio_categories_empty),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -1084,18 +1125,21 @@ private fun CategoriesPanel(
             Column(Modifier.weight(1f)) {
                 Text(category.name, style = MaterialTheme.typography.titleMedium)
                 Text(
-                    text = if (count == 1) "1 fondo" else "$count fondos",
+                    text = pluralStringResource(R.plurals.wallpapers_count, count, count),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
             IconButton(onClick = { onEdit(category) }) {
-                Icon(Icons.Rounded.Edit, contentDescription = "Renombrar")
+                Icon(
+                    Icons.Rounded.Edit,
+                    contentDescription = stringResource(R.string.studio_rename),
+                )
             }
             IconButton(onClick = { onDelete(category) }) {
                 Icon(
                     Icons.Rounded.Delete,
-                    contentDescription = "Borrar",
+                    contentDescription = stringResource(R.string.action_delete),
                     tint = MaterialTheme.colorScheme.error,
                 )
             }
@@ -1131,26 +1175,26 @@ private fun TagsPanel(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
-            text = "Tags",
+            text = stringResource(R.string.studio_section_tags),
             style = MaterialTheme.typography.headlineMedium,
             modifier = Modifier.weight(1f),
         )
         Button(onClick = onCreate, shape = CircleShape) {
             Icon(Icons.Rounded.Add, contentDescription = null, modifier = Modifier.size(18.dp))
             Spacer(Modifier.width(6.dp))
-            Text("Crear tag")
+            Text(stringResource(R.string.studio_create_tag))
         }
     }
     Spacer(Modifier.height(6.dp))
     Text(
-        text = "Los tags se aplican a los fondos que elijas y se pueden renombrar o unir.",
+        text = stringResource(R.string.studio_tags_help_section),
         style = MaterialTheme.typography.bodySmall,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
     )
     Spacer(Modifier.height(12.dp))
     if (counts.isEmpty()) {
         Text(
-            text = "Todavía no hay tags.",
+            text = stringResource(R.string.studio_tags_empty),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -1172,18 +1216,21 @@ private fun TagsPanel(
             Column(Modifier.weight(1f)) {
                 Text(tag, style = MaterialTheme.typography.titleMedium)
                 Text(
-                    text = if (count == 1) "1 fondo" else "$count fondos",
+                    text = pluralStringResource(R.plurals.wallpapers_count, count, count),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
             IconButton(onClick = { onRename(tag) }) {
-                Icon(Icons.Rounded.Edit, contentDescription = "Renombrar")
+                Icon(
+                    Icons.Rounded.Edit,
+                    contentDescription = stringResource(R.string.studio_rename),
+                )
             }
             IconButton(onClick = { onDelete(tag) }) {
                 Icon(
                     Icons.Rounded.Delete,
-                    contentDescription = "Borrar",
+                    contentDescription = stringResource(R.string.action_delete),
                     tint = MaterialTheme.colorScheme.error,
                 )
             }
@@ -1207,26 +1254,26 @@ private fun CollectionsPanel(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
-            text = "Colecciones",
+            text = stringResource(R.string.studio_collections),
             style = MaterialTheme.typography.headlineMedium,
             modifier = Modifier.weight(1f),
         )
         Button(onClick = onCreate, shape = CircleShape) {
             Icon(Icons.Rounded.Add, contentDescription = null, modifier = Modifier.size(18.dp))
             Spacer(Modifier.width(6.dp))
-            Text("Crear")
+            Text(stringResource(R.string.action_create))
         }
     }
     Spacer(Modifier.height(6.dp))
     Text(
-        text = "Cambiá el nombre, la visibilidad y los fondos de cada colección.",
+        text = stringResource(R.string.studio_collections_help),
         style = MaterialTheme.typography.bodySmall,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
     )
     Spacer(Modifier.height(12.dp))
     if (state.myCollections.isEmpty()) {
         Text(
-            text = "Todavía no tenés colecciones.",
+            text = stringResource(R.string.studio_collections_empty),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -1252,20 +1299,32 @@ private fun CollectionsPanel(
                     Spacer(Modifier.width(10.dp))
                     Column(Modifier.weight(1f)) {
                         Text(collection.name, style = MaterialTheme.typography.titleMedium)
+                        val visibility = if (collection.isPublic) {
+                            stringResource(R.string.collection_public)
+                        } else {
+                            stringResource(R.string.collection_private_badge)
+                        }
                         Text(
-                            text = "${collection.wallpaperIds.size} fondos · " +
-                                if (collection.isPublic) "Pública" else "Privada",
+                            text = pluralStringResource(
+                                R.plurals.collection_meta,
+                                collection.wallpaperIds.size,
+                                collection.wallpaperIds.size,
+                                visibility,
+                            ),
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
                     IconButton(onClick = { onEdit(collection) }) {
-                        Icon(Icons.Rounded.Edit, contentDescription = "Editar")
+                        Icon(
+                            Icons.Rounded.Edit,
+                            contentDescription = stringResource(R.string.studio_edit),
+                        )
                     }
                     IconButton(onClick = { onDelete(collection) }) {
                         Icon(
                             Icons.Rounded.Delete,
-                            contentDescription = "Borrar",
+                            contentDescription = stringResource(R.string.action_delete),
                             tint = MaterialTheme.colorScheme.error,
                         )
                     }
@@ -1283,13 +1342,13 @@ private fun CollectionsPanel(
                 Spacer(Modifier.height(8.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     OutlinedButton(onClick = { onManageWalls(collection) }) {
-                        Text("Fondos")
+                        Text(stringResource(R.string.studio_walls))
                     }
                     OutlinedButton(onClick = { onOrder(collection) }) {
-                        Text("Orden")
+                        Text(stringResource(R.string.studio_order))
                     }
                     OutlinedButton(onClick = { onOpen(collection) }) {
-                        Text("Abrir")
+                        Text(stringResource(R.string.studio_open))
                     }
                 }
             }
@@ -1308,12 +1367,13 @@ private fun WallpaperEditDialog(
     var tags by remember(wallpaper.id) { mutableStateOf(wallpaper.tags.joinToString(", ")) }
     var featured by remember(wallpaper.id) { mutableStateOf(wallpaper.featured) }
     var categoryId by remember(wallpaper.id) { mutableStateOf(wallpaper.categoryId) }
-    val options = remember(wallpaper, state.categories) {
+    val noCategory = stringResource(R.string.studio_no_category)
+    val options = remember(wallpaper, state.categories, noCategory) {
         val base = state.categories
         if (wallpaper.categoryId != null && base.none { it.id == wallpaper.categoryId }) {
             base + WallpaperCategory(
                 id = wallpaper.categoryId,
-                name = wallpaper.category.ifBlank { "Sin categoría" },
+                name = wallpaper.category.ifBlank { noCategory },
             )
         } else {
             base
@@ -1324,7 +1384,7 @@ private fun WallpaperEditDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Editar fondo") },
+        title = { Text(stringResource(R.string.studio_edit_wallpaper)) },
         text = {
             Column(
                 modifier = Modifier
@@ -1334,12 +1394,12 @@ private fun WallpaperEditDialog(
                 OutlinedTextField(
                     value = title,
                     onValueChange = { title = it },
-                    label = { Text("Título") },
+                    label = { Text(stringResource(R.string.field_title)) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                 )
                 Spacer(Modifier.height(10.dp))
-                Text("Categoría", style = MaterialTheme.typography.labelLarge)
+                Text(stringResource(R.string.field_category), style = MaterialTheme.typography.labelLarge)
                 Spacer(Modifier.height(4.dp))
                 options.forEach { option ->
                     Row(
@@ -1360,14 +1420,17 @@ private fun WallpaperEditDialog(
                 OutlinedTextField(
                     value = tags,
                     onValueChange = { tags = it },
-                    label = { Text("Tags") },
-                    supportingText = { Text("Separados por comas.") },
+                    label = { Text(stringResource(R.string.field_tags)) },
+                    supportingText = { Text(stringResource(R.string.studio_tags_comma)) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                 )
                 Spacer(Modifier.height(8.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text("Destacado", modifier = Modifier.weight(1f))
+                    Text(
+                        stringResource(R.string.studio_featured),
+                        modifier = Modifier.weight(1f),
+                    )
                     Switch(checked = featured, onCheckedChange = { featured = it })
                 }
             }
@@ -1385,11 +1448,11 @@ private fun WallpaperEditDialog(
                 },
                 enabled = title.isNotBlank(),
             ) {
-                Text("Guardar")
+                Text(stringResource(R.string.action_save))
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Cancelar") }
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) }
         },
     )
 }
@@ -1404,12 +1467,20 @@ private fun CategoryEditDialog(
     var name by remember(category.id) { mutableStateOf(category.name) }
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(if (isNew) "Nueva categoría" else "Renombrar categoría") },
+        title = {
+            Text(
+                if (isNew) {
+                    stringResource(R.string.studio_new_category)
+                } else {
+                    stringResource(R.string.studio_rename_category)
+                },
+            )
+        },
         text = {
             OutlinedTextField(
                 value = name,
                 onValueChange = { name = it },
-                label = { Text("Nombre") },
+                label = { Text(stringResource(R.string.field_name)) },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
             )
@@ -1419,11 +1490,11 @@ private fun CategoryEditDialog(
                 onClick = { onSave(name) },
                 enabled = name.isNotBlank(),
             ) {
-                Text("Guardar")
+                Text(stringResource(R.string.action_save))
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Cancelar") }
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) }
         },
     )
 }
@@ -1440,14 +1511,18 @@ private fun CategoryDeleteDialog(
     var reassignTo by remember(category.id) { mutableStateOf(alternatives.firstOrNull()?.id) }
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Borrar categoría") },
+        title = { Text(stringResource(R.string.studio_delete_category)) },
         text = {
             Column {
                 Text(
                     if (count == 0) {
-                        "Se eliminará \"${category.name}\"."
+                        stringResource(R.string.studio_delete_category_body, category.name)
                     } else {
-                        "\"${category.name}\" tiene $count fondos. Elegí una categoría de destino."
+                        stringResource(
+                            R.string.studio_delete_category_has_walls,
+                            category.name,
+                            count,
+                        )
                     },
                 )
                 if (count > 0) {
@@ -1469,7 +1544,7 @@ private fun CategoryDeleteDialog(
                     }
                     if (alternatives.isEmpty()) {
                         Text(
-                            text = "Creá otra categoría para poder mover estos fondos.",
+                            text = stringResource(R.string.studio_delete_category_create_another),
                             color = MaterialTheme.colorScheme.error,
                             style = MaterialTheme.typography.bodySmall,
                         )
@@ -1482,11 +1557,11 @@ private fun CategoryDeleteDialog(
                 onClick = { onConfirm(if (count > 0) reassignTo else null) },
                 enabled = count == 0 || reassignTo != null,
             ) {
-                Text("Borrar")
+                Text(stringResource(R.string.studio_delete_confirm))
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Cancelar") }
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) }
         },
     )
 }
@@ -1503,13 +1578,21 @@ private fun CollectionEditDialog(
     var isPublic by remember(collection.id) { mutableStateOf(collection.isPublic) }
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(if (isNew) "Nueva colección" else "Editar colección") },
+        title = {
+            Text(
+                if (isNew) {
+                    stringResource(R.string.collection_new)
+                } else {
+                    stringResource(R.string.studio_edit_collection)
+                },
+            )
+        },
         text = {
             Column {
                 OutlinedTextField(
                     value = name,
                     onValueChange = { name = it },
-                    label = { Text("Nombre") },
+                    label = { Text(stringResource(R.string.field_name)) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                 )
@@ -1517,19 +1600,25 @@ private fun CollectionEditDialog(
                 OutlinedTextField(
                     value = description,
                     onValueChange = { description = it },
-                    label = { Text("Descripción") },
+                    label = { Text(stringResource(R.string.field_description)) },
                     minLines = 2,
                     modifier = Modifier.fillMaxWidth(),
                 )
                 Spacer(Modifier.height(8.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Column(Modifier.weight(1f)) {
-                        Text(if (isPublic) "Pública" else "Privada")
+                        Text(
+                            if (isPublic) {
+                                stringResource(R.string.collection_public)
+                            } else {
+                                stringResource(R.string.collection_private_badge)
+                            },
+                        )
                         Text(
                             text = if (isPublic) {
-                                "Visible para todos en la app."
+                                stringResource(R.string.collection_public_hint)
                             } else {
-                                "Solo vos podés verla."
+                                stringResource(R.string.collection_private_hint)
                             },
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -1544,11 +1633,11 @@ private fun CollectionEditDialog(
                 onClick = { onSave(name, description, isPublic) },
                 enabled = name.isNotBlank(),
             ) {
-                Text("Guardar")
+                Text(stringResource(R.string.action_save))
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Cancelar") }
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) }
         },
     )
 }
@@ -1573,10 +1662,10 @@ private fun CollectionWallsDialog(
                         TextButton(onClick = {
                             selected.value = wallpapers.map { it.id }.toSet()
                         }) {
-                            Text("Todos")
+                            Text(stringResource(R.string.studio_all))
                         }
                         TextButton(onClick = { selected.value = emptySet() }) {
-                            Text("Ninguno")
+                            Text(stringResource(R.string.studio_none))
                         }
                     }
                 }
@@ -1613,7 +1702,7 @@ private fun CollectionWallsDialog(
                             )
                             if (wallpaper.isArchived) {
                                 Text(
-                                    "Archivado",
+                                    stringResource(R.string.studio_archived_badge),
                                     style = MaterialTheme.typography.labelSmall,
                                     color = MaterialTheme.colorScheme.tertiary,
                                 )
@@ -1624,10 +1713,12 @@ private fun CollectionWallsDialog(
             }
         },
         confirmButton = {
-            TextButton(onClick = { onSave(selected.value) }) { Text("Guardar") }
+            TextButton(onClick = { onSave(selected.value) }) {
+                Text(stringResource(R.string.action_save))
+            }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Cancelar") }
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) }
         },
     )
 }
@@ -1646,7 +1737,7 @@ private fun CollectionOrderDialog(
     var order by remember(collection.id) { mutableStateOf(initial) }
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Orden de ${collection.name}") },
+        title = { Text(stringResource(R.string.studio_collection_order_title, collection.name)) },
         text = {
             LazyColumn(modifier = Modifier.heightIn(max = 420.dp)) {
                 itemsIndexed(items = order, key = { _, id -> id }) { index, id ->
@@ -1672,7 +1763,10 @@ private fun CollectionOrderDialog(
                             },
                             enabled = index > 0,
                         ) {
-                            Icon(Icons.Rounded.KeyboardArrowUp, contentDescription = "Subir")
+                            Icon(
+                                Icons.Rounded.KeyboardArrowUp,
+                                contentDescription = stringResource(R.string.studio_move_up),
+                            )
                         }
                         IconButton(
                             onClick = {
@@ -1685,14 +1779,17 @@ private fun CollectionOrderDialog(
                             },
                             enabled = index < order.lastIndex,
                         ) {
-                            Icon(Icons.Rounded.KeyboardArrowDown, contentDescription = "Bajar")
+                            Icon(
+                                Icons.Rounded.KeyboardArrowDown,
+                                contentDescription = stringResource(R.string.studio_move_down),
+                            )
                         }
                     }
                 }
                 if (order.isEmpty()) {
                     item(key = "collection-order-empty") {
                         Text(
-                            text = "La colección no tiene fondos.",
+                            text = stringResource(R.string.studio_collection_empty),
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
@@ -1700,10 +1797,12 @@ private fun CollectionOrderDialog(
             }
         },
         confirmButton = {
-            TextButton(onClick = { onSave(order) }) { Text("Guardar") }
+            TextButton(onClick = { onSave(order) }) {
+                Text(stringResource(R.string.action_save))
+            }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Cancelar") }
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) }
         },
     )
 }
@@ -1718,7 +1817,7 @@ private fun TagCreateDialog(
     val selected = remember { mutableStateOf(emptySet<String>()) }
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Crear tag") },
+        title = { Text(stringResource(R.string.studio_create_tag)) },
         text = {
             LazyColumn(modifier = Modifier.heightIn(max = 430.dp)) {
                 item(key = "tag-create-header") {
@@ -1726,12 +1825,15 @@ private fun TagCreateDialog(
                         OutlinedTextField(
                             value = tag,
                             onValueChange = { tag = it },
-                            label = { Text("Nombre del tag") },
+                            label = { Text(stringResource(R.string.studio_tag_name)) },
                             singleLine = true,
                             modifier = Modifier.fillMaxWidth(),
                         )
                         Spacer(Modifier.height(8.dp))
-                        Text("Aplicar a", style = MaterialTheme.typography.labelLarge)
+                        Text(
+                            stringResource(R.string.studio_apply_to),
+                            style = MaterialTheme.typography.labelLarge,
+                        )
                     }
                 }
                 items(items = wallpapers, key = { it.id }) { wallpaper ->
@@ -1772,11 +1874,11 @@ private fun TagCreateDialog(
                 onClick = { onSave(tag, selected.value.toList()) },
                 enabled = tag.isNotBlank() && selected.value.isNotEmpty(),
             ) {
-                Text("Aplicar")
+                Text(stringResource(R.string.action_apply))
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Cancelar") }
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) }
         },
     )
 }
@@ -1790,12 +1892,12 @@ private fun TagRenameDialog(
     var next by remember(tag) { mutableStateOf(tag) }
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Renombrar tag") },
+        title = { Text(stringResource(R.string.studio_rename_tag)) },
         text = {
             OutlinedTextField(
                 value = next,
                 onValueChange = { next = it },
-                label = { Text("Nombre nuevo") },
+                label = { Text(stringResource(R.string.studio_new_name)) },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
             )
@@ -1805,11 +1907,11 @@ private fun TagRenameDialog(
                 onClick = { onSave(next) },
                 enabled = next.isNotBlank(),
             ) {
-                Text("Guardar")
+                Text(stringResource(R.string.action_save))
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Cancelar") }
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) }
         },
     )
 }
@@ -1830,7 +1932,7 @@ private fun ConfirmDialog(
             TextButton(onClick = onConfirm) { Text(confirm) }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Cancelar") }
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) }
         },
     )
 }

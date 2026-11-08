@@ -40,8 +40,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.dannx.walls.R
 import com.dannx.walls.UiState
 import com.dannx.walls.data.Wallpaper
 import com.dannx.walls.data.WallpaperCollection
@@ -78,7 +81,7 @@ fun CollectionDetailScreen(
             Column(Modifier.fillMaxWidth()) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     FilledTonalIconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "Volver")
+                        Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = stringResource(R.string.action_back))
                     }
                     Spacer(Modifier.width(12.dp))
                     Column(Modifier.weight(1f)) {
@@ -88,9 +91,19 @@ fun CollectionDetailScreen(
                         )
                         Text(
                             text = if (items.size == total) {
-                                "${items.size} fondos · ${collection.ownerName}"
+                                pluralStringResource(
+                                    R.plurals.collection_meta,
+                                    items.size,
+                                    items.size,
+                                    collection.ownerName,
+                                )
                             } else {
-                                "${items.size} de $total fondos · ${collection.ownerName}"
+                                stringResource(
+                                    R.string.collection_meta_visible,
+                                    items.size,
+                                    total,
+                                    collection.ownerName,
+                                )
                             },
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -104,7 +117,7 @@ fun CollectionDetailScreen(
                                 contentColor = MaterialTheme.colorScheme.onErrorContainer,
                             ),
                         ) {
-                            Icon(Icons.Rounded.Delete, contentDescription = "Eliminar colección")
+                            Icon(Icons.Rounded.Delete, contentDescription = stringResource(R.string.collection_delete))
                         }
                     }
                 }
@@ -119,7 +132,7 @@ fun CollectionDetailScreen(
                 if (!collection.isPublic) {
                     Spacer(Modifier.height(6.dp))
                     Text(
-                        text = "Colección privada",
+                        text = stringResource(R.string.collection_private_label),
                         style = MaterialTheme.typography.labelLarge,
                         color = MaterialTheme.colorScheme.primary,
                     )
@@ -144,13 +157,13 @@ fun CollectionDetailScreen(
                     )
                     Spacer(Modifier.height(12.dp))
                     Text(
-                        text = "Esta colección está vacía",
+                        text = stringResource(R.string.collection_empty_title),
                         style = MaterialTheme.typography.titleLarge,
                         textAlign = TextAlign.Center,
                     )
                     Spacer(Modifier.height(4.dp))
                     Text(
-                        text = "Abre un fondo y toca el ícono de colecciones para agregarlo.",
+                        text = stringResource(R.string.collection_empty_body),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         textAlign = TextAlign.Center,
@@ -187,7 +200,7 @@ fun CollectionDetailScreen(
                         ) {
                             Icon(
                                 imageVector = Icons.Rounded.RemoveCircleOutline,
-                                contentDescription = "Quitar de la colección",
+                                contentDescription = stringResource(R.string.collection_remove_item),
                                 modifier = Modifier.size(20.dp),
                             )
                         }
@@ -200,11 +213,10 @@ fun CollectionDetailScreen(
     if (confirmDelete) {
         AlertDialog(
             onDismissRequest = { confirmDelete = false },
-            title = { Text("Eliminar colección") },
+            title = { Text(stringResource(R.string.collection_delete)) },
             text = {
                 Text(
-                    "Se eliminará \"${collection.name}\" de tu perfil. " +
-                        "Los fondos seguirán disponibles en el feed.",
+                    stringResource(R.string.collection_delete_body, collection.name),
                 )
             },
             confirmButton = {
@@ -215,12 +227,12 @@ fun CollectionDetailScreen(
                         onBack()
                     },
                 ) {
-                    Text("Eliminar", color = MaterialTheme.colorScheme.error)
+                    Text(stringResource(R.string.action_delete), color = MaterialTheme.colorScheme.error)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { confirmDelete = false }) {
-                    Text("Cancelar")
+                    Text(stringResource(R.string.action_cancel))
                 }
             },
         )

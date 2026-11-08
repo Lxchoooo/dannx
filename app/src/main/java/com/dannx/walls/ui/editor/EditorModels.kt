@@ -1,7 +1,9 @@
 package com.dannx.walls.ui.editor
 
 import android.graphics.ColorMatrix
+import androidx.annotation.StringRes
 import androidx.compose.runtime.Immutable
+import com.dannx.walls.R
 import kotlin.math.max
 
 /** Escala máxima del editor. Es independiente del zoom de la ficha. */
@@ -31,7 +33,7 @@ data class EditorAdjustments(
 @Immutable
 class FilterPreset(
     val id: String,
-    val name: String,
+    @StringRes val nameRes: Int,
     val values: FloatArray,
 )
 
@@ -94,18 +96,18 @@ internal object EditorPresets {
     )
 
     val all: List<FilterPreset> = listOf(
-        FilterPreset("original", "Original", identity.copyOf()),
-        FilterPreset("calido", "Cálido", scaleMatrix(1.09f, 1.02f, 0.91f)),
-        FilterPreset("frio", "Frío", scaleMatrix(0.91f, 1.01f, 1.10f)),
+        FilterPreset("original", R.string.filter_original, identity.copyOf()),
+        FilterPreset("calido", R.string.filter_warm, scaleMatrix(1.09f, 1.02f, 0.91f)),
+        FilterPreset("frio", R.string.filter_cool, scaleMatrix(0.91f, 1.01f, 1.10f)),
         FilterPreset(
             "mono",
-            "Blanco y negro",
+            R.string.filter_mono,
             matrixArray { setSaturation(0f) },
         ),
-        FilterPreset("sepia", "Sepia", sepia.copyOf()),
+        FilterPreset("sepia", R.string.filter_sepia, sepia.copyOf()),
         FilterPreset(
             "vintage",
-            "Vintage",
+            R.string.filter_vintage,
             matrixArray {
                 setSaturation(0.62f)
                 postConcat(ColorMatrix(contrastMatrix(1.08f)))
@@ -114,16 +116,16 @@ internal object EditorPresets {
         ),
         FilterPreset(
             "cine",
-            "Cine",
+            R.string.filter_cinema,
             matrixArray {
                 setSaturation(1.16f)
                 postConcat(ColorMatrix(contrastMatrix(1.14f)))
                 postConcat(ColorMatrix(scaleMatrix(0.97f, 1f, 1.08f)))
             },
         ),
-        FilterPreset("verde", "Verde", scaleMatrix(0.93f, 1.07f, 0.96f)),
-        FilterPreset("rosa", "Rosa", scaleMatrix(1.09f, 0.96f, 1.01f)),
-        FilterPreset("contraste", "Contraste", contrastMatrix(1.22f)),
+        FilterPreset("verde", R.string.filter_green, scaleMatrix(0.93f, 1.07f, 0.96f)),
+        FilterPreset("rosa", R.string.filter_pink, scaleMatrix(1.09f, 0.96f, 1.01f)),
+        FilterPreset("contraste", R.string.filter_contrast, contrastMatrix(1.22f)),
     )
 
     fun byId(id: String): FilterPreset =
