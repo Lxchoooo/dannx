@@ -124,6 +124,9 @@ alter table public.wallpapers
 alter table public.wallpapers
     add column if not exists archived_at timestamptz;
 
+alter table public.wallpapers
+    alter column created_by set default auth.uid();
+
 create index if not exists wallpapers_category_idx
     on public.wallpapers(category_id);
 

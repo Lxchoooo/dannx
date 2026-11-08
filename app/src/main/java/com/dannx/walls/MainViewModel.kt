@@ -152,7 +152,10 @@ data class UiState(
         }
 
     val categoryNames: List<String>
-        get() = categoryOptions.map { it.name }
+        get() = wallpapers.map { categoryNameFor(it) }
+            .filter { it.isNotBlank() }
+            .distinctBy { it.lowercase() }
+            .sorted()
 
     fun categoryNameFor(wallpaper: Wallpaper): String =
         categories.firstOrNull { it.id == wallpaper.categoryId }?.name
@@ -381,6 +384,7 @@ class MainViewModel(
     }
 
     fun signOut() {
+        studioJob?.cancel()
         prefs.clearSession()
         val fallback = _state.value.collectionItems.filter { it.isPublic }
         _state.update {

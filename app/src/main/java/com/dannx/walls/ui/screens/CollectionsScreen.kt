@@ -256,8 +256,13 @@ private fun CollectionCard(
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
+                val count = if (mine) {
+                    collection.wallpaperIds.size
+                } else {
+                    state.wallpapersIn(collection).size
+                }
                 Text(
-                    text = "${collection.wallpaperIds.size} fondos · ${collection.ownerName}",
+                    text = "$count fondos · ${collection.ownerName}",
                     style = MaterialTheme.typography.labelLarge,
                     color = Color.White.copy(alpha = 0.82f),
                 )

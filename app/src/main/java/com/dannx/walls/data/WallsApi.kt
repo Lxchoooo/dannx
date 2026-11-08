@@ -73,7 +73,7 @@ class WallsApi(
         runCatching {
             getList<CategoryDto>("categories?select=*&order=position.asc,name.asc")
                 .map { it.toCategory() }
-        }.getOrElse { defaultCategories() }
+        }.getOrElse { emptyList() }
     }
 
     override suspend fun loadCollections(): List<WallpaperCollection> = withContext(Dispatchers.IO) {
