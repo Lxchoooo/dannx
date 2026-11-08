@@ -225,7 +225,14 @@ private fun ApplyProgressOverlay(progress: Int) {
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.Black.copy(alpha = 0.48f)),
+            .background(Color.Black.copy(alpha = 0.48f))
+            .pointerInput(Unit) {
+                awaitPointerEventScope {
+                    while (true) {
+                        awaitPointerEvent().changes.forEach { it.consume() }
+                    }
+                }
+            },
         contentAlignment = Alignment.Center,
     ) {
         Card {

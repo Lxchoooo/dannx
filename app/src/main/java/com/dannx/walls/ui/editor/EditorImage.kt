@@ -51,7 +51,7 @@ internal object EditorImage {
             throw IOException("La imagen no se pudo decodificar.")
         }
         var sample = 1
-        while (max(width, height) / (sample * 2) >= PreviewMaxSide) {
+        while (max(width, height) / sample > PreviewMaxSide) {
             sample *= 2
         }
         val options = BitmapFactory.Options().apply {

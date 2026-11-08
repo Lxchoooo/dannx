@@ -174,6 +174,7 @@ internal class WallpaperEditorViewModel(
         if (applyJob?.isActive == true) return
         val current = _state.value
         if (current.preview == null || current.loading) return
+        val settings = current.settings
         applyJob = viewModelScope.launch {
             _state.update {
                 it.copy(
@@ -191,7 +192,7 @@ internal class WallpaperEditorViewModel(
                         file = file,
                         targetWidth = size.x,
                         targetHeight = size.y,
-                        settings = _state.value.settings,
+                        settings = settings,
                     ) { progress ->
                         _state.update { it.copy(applyProgress = progress) }
                     }
@@ -280,13 +281,13 @@ internal class WallpaperEditorViewModel(
     }
 
     override fun onCleared() {
+        val hadActiveJobs = loadJob?.isActive == true ||
+            blurJob?.isActive == true ||
+            applyJob?.isActive == true
         loadJob?.cancel()
         blurJob?.cancel()
         applyJob?.cancel()
-        val hasActiveJobs = loadJob?.isActive == true ||
-            blurJob?.isActive == true ||
-            applyJob?.isActive == true
-        if (!hasActiveJobs) {
+        if (!hadActiveJobs) {
             val current = _state.value
             current.preview?.recycle()
             current.blurredPreview?.recycle()
