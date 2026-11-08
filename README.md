@@ -56,9 +56,10 @@ right after installing.
    when Android asks for it.
 3. Updates install on top of the existing app: your favourites, collections and
    settings are kept.
-4. Debug artifacts from this repository's Actions use the same signing key as
-   releases, so they also install on top of the published app. Use the latest
-   run's artifact; an older debug build cannot replace a newer release.
+4. Debug artifacts that CI builds with the repository's keystore secret use the
+   same signing key as releases, so they also install on top of the published
+   app. Use the latest run's artifact; an older debug build cannot replace a
+   newer release.
 
 Requirements: **Android 10 (API 29) or newer**. Release builds are signed with a
 private key stored as a GitHub secret; the key is never committed to the

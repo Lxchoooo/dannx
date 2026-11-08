@@ -227,12 +227,29 @@ removes the correctness gate from the critical path.
 Records the measured baseline, the review resolutions, and the decision to
 reject the configuration cache.
 
-### 3. No changes to `gradle.properties` or `app/build.gradle.kts`
+### 3. No speed-related changes to `gradle.properties` or `app/build.gradle.kts`
 
 `org.gradle.caching=true`, `org.gradle.parallel=true` and the daemon setting
 stay. No configuration-cache flag is added. No provider rewiring is needed
-because the configuration cache is not used. The signing and `VERSION_CODE`
-wiring stays byte-for-byte compatible with the current release flow.
+because the configuration cache is not used.
+
+### 3b. Debug artifact signing (follow-up, not a speed lever)
+
+The debug artifact initially used the runner-generated debug key, so it could
+not be installed over the release-signed app. The follow-up aligns them:
+
+*   `app/build.gradle.kts` assigns the release signing config to the `debug`
+    build type when the release keystore is available. Without it (for example,
+    a fork PR), the normal debug key is used.
+*   The `debug` CI job restores the keystore and passes the same
+    `VERSION_CODE` (`github.run_number`) as the release build, so the debug APK
+    can replace the release of the same run without a downgrade.
+*   Release signing itself is unchanged. The release keystore and secret names
+    are the same.
+
+Verified on run `42491881254`: debug and release APKs share package
+`com.dannx.walls`, version code `132` and certificate SHA-256
+`1B:C0:A3:3A:E6:91:09:0A:A8:1B:94:F3:50:02:4B:45:53:27:DE:81:19:0F:13:8C:76:BC:45:89:F9:A0:B2:2C`.
 
 ### 4. No change to `.github/dependabot.yml`
 
