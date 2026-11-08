@@ -58,10 +58,10 @@ fun CollectionDetailScreen(
     onDelete: () -> Unit,
 ) {
     val items = remember(state.wallpapers, collection.wallpaperIds) {
-        collection.wallpaperIds.mapNotNull { id ->
-            state.wallpapers.firstOrNull { it.id == id }
-        }
+        val byId = state.wallpapers.associateBy { it.id }
+        collection.wallpaperIds.mapNotNull { byId[it] }
     }
+    val total = collection.wallpaperIds.size
     val canEdit = state.canEdit(collection)
     var confirmDelete by rememberSaveable { mutableStateOf(false) }
 
@@ -87,7 +87,11 @@ fun CollectionDetailScreen(
                             style = MaterialTheme.typography.headlineMedium,
                         )
                         Text(
-                            text = "${items.size} fondos · ${collection.ownerName}",
+                            text = if (items.size == total) {
+                                "${items.size} fondos · ${collection.ownerName}"
+                            } else {
+                                "${items.size} de $total fondos · ${collection.ownerName}"
+                            },
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )

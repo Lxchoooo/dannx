@@ -186,7 +186,7 @@ class WallsApi(
         categoryId: String?,
         tags: List<String>,
         collectionId: String?,
-    ): Wallpaper = withContext(Dispatchers.IO) {
+    ): UploadOutcome = withContext(Dispatchers.IO) {
         ensureConfigured()
         val token = requireToken()
         val prepared = prepareUploadImage(context, uri, MAX_BYTES)
@@ -221,10 +221,26 @@ class WallsApi(
                     error
                 }
             }
-            if (collectionId != null) {
-                runCatching { insertCollectionItem(token, collectionId, created.id) }
+            val warning = if (collectionId != null) {
+                try {
+                    insertCollectionItem(token, collectionId, created.id)
+                    null
+                } catch (error: CancellationException) {
+                    throw error
+                } catch (error: DannXError.SessionExpired) {
+                    // La ficha ya está publicada; se propaga para que la app
+                    // vuelva a pedir sesión y no muestre un falso éxito.
+                    throw error
+                } catch (error: Exception) {
+                    "El fondo se publicó, pero no se pudo agregar a la colección."
+                }
+            } else {
+                null
             }
-            created.toWallpaper(baseUrl)
+            UploadOutcome(
+                wallpaper = created.toWallpaper(baseUrl),
+                warning = warning,
+            )
         } finally {
             prepared.file.delete()
         }
@@ -430,6 +446,34 @@ class WallsApi(
             ?: throw DannXError.Parse("El servidor no devolvió la categoría actualizada.")
     }
 
+    override suspend fun reassignCategory(
+        categoryId: String,
+        targetId: String,
+        targetName: String,
+    ) {
+        if (!isConfigured) return
+        withContext(Dispatchers.IO) {
+            executeAuthorized(
+                build = { token ->
+                    Request.Builder()
+                        .url("$baseUrl/rest/v1/wallpapers?category_id=eq.$categoryId")
+                        .header("apikey", anonKey)
+                        .header("Authorization", "Bearer $token")
+                        .header("Prefer", "return=minimal")
+                        .patch(
+                            json.encodeToString(
+                                CategoryAssignmentUpdate(
+                                    categoryId = targetId,
+                                    category = targetName.trim().take(40),
+                                ),
+                            ).toRequestBody(JSON_MEDIA),
+                        )
+                        .build()
+                },
+            )
+        }
+    }
+
     override suspend fun deleteCategory(id: String) {
         if (!isConfigured) return
         withContext(Dispatchers.IO) {
@@ -610,6 +654,66 @@ class WallsApi(
                         .build()
                 },
             )
+        }
+    }
+
+    override suspend fun setCollectionWallpapers(
+        collectionId: String,
+        wallpaperIds: List<String>,
+    ) {
+        if (!isConfigured) return
+        withContext(Dispatchers.IO) {
+            val selected = wallpaperIds
+                .map { it.trim() }
+                .filter { it.isNotBlank() }
+                .distinct()
+            val current = getListAuthorized<CollectionItemRef>(
+                "collection_items?select=wallpaper_id&collection_id=eq.$collectionId",
+            ).map { it.wallpaperId }.toSet()
+            val toAdd = selected.filterNot { it in current }
+            val toRemove = current.filterNot { it in selected }
+
+            if (toAdd.isNotEmpty()) {
+                val start = current.size
+                val payload = toAdd.mapIndexed { index, id ->
+                    NewCollectionItem(
+                        collectionId = collectionId,
+                        wallpaperId = id,
+                        position = start + index,
+                    )
+                }
+                executeAuthorized(
+                    build = { token ->
+                        Request.Builder()
+                            .url("$baseUrl/rest/v1/collection_items")
+                            .header("apikey", anonKey)
+                            .header("Authorization", "Bearer $token")
+                            .header(
+                                "Prefer",
+                                "resolution=ignore-duplicates,return=minimal",
+                            )
+                            .post(json.encodeToString(payload).toRequestBody(JSON_MEDIA))
+                            .build()
+                    },
+                )
+            }
+
+            if (toRemove.isNotEmpty()) {
+                executeAuthorized(
+                    build = { token ->
+                        Request.Builder()
+                            .url(
+                                "$baseUrl/rest/v1/collection_items" +
+                                    "?collection_id=eq.$collectionId" +
+                                    "&wallpaper_id=in.(${toRemove.joinToString(",")})",
+                            )
+                            .header("apikey", anonKey)
+                            .header("Authorization", "Bearer $token")
+                            .delete()
+                            .build()
+                    },
+                )
+            }
         }
     }
 

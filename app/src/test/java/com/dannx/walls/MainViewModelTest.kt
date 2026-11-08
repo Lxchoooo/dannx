@@ -321,6 +321,54 @@ class MainViewModelTest {
             assertTrue(model.state.value.message.orEmpty().contains("reservado"))
         }
 
+    @Test
+    fun `collection walls are replaced in one bulk operation`() = runTest(dispatcher) {
+        store.saveSession("admin@test", "token", null, "u1")
+        repository.session = AdminSession("admin@test", "token", "u1")
+        repository.collections = listOf(
+            WallpaperCollection(
+                id = "c1",
+                name = "Colección",
+                ownerId = "u1",
+                wallpaperIds = listOf("1", "2"),
+            ),
+        )
+        val model = viewModel()
+        advanceUntilIdle()
+
+        model.setCollectionWallpapers("c1", listOf("2", "3"))
+        advanceUntilIdle()
+
+        assertEquals("c1" to listOf("2", "3"), repository.lastCollectionWallpapers)
+        assertEquals(
+            listOf("2", "3"),
+            model.state.value.collectionItems.first { it.id == "c1" }.wallpaperIds,
+        )
+    }
+
+    @Test
+    fun `deleting a category reassigns its wallpapers in bulk`() = runTest(dispatcher) {
+        store.saveSession("admin@test", "token", null, "u1")
+        repository.session = AdminSession("admin@test", "token", "u1")
+        repository.categories = listOf(
+            com.dannx.walls.data.WallpaperCategory(id = "old", name = "Vieja", position = 0),
+            com.dannx.walls.data.WallpaperCategory(id = "new", name = "Nueva", position = 1),
+        )
+        repository.adminWallpapers = listOf(
+            wallpaper("1").copy(categoryId = "old", category = "Vieja"),
+        )
+        val model = viewModel()
+        advanceUntilIdle()
+        model.loadStudio()
+        advanceUntilIdle()
+
+        model.deleteCategory("old", "new")
+        advanceUntilIdle()
+
+        assertEquals(Triple("old", "new", "Nueva"), repository.reassignedCategory)
+        assertEquals("Nueva", model.state.value.adminWallpapers.single().category)
+    }
+
     private fun wallpaper(id: String) = Wallpaper(
         id = id,
         title = "Fondo $id",

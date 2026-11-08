@@ -5,6 +5,7 @@ import com.dannx.walls.data.AdminSession
 import com.dannx.walls.data.DannXError
 import com.dannx.walls.data.FeedCacheStore
 import com.dannx.walls.data.LocalStore
+import com.dannx.walls.data.UploadOutcome
 import com.dannx.walls.data.Wallpaper
 import com.dannx.walls.data.WallpaperActions
 import com.dannx.walls.data.WallpaperCategory
@@ -25,6 +26,9 @@ class FakeRepository : WallpapersRepository {
     var failTimes: Int = 0
     var loadCalls: Int = 0
     var session: AdminSession? = null
+    var uploadWarning: String? = null
+    var reassignedCategory: Triple<String, String, String>? = null
+    var lastCollectionWallpapers: Pair<String, List<String>>? = null
 
     override val isConfigured: Boolean = true
 
@@ -63,13 +67,16 @@ class FakeRepository : WallpapersRepository {
         categoryId: String?,
         tags: List<String>,
         collectionId: String?,
-    ): Wallpaper = Wallpaper(
-        id = "new",
-        title = title,
-        category = category,
-        categoryId = categoryId,
-        imageUrl = "url",
-        tags = tags,
+    ): UploadOutcome = UploadOutcome(
+        wallpaper = Wallpaper(
+            id = "new",
+            title = title,
+            category = category,
+            categoryId = categoryId,
+            imageUrl = "url",
+            tags = tags,
+        ),
+        warning = uploadWarning,
     )
 
     override suspend fun updateWallpaper(
@@ -123,6 +130,14 @@ class FakeRepository : WallpapersRepository {
         position: Int,
     ): WallpaperCategory = WallpaperCategory(id = id, name = name, position = position)
 
+    override suspend fun reassignCategory(
+        categoryId: String,
+        targetId: String,
+        targetName: String,
+    ) {
+        reassignedCategory = Triple(categoryId, targetId, targetName)
+    }
+
     override suspend fun deleteCategory(id: String) = Unit
 
     override suspend fun createCollection(
@@ -145,6 +160,13 @@ class FakeRepository : WallpapersRepository {
     override suspend fun addToCollection(collectionId: String, wallpaperId: String) = Unit
 
     override suspend fun removeFromCollection(collectionId: String, wallpaperId: String) = Unit
+
+    override suspend fun setCollectionWallpapers(
+        collectionId: String,
+        wallpaperIds: List<String>,
+    ) {
+        lastCollectionWallpapers = collectionId to wallpaperIds
+    }
 
     override suspend fun reorderCollection(collectionId: String, wallpaperIds: List<String>) = Unit
 

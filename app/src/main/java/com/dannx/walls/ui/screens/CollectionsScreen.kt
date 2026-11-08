@@ -170,11 +170,11 @@ private fun CollectionCard(
     onClick: () -> Unit,
 ) {
     val wallpapers = state.wallpapers
-    val cover = remember(collection.id, collection.wallpaperIds, wallpapers) {
-        collection.wallpaperIds.firstNotNullOfOrNull { id ->
-            wallpapers.firstOrNull { it.id == id }
-        }
+    val visibleWallpapers = remember(collection.id, collection.wallpaperIds, wallpapers) {
+        val byId = wallpapers.associateBy { it.id }
+        collection.wallpaperIds.mapNotNull { byId[it] }
     }
+    val cover = visibleWallpapers.firstOrNull()
     val mine = state.canEdit(collection) && !state.isDemo
     Card(
         modifier = Modifier
@@ -257,13 +257,15 @@ private fun CollectionCard(
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
-                val count = if (mine) {
-                    collection.wallpaperIds.size
+                val total = collection.wallpaperIds.size
+                val visible = visibleWallpapers.size
+                val countText = if (visible == total) {
+                    "$total fondos"
                 } else {
-                    state.wallpapersIn(collection).size
+                    "$visible de $total fondos"
                 }
                 Text(
-                    text = "$count fondos · ${collection.ownerName}",
+                    text = "$countText · ${collection.ownerName}",
                     style = MaterialTheme.typography.labelLarge,
                     color = Color.White.copy(alpha = 0.82f),
                 )

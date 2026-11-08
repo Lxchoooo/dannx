@@ -6,6 +6,15 @@ import com.dannx.walls.util.SharedImage
 import com.dannx.walls.util.WallpaperTarget
 
 /**
+ * Resultado de publicar un fondo. El aviso permite contar cuando la ficha se
+ * creó pero una operación secundaria, como sumarlo a una colección, falló.
+ */
+data class UploadOutcome(
+    val wallpaper: Wallpaper,
+    val warning: String? = null,
+)
+
+/**
  * Contrato de los datos remotos. Permite probar el ViewModel con un fake.
  */
 interface WallpapersRepository {
@@ -24,7 +33,7 @@ interface WallpapersRepository {
         categoryId: String?,
         tags: List<String>,
         collectionId: String?,
-    ): Wallpaper
+    ): UploadOutcome
 
     suspend fun updateWallpaper(
         wallpaperId: String,
@@ -41,6 +50,7 @@ interface WallpapersRepository {
 
     suspend fun createCategory(name: String, position: Int): WallpaperCategory
     suspend fun updateCategory(id: String, name: String, position: Int): WallpaperCategory
+    suspend fun reassignCategory(categoryId: String, targetId: String, targetName: String)
     suspend fun deleteCategory(id: String)
 
     suspend fun createCollection(
@@ -58,6 +68,7 @@ interface WallpapersRepository {
 
     suspend fun addToCollection(collectionId: String, wallpaperId: String)
     suspend fun removeFromCollection(collectionId: String, wallpaperId: String)
+    suspend fun setCollectionWallpapers(collectionId: String, wallpaperIds: List<String>)
     suspend fun reorderCollection(collectionId: String, wallpaperIds: List<String>)
     suspend fun deleteCollection(id: String)
 

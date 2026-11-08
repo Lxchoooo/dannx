@@ -90,6 +90,12 @@ data class CategoryNameUpdate(
 )
 
 @Serializable
+data class CategoryAssignmentUpdate(
+    @SerialName("category_id") val categoryId: String,
+    val category: String,
+)
+
+@Serializable
 data class PositionUpdate(
     val position: Int,
 )
@@ -130,6 +136,11 @@ data class NewCollectionItem(
     @SerialName("collection_id") val collectionId: String,
     @SerialName("wallpaper_id") val wallpaperId: String,
     val position: Int = 0,
+)
+
+@Serializable
+data class CollectionItemRef(
+    @SerialName("wallpaper_id") val wallpaperId: String,
 )
 
 @Serializable

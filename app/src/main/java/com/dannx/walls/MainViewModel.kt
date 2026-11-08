@@ -164,8 +164,10 @@ data class UiState(
     fun canEdit(collection: WallpaperCollection): Boolean =
         isDemo || (session != null && session.userId == collection.ownerId)
 
-    fun wallpapersIn(collection: WallpaperCollection): List<Wallpaper> =
-        collection.wallpaperIds.mapNotNull { id -> wallpapers.firstOrNull { it.id == id } }
+    fun wallpapersIn(collection: WallpaperCollection): List<Wallpaper> {
+        val byId = wallpapers.associateBy { it.id }
+        return collection.wallpaperIds.mapNotNull { byId[it] }
+    }
 }
 
 /**
@@ -472,7 +474,7 @@ class MainViewModel(
         uploadJob = viewModelScope.launch {
             _state.update { it.copy(uploading = true) }
             try {
-                val created = api.uploadWallpaper(
+                val outcome = api.uploadWallpaper(
                     uri = uri,
                     title = title,
                     category = category,
@@ -480,6 +482,7 @@ class MainViewModel(
                     tags = tags,
                     collectionId = collectionId,
                 )
+                val created = outcome.wallpaper
                 val collections = loadCollectionsOrEmpty(_state.value.collectionItems)
                 _state.update {
                     val updatedWallpapers = listOf(created) +
@@ -497,7 +500,7 @@ class MainViewModel(
                             LoadState.Content(collections)
                         },
                         uploadSuccessCount = it.uploadSuccessCount + 1,
-                        message = "Wallpaper publicado.",
+                        message = outcome.warning ?: "Wallpaper publicado.",
                         messageAction = null,
                     )
                 }
@@ -636,9 +639,7 @@ class MainViewModel(
                     )
                 }
             } catch (error: Exception) {
-                _state.update {
-                    it.afterError(error)
-                }
+                handleBulkFailure(error)
             }
         }
     }
@@ -682,17 +683,12 @@ class MainViewModel(
         viewModelScope.launch {
             _state.update { it.copy(studioBusy = true) }
             try {
-                if (target != null) {
-                    affected.forEach { wallpaper ->
-                        api.updateWallpaper(
-                            wallpaperId = wallpaper.id,
-                            title = wallpaper.title,
-                            category = target.name,
-                            categoryId = target.id,
-                            tags = wallpaper.tags,
-                            featured = wallpaper.featured,
-                        )
-                    }
+                if (target != null && affected.isNotEmpty()) {
+                    api.reassignCategory(
+                        categoryId = categoryId,
+                        targetId = target.id,
+                        targetName = target.name,
+                    )
                 }
                 api.deleteCategory(categoryId)
                 _state.update {
@@ -717,9 +713,7 @@ class MainViewModel(
                     )
                 }
             } catch (error: Exception) {
-                _state.update {
-                    it.afterError(error)
-                }
+                handleBulkFailure(error)
             }
         }
     }
@@ -977,9 +971,8 @@ class MainViewModel(
                     )
                 }
             } catch (error: Exception) {
-                _state.update {
-                    it.afterError(error)
-                }
+                _state.update { it.afterError(error) }
+                reloadCollectionsQuietly()
             }
         }
     }
@@ -1009,9 +1002,8 @@ class MainViewModel(
                     )
                 }
             } catch (error: Exception) {
-                _state.update {
-                    it.afterError(error)
-                }
+                _state.update { it.afterError(error) }
+                reloadCollectionsQuietly()
             }
         }
     }
@@ -1073,9 +1065,7 @@ class MainViewModel(
                     )
                 }
             } catch (error: Exception) {
-                _state.update {
-                    it.afterError(error)
-                }
+                handleBulkFailure(error)
             }
         }
     }
@@ -1138,9 +1128,7 @@ class MainViewModel(
                     )
                 }
             } catch (error: Exception) {
-                _state.update {
-                    it.afterError(error)
-                }
+                handleBulkFailure(error)
             }
         }
     }
@@ -1198,9 +1186,7 @@ class MainViewModel(
                     )
                 }
             } catch (error: Exception) {
-                _state.update {
-                    it.afterError(error)
-                }
+                handleBulkFailure(error)
             }
         }
     }
@@ -1299,6 +1285,7 @@ class MainViewModel(
                 }
             } catch (error: Exception) {
                 _state.update { it.afterError(error) }
+                reloadCollectionsQuietly()
             }
         }
     }
@@ -1342,6 +1329,62 @@ class MainViewModel(
                 }
             } catch (error: Exception) {
                 _state.update { it.afterError(error) }
+                reloadCollectionsQuietly()
+            }
+        }
+    }
+
+    /**
+     * Reemplaza la selección completa de fondos de una colección en dos
+     * operaciones, en vez de una llamada por cada alta y baja.
+     */
+    fun setCollectionWallpapers(collectionId: String, wallpaperIds: List<String>) {
+        val target = _state.value.collectionItems.firstOrNull { it.id == collectionId } ?: return
+        val selected = wallpaperIds.distinct()
+        if (_state.value.isDemo) {
+            val updated = _state.value.collectionItems.map { collection ->
+                if (collection.id == collectionId) {
+                    collection.copy(wallpaperIds = selected)
+                } else {
+                    collection
+                }
+            }
+            prefs.saveLocalCollections(updated)
+            _state.update {
+                it.copy(
+                    collectionItems = updated,
+                    message = "Colección \"${target.name}\" actualizada.",
+                )
+            }
+            return
+        }
+        if (_state.value.session == null) {
+            _state.update { it.copy(message = "Iniciá sesión en Estudio para editar colecciones.") }
+            return
+        }
+        viewModelScope.launch {
+            _state.update { it.copy(collectionBusy = true) }
+            try {
+                api.setCollectionWallpapers(collectionId, selected)
+                _state.update {
+                    it.copy(
+                        collectionBusy = false,
+                        collectionItems = it.collectionItems.map { collection ->
+                            if (collection.id == collectionId) {
+                                collection.copy(wallpaperIds = selected)
+                            } else {
+                                collection
+                            }
+                        },
+                        message = "Colección \"${target.name}\" actualizada.",
+                    )
+                }
+            } catch (error: CancellationException) {
+                _state.update { it.copy(collectionBusy = false) }
+                throw error
+            } catch (error: Exception) {
+                _state.update { it.afterError(error) }
+                reloadCollectionsQuietly()
             }
         }
     }
@@ -1376,6 +1419,7 @@ class MainViewModel(
                 }
             } catch (error: Exception) {
                 _state.update { it.afterError(error) }
+                reloadCollectionsQuietly()
             }
         }
     }
@@ -1575,6 +1619,44 @@ class MainViewModel(
                 return@launch
             }
             _state.update { it.copy(session = session) }
+        }
+    }
+
+    /**
+     * Una operación masiva puede quedar a medias si falla en el servidor. Se
+     * muestra el error y se vuelve a leer el Estudio para no dejar en pantalla
+     * un estado que ya no coincide con la base.
+     */
+    private fun handleBulkFailure(error: Exception) {
+        _state.update { it.afterError(error) }
+        if (_state.value.session != null) {
+            loadStudio()
+        }
+    }
+
+    /**
+     * Relee las colecciones sin pisar el mensaje de error. Si la sesión venció,
+     * afterError ya la ocultó y no se pide nada más.
+     */
+    private suspend fun reloadCollectionsQuietly() {
+        if (_state.value.session == null) return
+        try {
+            val collections = api.loadCollections()
+            _state.update {
+                it.copy(
+                    collectionItems = collections,
+                    collections = if (collections.isEmpty()) {
+                        LoadState.Empty
+                    } else {
+                        LoadState.Content(collections)
+                    },
+                )
+            }
+        } catch (error: CancellationException) {
+            throw error
+        } catch (error: Exception) {
+            // El error original ya está visible. Si tampoco se puede releer, la
+            // próxima acción o el refresco general volverán a intentarlo.
         }
     }
 
