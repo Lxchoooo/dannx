@@ -8,6 +8,16 @@ updates:
     labels: ["dependencies"]
     commit-message:
       prefix: "chore(deps)"
+    groups:
+      androidx:
+        patterns: ["androidx.*"]
+        update-types: ["minor", "patch"]
+      kotlin:
+        patterns: ["org.jetbrains.kotlin*"]
+        update-types: ["minor", "patch"]
+      build-tools:
+        patterns: ["com.android.tools*", "com.google.*"]
+        update-types: ["minor", "patch"]
 
   - package-ecosystem: "github-actions"
     directory: "/"
@@ -17,3 +27,7 @@ updates:
     labels: ["dependencies"]
     commit-message:
       prefix: "ci"
+    groups:
+      actions:
+        patterns: ["*"]
+        update-types: ["minor", "patch"]

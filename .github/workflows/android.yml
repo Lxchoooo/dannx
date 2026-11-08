@@ -24,9 +24,10 @@ env:
   SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY || vars.SUPABASE_ANON_KEY }}
 
 jobs:
-  # Modo rápido: APK de prueba en cada push y en cada PR.
+  # Modo rápido: APK de prueba en cada PR. En main alcanza con la release
+  # rolling que publica `publish`; así no se gasta un runner por push.
   debug:
-    if: github.ref_type != 'tag'
+    if: github.event_name == 'pull_request'
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:

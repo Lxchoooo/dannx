@@ -311,7 +311,7 @@ private fun CreateCollectionDialog(
 ) {
     var name by rememberSaveable { mutableStateOf("") }
     var description by rememberSaveable { mutableStateOf("") }
-    var isPublic by rememberSaveable { mutableStateOf(true) }
+    var isPublic by rememberSaveable { mutableStateOf(false) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -341,9 +341,16 @@ private fun CreateCollectionDialog(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Column(Modifier.weight(1f)) {
-                        Text("Pública", style = MaterialTheme.typography.titleMedium)
                         Text(
-                            text = "Visible para todos en la app.",
+                            if (isPublic) "Pública" else "Privada",
+                            style = MaterialTheme.typography.titleMedium,
+                        )
+                        Text(
+                            text = if (isPublic) {
+                                "Visible para todos en la app."
+                            } else {
+                                "Solo vos podés verla."
+                            },
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )

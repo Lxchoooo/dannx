@@ -40,7 +40,8 @@ así que funciona apenas la instalás.
   splash screen y accesos directos en el launcher.
 - Funciona sin conexión: el feed que ya cargaste sigue disponible.
 - Temas claro y oscuro, con color dinámico en Android 12+.
-- Pantalla de ajustes: tema (sistema, claro, oscuro), modo lite y borrar caché.
+- Pantalla de ajustes: tema (sistema, claro, oscuro), modo lite, borrar caché y
+  acceso a la última release.
 - Los botones del detalle toman el color del fondo que estás mirando.
 - Pantallas de bienvenida que se muestran una sola vez al inicio.
 
@@ -99,7 +100,8 @@ Todo lo siguiente está **planeado** y todavía no existe:
 - Panel web de administración para gestionar fondos.
 - Perfil de base para mejorar el rendimiento en equipos de gama baja.
 - Release firmado distribuido fuera de GitHub.
-- Actualizador dentro de la app.
+- Actualizador completo dentro de la app (por ahora, Ajustes abre la página de
+  releases).
 
 ## 🐞 Contribuir
 

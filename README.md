@@ -40,7 +40,8 @@ right after installing.
   splash screen and launcher shortcuts.
 - Works offline: the feed you already loaded stays available.
 - Dark and light themes, with dynamic colour on Android 12+.
-- Settings screen: theme (system, light, dark), lite mode and cache reset.
+- Settings screen: theme (system, light, dark), lite mode, cache reset and a
+  shortcut to the latest release.
 - Detail buttons take the colour of the wallpaper you are looking at.
 - Welcome screens shown once on first launch.
 
@@ -99,7 +100,7 @@ The following are **planned** and not available yet:
 - Web admin panel for managing wallpapers.
 - A base profile to improve performance on low-end devices.
 - Signed release distributed outside GitHub.
-- In-app updater.
+- A full in-app updater (for now, Settings opens the releases page).
 
 ## 🐞 Contributing
 

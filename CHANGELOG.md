@@ -23,6 +23,20 @@ reservado a administradores y no se detalla en la documentación.
 - Se restauró `supabase/setup.sql` como referencia histórica del esquema.
 - El APK de release ya no incluye logs de depuración.
 - Los tags publican `versionName` sin la `v` inicial.
+- Las colecciones nuevas nacen privadas y el diálogo muestra la etiqueta
+  correcta según el interruptor.
+
+### Mejoras
+
+- Gradle actualizado a 9.9.0; se elimina el aviso de versión obsoleta del CI.
+- El job `debug` corre solo en pull requests: en `main` alcanza con la release
+  rolling, así que se ahorra un runner por push.
+- Ajustes incluye “Buscar actualizaciones”, que abre la última release.
+- Dependabot agrupa las actualizaciones menores de AndroidX, Kotlin y las
+  herramientas de build.
+- El editor marca su estado y sus filtros como inmutables para reducir
+  recomposiciones.
+- El `versionName` de los builds locales pasa a 1.3.0.
 
 ## v1.3.0
 

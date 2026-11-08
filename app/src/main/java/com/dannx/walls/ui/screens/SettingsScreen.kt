@@ -42,6 +42,7 @@ import com.dannx.walls.UiState
 import com.dannx.walls.data.ThemeMode
 
 private const val REPO_URL = "https://github.com/Lxchoooo/dannx"
+private const val RELEASES_URL = "https://github.com/Lxchoooo/dannx/releases/latest"
 
 /**
  * Ajustes de la app: apariencia, caché y datos generales.
@@ -200,6 +201,15 @@ fun SettingsScreen(
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
+                        TextButton(onClick = { openUrl(context, RELEASES_URL) }) {
+                            Text("Buscar actualizaciones")
+                            Spacer(Modifier.width(6.dp))
+                            Icon(
+                                Icons.Rounded.OpenInNew,
+                                contentDescription = null,
+                                modifier = Modifier.size(16.dp),
+                            )
+                        }
                         TextButton(onClick = { openUrl(context, REPO_URL) }) {
                             Text("GitHub")
                             Spacer(Modifier.width(6.dp))

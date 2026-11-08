@@ -13,6 +13,7 @@ import android.graphics.RadialGradient
 import android.graphics.Rect
 import android.graphics.RectF
 import android.graphics.Shader
+import androidx.compose.runtime.Immutable
 import com.dannx.walls.util.CropRect
 import com.dannx.walls.util.calculateInSampleSize
 import com.dannx.walls.util.centerCropRect
@@ -24,6 +25,7 @@ import kotlin.math.min
 import kotlin.math.roundToInt
 
 /** Miniatura de un filtro para el selector. */
+@Immutable
 internal data class EditorFilterThumb(
     val preset: FilterPreset,
     val bitmap: Bitmap,

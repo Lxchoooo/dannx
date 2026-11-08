@@ -2,6 +2,7 @@ package com.dannx.walls.ui.editor
 
 import android.app.Application
 import android.graphics.Bitmap
+import androidx.compose.runtime.Immutable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
@@ -21,6 +22,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
+@Immutable
 internal data class EditorUiState(
     val loading: Boolean = true,
     val loadProgress: Int? = null,

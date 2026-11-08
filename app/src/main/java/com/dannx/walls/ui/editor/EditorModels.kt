@@ -28,6 +28,7 @@ data class EditorAdjustments(
 )
 
 /** Un filtro rápido. La matriz se mezcla con la identidad según la intensidad. */
+@Immutable
 class FilterPreset(
     val id: String,
     val name: String,

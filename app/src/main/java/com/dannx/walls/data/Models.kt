@@ -53,7 +53,7 @@ data class WallpaperCollection(
     val description: String = "",
     val ownerId: String = "",
     val ownerName: String = "DannX",
-    val isPublic: Boolean = true,
+    val isPublic: Boolean = false,
     val createdAt: String = "",
     val wallpaperIds: List<String> = emptyList(),
 )

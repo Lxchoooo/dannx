@@ -1523,7 +1523,18 @@ private fun CollectionEditDialog(
                 )
                 Spacer(Modifier.height(8.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text("Pública", modifier = Modifier.weight(1f))
+                    Column(Modifier.weight(1f)) {
+                        Text(if (isPublic) "Pública" else "Privada")
+                        Text(
+                            text = if (isPublic) {
+                                "Visible para todos en la app."
+                            } else {
+                                "Solo vos podés verla."
+                            },
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
                     Switch(checked = isPublic, onCheckedChange = { isPublic = it })
                 }
             }

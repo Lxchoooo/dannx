@@ -164,7 +164,7 @@ data class NewCollection(
     val name: String,
     val description: String = "",
     @SerialName("owner_name") val ownerName: String,
-    @SerialName("is_public") val isPublic: Boolean = true,
+    @SerialName("is_public") val isPublic: Boolean = false,
 )
 
 @Serializable
