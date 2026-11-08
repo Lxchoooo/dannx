@@ -14,6 +14,7 @@ import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -368,6 +369,29 @@ class MainViewModelTest {
         assertEquals(Triple("old", "new", "Nueva"), repository.deletedCategory)
         assertEquals("Nueva", model.state.value.adminWallpapers.single().category)
     }
+
+    @Test
+    fun `deleting a category with wallpapers and no target shows a message and skips the api`() =
+        runTest(dispatcher) {
+            store.saveSession("admin@test", "token", null, "u1")
+            repository.session = AdminSession("admin@test", "token", "u1")
+            repository.categories = listOf(
+                com.dannx.walls.data.WallpaperCategory(id = "old", name = "Vieja", position = 0),
+            )
+            repository.adminWallpapers = listOf(
+                wallpaper("1").copy(categoryId = "old", category = "Vieja"),
+            )
+            val model = viewModel()
+            advanceUntilIdle()
+            model.loadStudio()
+            advanceUntilIdle()
+
+            model.deleteCategory("old")
+            advanceUntilIdle()
+
+            assertNull(repository.deletedCategory)
+            assertTrue(model.state.value.message.orEmpty().contains("Reasignalos"))
+        }
 
     private fun wallpaper(id: String) = Wallpaper(
         id = id,
