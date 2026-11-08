@@ -86,6 +86,8 @@ import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.res.stringResource
 import androidx.core.view.WindowCompat
+import coil.compose.AsyncImage
+import coil.request.CachePolicy
 import coil.request.ImageRequest
 import com.dannx.walls.R
 import com.dannx.walls.DownloadPrompt
@@ -94,7 +96,7 @@ import com.dannx.walls.UiAction
 import com.dannx.walls.data.Wallpaper
 import com.dannx.walls.data.WallpaperCollection
 import com.dannx.walls.ui.components.rememberWallpaperAccent
-import com.dannx.walls.ui.components.StatefulImage
+import com.dannx.walls.ui.components.wallpaperThumbRequest
 import com.dannx.walls.ui.theme.LocalLiteMode
 import com.dannx.walls.util.DoubleTapZoom
 import com.dannx.walls.util.MinZoom
@@ -165,7 +167,13 @@ fun DetailScreen(
     val activity = LocalActivity.current
     val liteMode = LocalLiteMode.current
     var entered by remember { mutableStateOf(false) }
+    var fullImageLoaded by remember(wallpaper.id) { mutableStateOf(false) }
     LaunchedEffect(Unit) { entered = true }
+    val fullImageAlpha by animateFloatAsState(
+        targetValue = if (fullImageLoaded) 1f else 0f,
+        animationSpec = tween(durationMillis = 220),
+        label = "detailFullImageAlpha",
+    )
     val enterScale by animateFloatAsState(
         targetValue = if (entered || liteMode) 1f else 1.04f,
         animationSpec = tween(durationMillis = 420, easing = FastOutSlowInEasing),
@@ -197,12 +205,26 @@ fun DetailScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.Black)
+            // Neutro mientras no hay imagen: nunca un rectángulo negro.
+            .background(MaterialTheme.colorScheme.surfaceVariant)
             .onSizeChanged { containerSize = it },
     ) {
         val context = LocalContext.current
         val configuration = LocalConfiguration.current
         val density = LocalDensity.current
+        // Se pide exactamente la misma miniatura que usa la grilla, con su
+        // misma clave de memoria. Si no está cacheada, no se descarga: solo se
+        // ve el fondo neutro hasta que llega la imagen completa.
+        val thumbnailRequest = remember(
+            wallpaper.id,
+            wallpaper.imageUrl,
+            wallpaper.thumbnailUrl,
+        ) {
+            wallpaperThumbRequest(context, wallpaper)
+                .newBuilder()
+                .networkCachePolicy(CachePolicy.DISABLED)
+                .build()
+        }
         val imageRequest = remember(
             wallpaper.id,
             wallpaper.imageUrl,
@@ -217,10 +239,7 @@ fun DetailScreen(
                 .size(width, height)
                 .build()
         }
-        StatefulImage(
-            model = imageRequest,
-            contentDescription = wallpaper.title,
-            contentScale = ContentScale.Crop,
+        Box(
             modifier = Modifier
                 .fillMaxSize()
                 .graphicsLayer {
@@ -267,7 +286,23 @@ fun DetailScreen(
                         },
                     )
                 },
-        )
+        ) {
+            AsyncImage(
+                model = thumbnailRequest,
+                contentDescription = null,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxSize(),
+            )
+            AsyncImage(
+                model = imageRequest,
+                contentDescription = wallpaper.title,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier
+                    .fillMaxSize()
+                    .graphicsLayer { alpha = fullImageAlpha },
+                onSuccess = { fullImageLoaded = true },
+            )
+        }
 
         Box(
             Modifier

@@ -26,6 +26,14 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.dannx.walls.BuildConfig
 
+/**
+ * Contadores temporales para medir recomposiciones en builds de debug.
+ * No se actualizan en release.
+ */
+object DebugRecompositionCounters {
+    var home: Int = 0
+}
+
 @Composable
 fun DebugFpsOverlay(modifier: Modifier = Modifier) {
     if (!BuildConfig.DEBUG) return
@@ -84,6 +92,12 @@ fun DebugFpsOverlay(modifier: Modifier = Modifier) {
                 text = "peor frame ${worstMs}ms",
                 style = MaterialTheme.typography.labelMedium,
                 color = Color(0xFFFFC86B),
+                textAlign = TextAlign.Center,
+            )
+            Text(
+                text = "Recomp. Home ${DebugRecompositionCounters.home}",
+                style = MaterialTheme.typography.labelMedium,
+                color = Color(0xFF9FD0FF),
                 textAlign = TextAlign.Center,
             )
         }

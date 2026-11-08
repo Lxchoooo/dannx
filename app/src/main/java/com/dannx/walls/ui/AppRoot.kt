@@ -1,21 +1,21 @@
 package com.dannx.walls.ui
 
 import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
 import androidx.compose.animation.slideInHorizontally
-import androidx.compose.animation.slideInVertically
-import androidx.compose.animation.slideOutHorizontally
-import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.CollectionsBookmark
@@ -36,6 +36,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
@@ -119,7 +120,8 @@ private fun MainApp(
     // El Estudio no aparece en la barra: se entra con el gesto secreto de la
     // pantalla de Explorar (mantener presionado el título).
     val topTabs = tabs
-    val showBar = currentRoute in topTabs.map { it.route }
+    val topTabRoutes: Set<String?> = topTabs.map { it.route }.toSet()
+    val showBar = currentRoute in topTabRoutes
     val startDestination = if (startTab in topTabs.map { it.route }) startTab else "home"
     val liteMode = LocalLiteMode.current
     val snackbarHostState = remember { SnackbarHostState() }
@@ -155,55 +157,21 @@ private fun MainApp(
         modifier = Modifier.fillMaxSize(),
         containerColor = MaterialTheme.colorScheme.background,
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
-        snackbarHost = { SnackbarHost(snackbarHostState) },
-        bottomBar = {
-            AnimatedVisibility(
-                visible = showBar,
-                enter = if (liteMode) {
-                    fadeIn(tween(120))
-                } else {
-                    slideInVertically(
-                        animationSpec = tween(260, easing = FastOutSlowInEasing),
-                    ) { it } + fadeIn(tween(200))
-                },
-                exit = if (liteMode) {
-                    fadeOut(tween(90))
-                } else {
-                    slideOutVertically(
-                        animationSpec = tween(200, easing = FastOutSlowInEasing),
-                    ) { it } + fadeOut(tween(140))
-                },
-            ) {
-                NavigationBar(
-                    containerColor = MaterialTheme.colorScheme.surfaceContainer,
-                    tonalElevation = 0.dp,
-                ) {
-                    topTabs.forEach { tab ->
-                        val selected = currentRoute == tab.route
-                        NavigationBarItem(
-                            selected = selected,
-                            onClick = {
-                                if (!selected) {
-                                    navController.navigateTopLevel(tab.route)
-                                }
-                            },
-                            icon = {
-                                Icon(tab.icon, contentDescription = null)
-                            },
-                            label = {
-                                Text(tab.label)
-                            },
-                        )
-                    }
-                }
-            }
+        // La barra ya no vive acá: ahora cada pestaña dibuja la suya. El
+        // snackbar se corre hacia arriba cuando hay barra para no taparla.
+        snackbarHost = {
+            SnackbarHost(
+                hostState = snackbarHostState,
+                modifier = Modifier
+                    .navigationBarsPadding()
+                    .padding(bottom = if (showBar) 80.dp else 0.dp),
+            )
         },
     ) { innerPadding ->
-        Box {
+        Box(Modifier.fillMaxSize().padding(innerPadding)) {
             NavHost(
                 navController = navController,
                 startDestination = startDestination,
-                modifier = Modifier.padding(innerPadding),
                 enterTransition = {
                     if (liteMode) {
                         fadeIn(tween(120))
@@ -233,86 +201,128 @@ private fun MainApp(
                     if (liteMode) {
                         fadeIn(tween(120))
                     } else {
-                        fadeIn(tween(220)) +
-                            scaleIn(
-                                animationSpec = tween(260, easing = FastOutSlowInEasing),
-                                initialScale = 0.985f,
-                            )
+                        // La pantalla de atrás ya está quieta y visible; la
+                        // tarjeta que sale es la que hace el movimiento.
+                        EnterTransition.None
                     }
                 },
                 popExitTransition = {
                     if (liteMode) {
                         fadeOut(tween(90))
                     } else {
-                        fadeOut(tween(160)) +
-                            slideOutHorizontally(
-                                animationSpec = tween(240, easing = FastOutSlowInEasing),
-                            ) { it / 14 } +
-                            scaleOut(
-                                animationSpec = tween(220, easing = FastOutSlowInEasing),
-                                targetScale = 0.985f,
-                            )
+                        scaleOut(
+                            animationSpec = tween(220, easing = LinearEasing),
+                            targetScale = 0.9f,
+                            transformOrigin = TransformOrigin.Center,
+                        )
+                    }
+                },
+                predictivePopEnterTransition = {
+                    if (targetState.destination.route in topTabRoutes) {
+                        // Volver a una pestaña no mueve la barra.
+                        EnterTransition.None
+                    } else if (liteMode) {
+                        fadeIn(tween(120))
+                    } else {
+                        EnterTransition.None
+                    }
+                },
+                predictivePopExitTransition = {
+                    if (initialState.destination.route in topTabRoutes) {
+                        // Salir de una pestaña hacia otra no escala la barra.
+                        ExitTransition.None
+                    } else if (liteMode) {
+                        fadeOut(tween(90))
+                    } else {
+                        scaleOut(
+                            animationSpec = tween(220, easing = LinearEasing),
+                            targetScale = 0.9f,
+                            transformOrigin = TransformOrigin.Center,
+                        )
                     }
                 },
             ) {
             composable(
                 route = "home",
-                enterTransition = { fadeIn(tween(180)) },
-                exitTransition = { fadeOut(tween(140)) },
+                // La barra de cada pestaña no se anima al cambiar de pestaña:
+                // se queda quieta y solo cambia el ítem marcado.
+                enterTransition = { EnterTransition.None },
+                exitTransition = { ExitTransition.None },
+                popEnterTransition = { EnterTransition.None },
+                popExitTransition = { ExitTransition.None },
             ) {
-                HomeScreen(
-                    state = state,
-                    onClearFilters = {
-                        viewModel.setQuery("")
-                        viewModel.setCategory(null)
-                        viewModel.setTag(null)
-                    },
-                    onQueryChange = viewModel::setQuery,
-                    onCategoryChange = viewModel::setCategory,
-                    onTagChange = viewModel::setTag,
-                    onRefresh = viewModel::refresh,
-                    onOpenWallpaper = { wallpaper ->
-                        navController.navigate("detail/${wallpaper.id}") {
-                            launchSingleTop = true
-                        }
-                    },
-                    onToggleFavorite = viewModel::toggleFavorite,
-                    onOpenStudio = { navController.navigateTopLevel("studio") },
-                    onOpenSettings = { navController.navigate("settings") },
-                )
+                TopLevelScaffold(
+                    selectedRoute = "home",
+                    onNavigate = { route -> navController.navigateTopLevel(route) },
+                ) {
+                    HomeScreen(
+                        state = state,
+                        onClearFilters = {
+                            viewModel.setQuery("")
+                            viewModel.setCategory(null)
+                            viewModel.setTag(null)
+                        },
+                        onQueryChange = viewModel::setQuery,
+                        onCategoryChange = viewModel::setCategory,
+                        onTagChange = viewModel::setTag,
+                        onRefresh = viewModel::refresh,
+                        onOpenWallpaper = { wallpaper ->
+                            navController.navigate("detail/${wallpaper.id}") {
+                                launchSingleTop = true
+                            }
+                        },
+                        onToggleFavorite = viewModel::toggleFavorite,
+                        onOpenStudio = { navController.navigateTopLevel("studio") },
+                        onOpenSettings = { navController.navigate("settings") },
+                    )
+                }
             }
             composable(
                 route = "favorites",
-                enterTransition = { fadeIn(tween(180)) },
-                exitTransition = { fadeOut(tween(140)) },
+                enterTransition = { EnterTransition.None },
+                exitTransition = { ExitTransition.None },
+                popEnterTransition = { EnterTransition.None },
+                popExitTransition = { ExitTransition.None },
             ) {
-                FavoritesScreen(
-                    state = state,
-                    onRefresh = viewModel::refresh,
-                    onOpenWallpaper = { wallpaper ->
-                        navController.navigate("detail/${wallpaper.id}") {
-                            launchSingleTop = true
-                        }
-                    },
-                    onToggleFavorite = viewModel::toggleFavorite,
-                    onExplore = { navController.navigateTopLevel("home") },
-                )
+                TopLevelScaffold(
+                    selectedRoute = "favorites",
+                    onNavigate = { route -> navController.navigateTopLevel(route) },
+                ) {
+                    FavoritesScreen(
+                        state = state,
+                        onRefresh = viewModel::refresh,
+                        onOpenWallpaper = { wallpaper ->
+                            navController.navigate("detail/${wallpaper.id}") {
+                                launchSingleTop = true
+                            }
+                        },
+                        onToggleFavorite = viewModel::toggleFavorite,
+                        onExplore = { navController.navigateTopLevel("home") },
+                    )
+                }
             }
             composable(
                 route = "collections",
-                enterTransition = { fadeIn(tween(180)) },
-                exitTransition = { fadeOut(tween(140)) },
+                enterTransition = { EnterTransition.None },
+                exitTransition = { ExitTransition.None },
+                popEnterTransition = { EnterTransition.None },
+                popExitTransition = { ExitTransition.None },
             ) {
-                CollectionsScreen(
-                    state = state,
-                    onRefresh = viewModel::refresh,
-                    onOpenCollection = { collection ->
-                        navController.navigate("collection/${collection.id}") {
-                            launchSingleTop = true
-                        }
-                    },
-                    onCreateCollection = viewModel::createCollection,
-                )
+                TopLevelScaffold(
+                    selectedRoute = "collections",
+                    onNavigate = { route -> navController.navigateTopLevel(route) },
+                ) {
+                    CollectionsScreen(
+                        state = state,
+                        onRefresh = viewModel::refresh,
+                        onOpenCollection = { collection ->
+                            navController.navigate("collection/${collection.id}") {
+                                launchSingleTop = true
+                            }
+                        },
+                        onCreateCollection = viewModel::createCollection,
+                    )
+                }
             }
             composable(
                 route = "collection/{id}",
@@ -414,6 +424,51 @@ private fun MainApp(
             }
         }
             DebugFpsOverlay(Modifier.fillMaxSize())
+        }
+    }
+}
+
+@Composable
+private fun TopLevelScaffold(
+    selectedRoute: String,
+    onNavigate: (String) -> Unit,
+    content: @Composable () -> Unit,
+) {
+    Scaffold(
+        modifier = Modifier.fillMaxSize(),
+        containerColor = MaterialTheme.colorScheme.background,
+        contentWindowInsets = WindowInsets(0, 0, 0, 0),
+        bottomBar = {
+            NavigationBar(
+                containerColor = MaterialTheme.colorScheme.surfaceContainer,
+                tonalElevation = 0.dp,
+            ) {
+                tabs.forEach { tab ->
+                    val selected = selectedRoute == tab.route
+                    NavigationBarItem(
+                        selected = selected,
+                        onClick = {
+                            if (!selected) {
+                                onNavigate(tab.route)
+                            }
+                        },
+                        icon = {
+                            Icon(tab.icon, contentDescription = null)
+                        },
+                        label = {
+                            Text(tab.label)
+                        },
+                    )
+                }
+            }
+        },
+    ) { innerPadding ->
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding),
+        ) {
+            content()
         }
     }
 }

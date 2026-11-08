@@ -92,6 +92,9 @@ internal fun wallpaperThumbRequest(context: Context, wallpaper: Wallpaper): Imag
     ImageRequest.Builder(context)
         .data(wallpaper.thumbnailUrl)
         .size(ThumbWidth, ThumbHeight)
+        // La grilla y el Detalle comparten esta clave para que la miniatura
+        // cacheada se pueda mostrar al instante como imagen provisoria.
+        .memoryCacheKey("dannx-thumb:${wallpaper.id}")
         .apply {
             if (USE_RGB565_FOR_THUMBS) {
                 allowRgb565(true)

@@ -43,6 +43,7 @@ import androidx.compose.material3.carousel.rememberCarouselState
 import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
@@ -60,9 +61,11 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import coil.imageLoader
+import com.dannx.walls.BuildConfig
 import com.dannx.walls.R
 import com.dannx.walls.LoadState
 import com.dannx.walls.UiState
+import com.dannx.walls.ui.components.DebugRecompositionCounters
 import com.dannx.walls.data.DefaultCategories
 import com.dannx.walls.data.Wallpaper
 import com.dannx.walls.ui.components.EmptyState
@@ -100,6 +103,9 @@ fun HomeScreen(
     onOpenStudio: () -> Unit = {},
     onOpenSettings: () -> Unit = {},
 ) {
+    if (BuildConfig.DEBUG) {
+        SideEffect { DebugRecompositionCounters.home++ }
+    }
     val favorites = state.favorites
     val featured = remember(state.wallpapers) { state.featured }
     val filtered = remember(state.wallpapers, state.query, state.category, state.tag) {
