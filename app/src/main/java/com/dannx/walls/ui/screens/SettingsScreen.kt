@@ -53,6 +53,7 @@ fun SettingsScreen(
     onBack: () -> Unit,
     onThemeModeChange: (ThemeMode) -> Unit,
     onLiteModeChange: (Boolean) -> Unit,
+    onOpenEditorOnApplyChange: (Boolean) -> Unit,
     onClearCache: () -> Unit,
     onResetAppearance: () -> Unit,
     onSignOut: () -> Unit,
@@ -128,6 +129,32 @@ fun SettingsScreen(
                         Switch(
                             checked = state.liteMode,
                             onCheckedChange = onLiteModeChange,
+                        )
+                    }
+                }
+            }
+
+            item {
+                Card(Modifier.fillMaxWidth()) {
+                    Row(
+                        modifier = Modifier.padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Column(Modifier.weight(1f)) {
+                            Text(
+                                "Abrir editor al aplicar",
+                                style = MaterialTheme.typography.titleMedium,
+                            )
+                            Text(
+                                "Ajustá el encuadre y los colores antes de poner el fondo.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                        Spacer(Modifier.width(12.dp))
+                        Switch(
+                            checked = state.openEditorOnApply,
+                            onCheckedChange = onOpenEditorOnApplyChange,
                         )
                     }
                 }

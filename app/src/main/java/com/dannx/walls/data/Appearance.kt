@@ -12,8 +12,10 @@ enum class ThemeMode { SYSTEM, LIGHT, DARK }
 interface AppearanceStore {
     fun themeMode(): ThemeMode
     fun liteMode(): Boolean
+    fun openEditorOnApply(): Boolean
     fun saveThemeMode(mode: ThemeMode)
     fun saveLiteMode(enabled: Boolean)
+    fun saveOpenEditorOnApply(enabled: Boolean)
     fun reset()
 }
 
@@ -30,12 +32,18 @@ class AppearancePrefs(context: Context) : AppearanceStore {
 
     override fun liteMode(): Boolean = prefs.getBoolean(KEY_LITE, false)
 
+    override fun openEditorOnApply(): Boolean = prefs.getBoolean(KEY_OPEN_EDITOR, true)
+
     override fun saveThemeMode(mode: ThemeMode) {
         prefs.edit().putString(KEY_THEME, mode.name).apply()
     }
 
     override fun saveLiteMode(enabled: Boolean) {
         prefs.edit().putBoolean(KEY_LITE, enabled).apply()
+    }
+
+    override fun saveOpenEditorOnApply(enabled: Boolean) {
+        prefs.edit().putBoolean(KEY_OPEN_EDITOR, enabled).apply()
     }
 
     override fun reset() {
@@ -45,6 +53,7 @@ class AppearancePrefs(context: Context) : AppearanceStore {
     private companion object {
         const val KEY_THEME = "theme_mode"
         const val KEY_LITE = "lite_mode"
+        const val KEY_OPEN_EDITOR = "open_editor_on_apply"
     }
 }
 
@@ -52,10 +61,13 @@ class AppearancePrefs(context: Context) : AppearanceStore {
 class InMemoryAppearanceStore(
     private var theme: ThemeMode = ThemeMode.SYSTEM,
     private var lite: Boolean = false,
+    private var openEditor: Boolean = true,
 ) : AppearanceStore {
     override fun themeMode(): ThemeMode = theme
 
     override fun liteMode(): Boolean = lite
+
+    override fun openEditorOnApply(): Boolean = openEditor
 
     override fun saveThemeMode(mode: ThemeMode) {
         theme = mode
@@ -65,8 +77,13 @@ class InMemoryAppearanceStore(
         lite = enabled
     }
 
+    override fun saveOpenEditorOnApply(enabled: Boolean) {
+        openEditor = enabled
+    }
+
     override fun reset() {
         theme = ThemeMode.SYSTEM
         lite = false
+        openEditor = true
     }
 }

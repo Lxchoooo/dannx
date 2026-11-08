@@ -247,6 +247,17 @@ class WallpaperFiles(private val context: Context) : WallpaperActions {
         }
     }
 
+    /**
+     * Aplica un bitmap ya editado, sin volver a descargarlo ni recortarlo.
+     * El editor genera la imagen final en segundo plano y la entrega acá.
+     */
+    suspend fun applyEditedWallpaper(
+        bitmap: Bitmap,
+        target: WallpaperTarget,
+    ): WallpaperTarget = withContext(Dispatchers.IO) {
+        applyBitmap(bitmap, target)
+    }
+
     private fun applyBitmap(
         bitmap: Bitmap,
         target: WallpaperTarget,

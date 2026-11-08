@@ -35,9 +35,7 @@ import androidx.compose.material.icons.rounded.CollectionsBookmark
 import androidx.compose.material.icons.rounded.Download
 import androidx.compose.material.icons.rounded.Favorite
 import androidx.compose.material.icons.rounded.FavoriteBorder
-import androidx.compose.material.icons.rounded.Lock
 import androidx.compose.material.icons.rounded.Share
-import androidx.compose.material.icons.rounded.Smartphone
 import androidx.compose.material.icons.rounded.Wallpaper
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -45,15 +43,12 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.LinearWavyProgressIndicator
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -95,6 +90,7 @@ import com.dannx.walls.ActionState
 import com.dannx.walls.UiAction
 import com.dannx.walls.data.Wallpaper
 import com.dannx.walls.data.WallpaperCollection
+import com.dannx.walls.ui.components.ApplyWallpaperSheet
 import com.dannx.walls.ui.components.rememberWallpaperAccent
 import com.dannx.walls.ui.components.wallpaperThumbRequest
 import com.dannx.walls.ui.theme.LocalLiteMode
@@ -124,9 +120,11 @@ fun DetailScreen(
     downloadPrompt: DownloadPrompt? = null,
     alreadyDownloaded: Boolean = false,
     offline: Boolean = false,
+    openEditorOnApply: Boolean = true,
     onBack: () -> Unit,
     onToggleFavorite: () -> Unit,
     onDownload: () -> Unit,
+    onOpenEditor: () -> Unit,
     onSetWallpaper: (WallpaperTarget) -> Unit,
     onShare: () -> Unit,
     onCancelAction: () -> Unit,
@@ -446,7 +444,11 @@ fun DetailScreen(
                 FilledTonalButton(
                     onClick = {
                         haptics.performHapticFeedback(HapticFeedbackType.LongPress)
-                        showApplySheet = true
+                        if (openEditorOnApply) {
+                            onOpenEditor()
+                        } else {
+                            showApplySheet = true
+                        }
                     },
                     modifier = Modifier.weight(1f),
                     shape = CircleShape,
@@ -586,84 +588,6 @@ fun DetailScreen(
                 showCreateCollection = false
             },
         )
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun ApplyWallpaperSheet(
-    onDismiss: () -> Unit,
-    onPick: (WallpaperTarget) -> Unit,
-) {
-    ModalBottomSheet(onDismissRequest = onDismiss) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 20.dp)
-                .padding(bottom = 28.dp),
-        ) {
-            Text(
-                text = stringResource(R.string.apply_sheet_title),
-                style = MaterialTheme.typography.headlineMedium,
-            )
-            Spacer(Modifier.height(12.dp))
-            ApplyOption(
-                icon = Icons.Rounded.Smartphone,
-                title = stringResource(R.string.apply_system),
-                hint = stringResource(R.string.apply_system_hint),
-                onClick = { onPick(WallpaperTarget.SYSTEM) },
-            )
-            Spacer(Modifier.height(8.dp))
-            ApplyOption(
-                icon = Icons.Rounded.Lock,
-                title = stringResource(R.string.apply_lock),
-                hint = stringResource(R.string.apply_lock_hint),
-                onClick = { onPick(WallpaperTarget.LOCK) },
-            )
-            Spacer(Modifier.height(8.dp))
-            ApplyOption(
-                icon = Icons.Rounded.Wallpaper,
-                title = stringResource(R.string.apply_both),
-                hint = stringResource(R.string.apply_both_hint),
-                onClick = { onPick(WallpaperTarget.BOTH) },
-            )
-        }
-    }
-}
-
-@Composable
-private fun ApplyOption(
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
-    title: String,
-    hint: String,
-    onClick: () -> Unit,
-) {
-    Surface(
-        onClick = onClick,
-        shape = MaterialTheme.shapes.large,
-        color = MaterialTheme.colorScheme.surfaceContainerHigh,
-        modifier = Modifier.fillMaxWidth(),
-    ) {
-        Row(
-            modifier = Modifier.padding(horizontal = 18.dp, vertical = 16.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                modifier = Modifier.size(26.dp),
-                tint = MaterialTheme.colorScheme.primary,
-            )
-            Spacer(Modifier.width(16.dp))
-            Column(Modifier.weight(1f)) {
-                Text(text = title, style = MaterialTheme.typography.titleMedium)
-                Text(
-                    text = hint,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-        }
     }
 }
 

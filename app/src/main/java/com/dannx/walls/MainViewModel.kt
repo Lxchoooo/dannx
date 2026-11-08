@@ -112,6 +112,7 @@ data class UiState(
     val selectedUploadUri: String? = null,
     val themeMode: ThemeMode = ThemeMode.SYSTEM,
     val liteMode: Boolean = false,
+    val openEditorOnApply: Boolean = true,
 ) {
     val filtered: List<Wallpaper>
         get() = filterWallpapers(wallpapers, query, category, tag)
@@ -169,6 +170,7 @@ class MainViewModel(
             selectedUploadUri = savedState.get<String>(KEY_UPLOAD_URI),
             themeMode = appearance.themeMode(),
             liteMode = appearance.liteMode(),
+            openEditorOnApply = appearance.openEditorOnApply(),
         ),
     )
     val state: StateFlow<UiState> = _state.asStateFlow()
@@ -649,13 +651,7 @@ class MainViewModel(
             try {
                 val applied = actions.setAsWallpaper(wallpaper, target)
                 _state.update {
-                    it.copy(
-                        message = when (applied) {
-                            WallpaperTarget.SYSTEM -> "Listo, tu fondo de pantalla cambió."
-                            WallpaperTarget.LOCK -> "Listo, cambiaste el fondo del bloqueo."
-                            WallpaperTarget.BOTH -> "Listo, cambiaste el fondo de inicio y del bloqueo."
-                        },
-                    )
+                    it.copy(message = appliedMessage(applied))
                 }
             } catch (error: CancellationException) {
                 _actionState.value = ActionState()
@@ -667,6 +663,20 @@ class MainViewModel(
                 }
             }
         }
+    }
+
+    /**
+     * El editor aplica la imagen por su cuenta y avisa acá para mostrar el
+     * mismo mensaje que el flujo anterior.
+     */
+    fun onWallpaperApplied(target: WallpaperTarget) {
+        _state.update { it.copy(message = appliedMessage(target)) }
+    }
+
+    private fun appliedMessage(target: WallpaperTarget): String = when (target) {
+        WallpaperTarget.SYSTEM -> "Listo, tu fondo de pantalla cambió."
+        WallpaperTarget.LOCK -> "Listo, cambiaste el fondo del bloqueo."
+        WallpaperTarget.BOTH -> "Listo, cambiaste el fondo de inicio y del bloqueo."
     }
 
     fun cancelAction() {
@@ -711,6 +721,12 @@ class MainViewModel(
         _state.update { it.copy(liteMode = enabled) }
     }
 
+    /** Define si el botón Aplicar abre primero el editor de fondos. */
+    fun setOpenEditorOnApply(enabled: Boolean) {
+        appearance.saveOpenEditorOnApply(enabled)
+        _state.update { it.copy(openEditorOnApply = enabled) }
+    }
+
     /** Vuelve la apariencia a los valores de fábrica. */
     fun resetAppearance() {
         appearance.reset()
@@ -718,6 +734,7 @@ class MainViewModel(
             it.copy(
                 themeMode = ThemeMode.SYSTEM,
                 liteMode = false,
+                openEditorOnApply = true,
                 message = "Ajustes restablecidos.",
             )
         }

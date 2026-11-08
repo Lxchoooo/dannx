@@ -55,6 +55,7 @@ import androidx.navigation.navArgument
 import com.dannx.walls.MainViewModel
 import com.dannx.walls.UiState
 import com.dannx.walls.ui.components.DebugFpsOverlay
+import com.dannx.walls.ui.editor.WallpaperEditorScreen
 import com.dannx.walls.ui.screens.CollectionDetailScreen
 import com.dannx.walls.ui.screens.CollectionsScreen
 import com.dannx.walls.ui.screens.DetailScreen
@@ -361,6 +362,7 @@ private fun MainApp(
                     onBack = { navController.popBackStack() },
                     onThemeModeChange = viewModel::setThemeMode,
                     onLiteModeChange = viewModel::setLiteMode,
+                    onOpenEditorOnApplyChange = viewModel::setOpenEditorOnApply,
                     onClearCache = viewModel::clearCache,
                     onResetAppearance = viewModel::resetAppearance,
                     onSignOut = {
@@ -404,9 +406,15 @@ private fun MainApp(
                         downloadPrompt = state.downloadPrompt,
                         alreadyDownloaded = wallpaper.id in state.downloadedIds,
                         offline = state.offline,
+                        openEditorOnApply = state.openEditorOnApply,
                         onBack = { navController.popBackStack() },
                         onToggleFavorite = { viewModel.toggleFavorite(wallpaper.id) },
                         onDownload = { viewModel.download(wallpaper) },
+                        onOpenEditor = {
+                            navController.navigate("editor/${wallpaper.id}") {
+                                launchSingleTop = true
+                            }
+                        },
                         onSetWallpaper = { target -> viewModel.setWallpaper(wallpaper, target) },
                         onShare = { viewModel.share(wallpaper) },
                         onCancelAction = { viewModel.cancelAction() },
@@ -418,6 +426,30 @@ private fun MainApp(
                         },
                         onCreateCollection = { name, description, isPublic ->
                             viewModel.createCollection(name, description, isPublic)
+                        },
+                    )
+                }
+            }
+            composable(
+                route = "editor/{id}",
+                arguments = listOf(
+                    navArgument("id") { type = NavType.StringType },
+                ),
+            ) { entry ->
+                val id = entry.arguments?.getString("id")
+                val wallpaper = state.wallpapers.firstOrNull { it.id == id }
+                if (wallpaper == null) {
+                    LaunchedEffect(id) {
+                        navController.popBackStack()
+                    }
+                    Box(Modifier.fillMaxSize())
+                } else {
+                    WallpaperEditorScreen(
+                        wallpaper = wallpaper,
+                        onBack = { navController.popBackStack() },
+                        onApplied = { target ->
+                            viewModel.onWallpaperApplied(target)
+                            navController.popBackStack()
                         },
                     )
                 }
