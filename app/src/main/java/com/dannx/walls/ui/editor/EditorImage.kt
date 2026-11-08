@@ -16,6 +16,7 @@ import android.graphics.Shader
 import androidx.compose.runtime.Immutable
 import androidx.core.graphics.createBitmap
 import androidx.core.graphics.scale
+import androidx.core.graphics.withClip
 import com.dannx.walls.util.CropRect
 import com.dannx.walls.util.calculateInSampleSize
 import com.dannx.walls.util.centerCropRect
@@ -132,33 +133,32 @@ internal object EditorImage {
         showOriginal: Boolean,
     ) {
         if (width <= 0f || height <= 0f) return
-        canvas.save()
-        canvas.clipRect(0f, 0f, width, height)
-        canvas.drawColor(Color.BLACK)
+        canvas.withClip(0f, 0f, width, height) {
+            canvas.drawColor(Color.BLACK)
 
-        val paint = Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG)
-        if (!showOriginal) {
-            paint.colorFilter = ColorMatrixColorFilter(EditorPresets.colorMatrix(settings))
-        }
-        val destination = destinationRect(
-            source.width,
-            source.height,
-            width,
-            height,
-            settings.crop,
-        )
-        canvas.drawBitmap(source, null, destination, paint)
+            val paint = Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG)
+            if (!showOriginal) {
+                paint.colorFilter = ColorMatrixColorFilter(EditorPresets.colorMatrix(settings))
+            }
+            val destination = destinationRect(
+                source.width,
+                source.height,
+                width,
+                height,
+                settings.crop,
+            )
+            canvas.drawBitmap(source, null, destination, paint)
 
-        if (!showOriginal && settings.blur > 0f && blurred != null) {
-            paint.alpha = (settings.blur * 255f).roundToInt().coerceIn(0, 255)
-            canvas.drawBitmap(blurred, null, destination, paint)
-            paint.alpha = 255
+            if (!showOriginal && settings.blur > 0f && blurred != null) {
+                paint.alpha = (settings.blur * 255f).roundToInt().coerceIn(0, 255)
+                canvas.drawBitmap(blurred, null, destination, paint)
+                paint.alpha = 255
+            }
+            if (!showOriginal) {
+                drawVignette(canvas, width, height, settings.adjustments.vignette)
+                drawGrain(canvas, width, height, grain, settings.adjustments.grain)
+            }
         }
-        if (!showOriginal) {
-            drawVignette(canvas, width, height, settings.adjustments.vignette)
-            drawGrain(canvas, width, height, grain, settings.adjustments.grain)
-        }
-        canvas.restore()
     }
 
     /**
