@@ -365,7 +365,7 @@ class MainViewModelTest {
         model.deleteCategory("old", "new")
         advanceUntilIdle()
 
-        assertEquals(Triple("old", "new", "Nueva"), repository.reassignedCategory)
+        assertEquals(Triple("old", "new", "Nueva"), repository.deletedCategory)
         assertEquals("Nueva", model.state.value.adminWallpapers.single().category)
     }
 

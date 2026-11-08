@@ -50,8 +50,7 @@ interface WallpapersRepository {
 
     suspend fun createCategory(name: String, position: Int): WallpaperCategory
     suspend fun updateCategory(id: String, name: String, position: Int): WallpaperCategory
-    suspend fun reassignCategory(categoryId: String, targetId: String, targetName: String)
-    suspend fun deleteCategory(id: String)
+    suspend fun deleteCategory(id: String, targetId: String? = null, targetName: String? = null)
 
     suspend fun createCollection(
         name: String,

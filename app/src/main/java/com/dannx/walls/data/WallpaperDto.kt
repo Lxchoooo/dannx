@@ -136,6 +136,12 @@ data class UpdateCategoryPayload(
 )
 
 @Serializable
+data class DeleteCategoryPayload(
+    @SerialName("p_category_id") val categoryId: String,
+    @SerialName("p_target_id") val targetId: String? = null,
+)
+
+@Serializable
 data class CollectionDto(
     val id: String,
     val name: String = "",

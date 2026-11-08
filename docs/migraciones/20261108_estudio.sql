@@ -401,6 +401,43 @@ as $$
       and btrim(p_name) <> '';
 $$;
 
+-- Borra una categoría moviendo antes sus fondos a otra, todo en la misma
+-- transacción. Si no hay destino y todavía quedan fondos, falla sin borrar
+-- nada. El trigger sync_wallpaper_category actualiza el texto de los fondos.
+create or replace function public.delete_category(
+    p_category_id uuid,
+    p_target_id uuid default null
+)
+returns void
+language plpgsql
+security invoker
+set search_path = public, pg_temp
+as $$
+begin
+    if not public.is_admin() then
+        raise exception 'No tenés permiso para esta acción.'
+            using errcode = '42501';
+    end if;
+
+    if p_target_id is not null then
+        update public.wallpapers
+        set category_id = p_target_id
+        where category_id = p_category_id;
+    end if;
+
+    if exists (
+        select 1
+        from public.wallpapers
+        where category_id = p_category_id
+    ) then
+        raise exception 'La categoría todavía tiene fondos.'
+            using errcode = '23503';
+    end if;
+
+    delete from public.categories where id = p_category_id;
+end;
+$$;
+
 -- Reordena todos los elementos de una colección en una sola sentencia.
 create or replace function public.reorder_collection(
     p_collection_id uuid,
@@ -441,6 +478,9 @@ grant execute on function public.delete_wallpaper_tag(text) to authenticated;
 
 revoke all on function public.update_category(uuid, text, int) from public;
 grant execute on function public.update_category(uuid, text, int) to authenticated;
+
+revoke all on function public.delete_category(uuid, uuid) from public;
+grant execute on function public.delete_category(uuid, uuid) to authenticated;
 
 revoke all on function public.reorder_collection(uuid, uuid[]) from public;
 grant execute on function public.reorder_collection(uuid, uuid[]) to authenticated;

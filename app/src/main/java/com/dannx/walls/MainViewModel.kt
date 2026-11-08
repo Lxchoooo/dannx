@@ -683,14 +683,11 @@ class MainViewModel(
         viewModelScope.launch {
             _state.update { it.copy(studioBusy = true) }
             try {
-                if (target != null && affected.isNotEmpty()) {
-                    api.reassignCategory(
-                        categoryId = categoryId,
-                        targetId = target.id,
-                        targetName = target.name,
-                    )
-                }
-                api.deleteCategory(categoryId)
+                api.deleteCategory(
+                    id = categoryId,
+                    targetId = target?.id,
+                    targetName = target?.name,
+                )
                 _state.update {
                     it.copy(
                         studioBusy = false,

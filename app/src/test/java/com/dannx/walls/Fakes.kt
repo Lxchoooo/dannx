@@ -27,7 +27,7 @@ class FakeRepository : WallpapersRepository {
     var loadCalls: Int = 0
     var session: AdminSession? = null
     var uploadWarning: String? = null
-    var reassignedCategory: Triple<String, String, String>? = null
+    var deletedCategory: Triple<String, String?, String?>? = null
     var lastCollectionWallpapers: Pair<String, List<String>>? = null
 
     override val isConfigured: Boolean = true
@@ -130,15 +130,13 @@ class FakeRepository : WallpapersRepository {
         position: Int,
     ): WallpaperCategory = WallpaperCategory(id = id, name = name, position = position)
 
-    override suspend fun reassignCategory(
-        categoryId: String,
-        targetId: String,
-        targetName: String,
+    override suspend fun deleteCategory(
+        id: String,
+        targetId: String?,
+        targetName: String?,
     ) {
-        reassignedCategory = Triple(categoryId, targetId, targetName)
+        deletedCategory = Triple(id, targetId, targetName)
     }
-
-    override suspend fun deleteCategory(id: String) = Unit
 
     override suspend fun createCollection(
         name: String,

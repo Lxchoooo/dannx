@@ -474,17 +474,41 @@ class WallsApi(
             ?: throw DannXError.Parse("El servidor no devolvió la categoría actualizada.")
     }
 
-    override suspend fun reassignCategory(
-        categoryId: String,
-        targetId: String,
-        targetName: String,
+    override suspend fun deleteCategory(
+        id: String,
+        targetId: String?,
+        targetName: String?,
     ) {
         if (!isConfigured) return
         withContext(Dispatchers.IO) {
+            try {
+                callRpc(
+                    "delete_category",
+                    json.encodeToString(
+                        DeleteCategoryPayload(categoryId = id, targetId = targetId),
+                    ),
+                )
+            } catch (error: DannXError) {
+                if (!error.isMissingRpc()) throw error
+                deleteCategorySequential(id, targetId, targetName)
+            }
+        }
+    }
+
+    /**
+     * Compatibilidad mientras la migración del Estudio no esté aplicada: mueve
+     * los fondos y después borra la categoría, en dos peticiones.
+     */
+    private suspend fun deleteCategorySequential(
+        id: String,
+        targetId: String?,
+        targetName: String?,
+    ) {
+        if (targetId != null) {
             executeAuthorized(
                 build = { token ->
                     Request.Builder()
-                        .url("$baseUrl/rest/v1/wallpapers?category_id=eq.$categoryId")
+                        .url("$baseUrl/rest/v1/wallpapers?category_id=eq.$id")
                         .header("apikey", anonKey)
                         .header("Authorization", "Bearer $token")
                         .header("Prefer", "return=minimal")
@@ -492,7 +516,7 @@ class WallsApi(
                             json.encodeToString(
                                 CategoryAssignmentUpdate(
                                     categoryId = targetId,
-                                    category = targetName.trim().take(40),
+                                    category = targetName.orEmpty().trim().take(40),
                                 ),
                             ).toRequestBody(JSON_MEDIA),
                         )
@@ -500,22 +524,16 @@ class WallsApi(
                 },
             )
         }
-    }
-
-    override suspend fun deleteCategory(id: String) {
-        if (!isConfigured) return
-        withContext(Dispatchers.IO) {
-            executeAuthorized(
-                build = { token ->
-                    Request.Builder()
-                        .url("$baseUrl/rest/v1/categories?id=eq.$id")
-                        .header("apikey", anonKey)
-                        .header("Authorization", "Bearer $token")
-                        .delete()
-                        .build()
-                },
-            )
-        }
+        executeAuthorized(
+            build = { token ->
+                Request.Builder()
+                    .url("$baseUrl/rest/v1/categories?id=eq.$id")
+                    .header("apikey", anonKey)
+                    .header("Authorization", "Bearer $token")
+                    .delete()
+                    .build()
+            },
+        )
     }
 
     override suspend fun updateCollection(
