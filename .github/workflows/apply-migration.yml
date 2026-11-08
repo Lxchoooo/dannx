@@ -1,0 +1,74 @@
+name: Apply Supabase migration
+
+# Aplica los .sql de docs/migraciones con la Management API de Supabase.
+# Requiere el secret SUPABASE_ACCESS_TOKEN y la variable SUPABASE_PROJECT_REF.
+on:
+  workflow_dispatch:
+    inputs:
+      file:
+        description: "Archivo SQL a aplicar (vacío = todos, en orden alfabético)"
+        required: false
+        default: ""
+
+concurrency:
+  group: supabase-migration
+  cancel-in-progress: false
+
+jobs:
+  apply:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Check configuration
+        env:
+          PROJECT_REF: ${{ vars.SUPABASE_PROJECT_REF }}
+          ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: |
+          if [ -z "$PROJECT_REF" ] || [ -z "$ACCESS_TOKEN" ]; then
+            echo "::error::Faltan SUPABASE_PROJECT_REF (variable) o SUPABASE_ACCESS_TOKEN (secret)."
+            exit 1
+          fi
+
+      - name: Apply SQL
+        env:
+          PROJECT_REF: ${{ vars.SUPABASE_PROJECT_REF }}
+          ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SQL_FILE: ${{ inputs.file }}
+        run: |
+          set -euo pipefail
+
+          files=()
+          if [ -n "$SQL_FILE" ]; then
+            files=("$SQL_FILE")
+          else
+            while IFS= read -r file; do
+              files+=("$file")
+            done < <(find docs/migraciones -maxdepth 1 -name '*.sql' | sort)
+          fi
+
+          if [ "${#files[@]}" -eq 0 ]; then
+            echo "::error::No hay archivos .sql para aplicar."
+            exit 1
+          fi
+
+          for file in "${files[@]}"; do
+            if [ ! -f "$file" ]; then
+              echo "::error::No existe $file."
+              exit 1
+            fi
+            echo "Aplicando $file"
+            jq -Rs '{query: .}' "$file" > payload.json
+            status=$(curl -sS -o response.json -w '%{http_code}' \
+              -X POST "https://api.supabase.com/v1/projects/$PROJECT_REF/database/query" \
+              -H "Authorization: Bearer $ACCESS_TOKEN" \
+              -H "Content-Type: application/json" \
+              --data-binary @payload.json)
+            echo "HTTP $status"
+            cat response.json
+            if [ "$status" -lt 200 ] || [ "$status" -ge 300 ]; then
+              echo "::error::Supabase rechazó $file (HTTP $status)."
+              exit 1
+            fi
+          done
