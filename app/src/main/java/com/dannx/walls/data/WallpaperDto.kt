@@ -148,7 +148,7 @@ data class CollectionDto(
     val description: String = "",
     @SerialName("owner_id") val ownerId: String = "",
     @SerialName("owner_name") val ownerName: String = "",
-    @SerialName("is_public") val isPublic: Boolean = true,
+    @SerialName("is_public") val isPublic: Boolean = false,
     @SerialName("created_at") val createdAt: String = "",
 )
 

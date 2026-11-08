@@ -6,6 +6,24 @@ trabajo (fases de la hoja de ruta) y al publicar cada versión.
 Sobre el Estudio: la pantalla de publicación es de uso privado. El acceso está
 reservado a administradores y no se detalla en la documentación.
 
+## Sin publicar
+
+### Seguridad
+
+- Se reparó la columna de privacidad de `collections`, que tenía un nombre
+  corrupto: ahora es `is_public`. Crear y editar colecciones vuelve a funcionar
+  y la privacidad se respeta en el servidor.
+- El DTO de colecciones asume privada por defecto si el servidor no manda el
+  campo (antes asumía pública).
+- El registro público de Supabase quedó deshabilitado.
+- La verificación de migraciones ahora exige `is_public`, RLS activo en
+  colecciones e ítems y políticas que usen esa columna.
+- Se eliminó la deploy key con escritura; `main` exige los checks `checks` y
+  `debug`; las actions están fijadas a SHA y el repo exige SHA pinning.
+- Se restauró `supabase/setup.sql` como referencia histórica del esquema.
+- El APK de release ya no incluye logs de depuración.
+- Los tags publican `versionName` sin la `v` inicial.
+
 ## v1.3.0
 
 ### Fase 5 — Experiencia
