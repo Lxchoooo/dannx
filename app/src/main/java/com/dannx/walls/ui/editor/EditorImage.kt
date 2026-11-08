@@ -192,14 +192,15 @@ internal object EditorImage {
 
         if (settings.blur > 0f) {
             val blurred = createBlurred(output)
-            paint.alpha = (settings.blur * 255f).roundToInt().coerceIn(0, 255)
+            val blurPaint = Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG).apply {
+                alpha = (settings.blur * 255f).roundToInt().coerceIn(0, 255)
+            }
             canvas.drawBitmap(
                 blurred,
                 null,
                 RectF(0f, 0f, output.width.toFloat(), output.height.toFloat()),
-                paint,
+                blurPaint,
             )
-            paint.alpha = 255
             blurred.recycle()
         }
         onProgress(72)

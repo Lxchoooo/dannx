@@ -333,7 +333,8 @@ private fun PreviewSection(
     ) {
         val gap = 10.dp
         val frameWidth = minOf((maxWidth - gap) / 2f, maxHeight * frameAspect)
-        val frameHeight = frameWidth / frameAspect
+            .coerceAtLeast(1.dp)
+        val frameHeight = (frameWidth / frameAspect).coerceAtLeast(1.dp)
         val density = LocalDensity.current
         val frameWidthPx = with(density) { frameWidth.toPx() }
         val frameHeightPx = with(density) { frameHeight.toPx() }
