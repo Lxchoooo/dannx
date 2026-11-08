@@ -56,6 +56,10 @@ así que funciona apenas la instalás.
    cuando Android te lo pida.
 3. Las actualizaciones se instalan encima de la app existente: se conservan
    favoritos, colecciones y ajustes.
+4. Los artifacts de debug de Actions de este repositorio usan la misma clave de
+   firma que los releases, así que también se instalan encima de la app
+   publicada. Usá el artifact del run más reciente; un debug viejo no puede
+   reemplazar un release más nuevo.
 
 Requisitos: **Android 10 (API 29) o superior**. Los builds de release se firman
 con una clave privada guardada como secreto de GitHub; la clave nunca se
@@ -72,6 +76,10 @@ apunta a SDK 36 y como mínimo soporta SDK 29).
 ./gradlew testDebugUnitTest    # tests unitarios
 ./gradlew assembleRelease      # APK de release firmado (necesita el keystore)
 ```
+
+`assembleDebug` usa el keystore de release cuando `ANDROID_KEYSTORE_PATH` está
+definido; CI lo configura para que los artifacts de debug se instalen encima del
+release publicado. Sin keystore, Gradle usa la firma de depuración habitual.
 
 Estructura del proyecto:
 

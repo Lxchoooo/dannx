@@ -39,7 +39,24 @@ jobs:
 
       - uses: gradle/actions/setup-gradle@v6
 
+      - name: Restore signing keystore
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+        run: |
+          if [ -z "$ANDROID_KEYSTORE_BASE64" ]; then
+            echo "::warning::Sin keystore; el APK debug usará la firma de depuración."
+            exit 0
+          fi
+          echo "$ANDROID_KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/release-keystore.p12"
+          echo "ANDROID_KEYSTORE_PATH=$RUNNER_TEMP/release-keystore.p12" >> "$GITHUB_ENV"
+
       - name: Build debug APK
+        env:
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          VERSION_CODE: ${{ github.run_number }}
+          VERSION_NAME: ${{ github.ref_type == 'tag' && github.ref_name || '' }}
         run: ./gradlew assembleDebug
 
       - name: Upload debug APK
@@ -49,6 +66,14 @@ jobs:
           path: app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
           retention-days: 7
+
+      - name: Remove keystore
+        if: always()
+        run: rm -f "$RUNNER_TEMP/release-keystore.p12"
+
+      - name: Remove keystore env
+        if: always()
+        run: echo "ANDROID_KEYSTORE_PATH=" >> "$GITHUB_ENV"
 
   # Compuerta de corrección: lint y tests. Corre en paralelo con el build
   # release; la publicación espera a que este job termine bien.

@@ -57,11 +57,20 @@ android {
         )
     }
 
+    val releaseSigning = signingConfigs.findByName("release")
+
     buildTypes {
+        // En CI, el APK de debug se firma con la misma clave que el release
+        // cuando el keystore está disponible. Así se puede instalar encima de
+        // la versión publicada sin desinstalarla. Sin keystore (por ejemplo,
+        // un PR desde un fork) queda la firma de depuración habitual.
+        if (releaseSigning != null) {
+            getByName("debug").signingConfig = releaseSigning
+        }
         release {
             isMinifyEnabled = true
             isShrinkResources = true
-            signingConfig = signingConfigs.findByName("release")
+            signingConfig = releaseSigning
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro",

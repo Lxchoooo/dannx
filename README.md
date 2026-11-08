@@ -56,6 +56,9 @@ right after installing.
    when Android asks for it.
 3. Updates install on top of the existing app: your favourites, collections and
    settings are kept.
+4. Debug artifacts from this repository's Actions use the same signing key as
+   releases, so they also install on top of the published app. Use the latest
+   run's artifact; an older debug build cannot replace a newer release.
 
 Requirements: **Android 10 (API 29) or newer**. Release builds are signed with a
 private key stored as a GitHub secret; the key is never committed to the
@@ -72,6 +75,10 @@ SDK 37, targets SDK 36 and has a minimum of SDK 29).
 ./gradlew testDebugUnitTest    # unit tests
 ./gradlew assembleRelease      # signed release APK (needs the keystore)
 ```
+
+`assembleDebug` uses the release keystore when `ANDROID_KEYSTORE_PATH` is set;
+CI does this so debug artifacts install over the published release. Without the
+keystore, Gradle falls back to the standard debug key.
 
 Project layout:
 
