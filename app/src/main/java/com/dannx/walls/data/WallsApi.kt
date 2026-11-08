@@ -45,6 +45,7 @@ class WallsApi(
                 getList<WallpaperDto>("wallpapers?select=*&order=created_at.desc")
                     .filter { it.storagePath.isNotBlank() }
                     .map { it.toWallpaper(baseUrl) }
+                    .filterNot { it.isArchived }
             } catch (error: Throwable) {
                 throw error.toDannXError()
             }
@@ -170,7 +171,7 @@ class WallsApi(
                 // no dejar basura en el almacenamiento.
                 runCatching { deleteObject(token, fileName) }
                 throw if (error.message.orEmpty().contains("Could not find the table")) {
-                    DannXError.Unexpected("Falta crear las tablas del catálogo en Supabase.")
+                    DannXError.Unexpected("Falta crear las tablas del catálogo.")
                 } else {
                     error
                 }
@@ -541,7 +542,7 @@ class WallsApi(
         )
         json.decodeFromString<List<CollectionDto>>(body).firstOrNull()
             ?.toCollection(emptyList())
-            ?: throw DannXError.Parse("Supabase no devolvió la colección creada.")
+            ?: throw DannXError.Parse("El servidor no devolvió la colección creada.")
     }
 
     override suspend fun addToCollection(collectionId: String, wallpaperId: String) {
@@ -780,7 +781,7 @@ class WallsApi(
             this is DannXError.Unexpected &&
                 detail.contains("bucket not found", ignoreCase = true) ->
                 DannXError.Unexpected(
-                    "Falta crear el almacenamiento «wallpapers» en Supabase.",
+                    "Falta crear el almacenamiento «wallpapers» del catálogo.",
                 )
 
             else -> this
@@ -800,7 +801,7 @@ class WallsApi(
             },
         )
         return json.decodeFromString<List<WallpaperDto>>(body).firstOrNull()
-            ?: throw DannXError.Parse("Supabase no devolvió el wallpaper creado.")
+            ?: throw DannXError.Parse("El servidor no devolvió el fondo creado.")
     }
 
     private suspend fun insertCollectionItem(
@@ -831,7 +832,7 @@ class WallsApi(
 
     private fun ensureConfigured() {
         if (!isConfigured) {
-            throw DannXError.Unexpected("Falta conectar Supabase en la configuración del proyecto.")
+            throw DannXError.Unexpected("Falta conectar el catálogo en la configuración del proyecto.")
         }
     }
 

@@ -11,7 +11,7 @@ import kotlin.math.max
 /**
  * Imagen lista para subir: archivo local, tipo, extensión y medidas reales.
  *
- * El almacenamiento de Supabase solo acepta JPG, PNG y WebP, y las fotos de
+ * El almacenamiento del catálogo solo acepta JPG, PNG y WebP, y las fotos de
  * algunos teléfonos llegan en HEIC/HEIF. Por eso todo lo que no entra en esos
  * formatos (o supera el límite de peso) se convierte a JPEG antes de subirlo.
  */

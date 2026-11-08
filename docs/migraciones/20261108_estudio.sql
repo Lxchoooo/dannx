@@ -17,27 +17,19 @@ alter table public.admins enable row level security;
 
 -- Si las políticas viejas tenían el UUID del administrador, lo recuperamos de
 -- ellas antes de reemplazarlas. Así no hay que copiar IDs a este archivo.
-do $$
-begin
-    if exists (
-        select 1
-        from information_schema.columns
-        where table_schema = 'public'
-          and table_name = 'wallpapers'
-          and column_name = 'created_by'
-    ) then
-        insert into public.admins (user_id)
-        select distinct (regexp_match(with_check, '([0-9a-fA-F-]{36})'))[1]::uuid
-        from pg_policies
-        where schemaname = 'public'
-          and tablename = 'wallpapers'
-          and policyname in ('wallpapers_admin_insert', 'wallpapers_admin_update')
-          and with_check ~ '[0-9a-fA-F-]{36}'
-        on conflict (user_id) do nothing;
-    end if;
+insert into public.admins (user_id)
+select distinct candidate.user_id
+from (
+    select (regexp_match(with_check, '([0-9a-fA-F-]{36})'))[1]::uuid as user_id
+    from pg_policies
+    where schemaname = 'public'
+      and tablename = 'wallpapers'
+      and policyname in ('wallpapers_admin_insert', 'wallpapers_admin_update')
+      and with_check ~ '[0-9a-fA-F-]{36}'
 
-    insert into public.admins (user_id)
-    select distinct (regexp_match(with_check, '([0-9a-fA-F-]{36})'))[1]::uuid
+    union all
+
+    select (regexp_match(with_check, '([0-9a-fA-F-]{36})'))[1]::uuid as user_id
     from pg_policies
     where schemaname = 'storage'
       and tablename = 'objects'
@@ -47,9 +39,9 @@ begin
           'wallpapers_storage_delete'
       )
       and with_check ~ '[0-9a-fA-F-]{36}'
-    on conflict (user_id) do nothing;
-end;
-$$;
+) candidate
+join auth.users u on u.id = candidate.user_id
+on conflict (user_id) do nothing;
 
 create or replace function public.is_admin()
 returns boolean
