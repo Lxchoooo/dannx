@@ -35,6 +35,16 @@ reservado a administradores y no se detalla en la documentación.
   muestran un indicador al cargar y un aviso si no se pudieron descargar.
 - Se eliminó código sin uso (`RoundedCornersTransformation`).
 
+### Correcciones
+
+- Las operaciones de etiquetas y el reordenamiento de colecciones usan una
+  función atómica de la base de datos cuando la migración del Estudio está
+  aplicada. Si la función todavía no existe, la app conserva el recorrido
+  anterior para no romper la compatibilidad.
+- Los APK de debug de CI se firman con la misma clave que release cuando el
+  secreto está disponible, y usan el mismo `versionCode` del run para poder
+  instalarse encima sin desinstalar.
+
 ### Fase 2 — Estabilidad
 
 - Al volver a la app o tocar "Actualizar", el feed anterior sigue visible: ya no

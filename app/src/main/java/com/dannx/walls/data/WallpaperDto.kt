@@ -106,6 +106,29 @@ data class TagsUpdate(
 )
 
 @Serializable
+data class AddTagPayload(
+    @SerialName("p_tag") val tag: String,
+    @SerialName("p_wallpaper_ids") val wallpaperIds: List<String>,
+)
+
+@Serializable
+data class RenameTagPayload(
+    @SerialName("p_old_tag") val oldTag: String,
+    @SerialName("p_new_tag") val newTag: String,
+)
+
+@Serializable
+data class DeleteTagPayload(
+    @SerialName("p_tag") val tag: String,
+)
+
+@Serializable
+data class ReorderCollectionPayload(
+    @SerialName("p_collection_id") val collectionId: String,
+    @SerialName("p_wallpaper_ids") val wallpaperIds: List<String>,
+)
+
+@Serializable
 data class CollectionDto(
     val id: String,
     val name: String = "",

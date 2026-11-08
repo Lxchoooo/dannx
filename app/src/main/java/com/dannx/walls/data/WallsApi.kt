@@ -527,26 +527,54 @@ class WallsApi(
     ) {
         if (!isConfigured) return
         withContext(Dispatchers.IO) {
-            wallpaperIds.forEachIndexed { index, wallpaperId ->
-                executeAuthorized(
-                    build = { token ->
-                        Request.Builder()
-                            .url(
-                                "$baseUrl/rest/v1/collection_items" +
-                                    "?collection_id=eq.$collectionId" +
-                                    "&wallpaper_id=eq.$wallpaperId",
-                            )
-                            .header("apikey", anonKey)
-                            .header("Authorization", "Bearer $token")
-                            .header("Prefer", "return=minimal")
-                            .patch(
-                                json.encodeToString(PositionUpdate(index))
-                                    .toRequestBody(JSON_MEDIA),
-                            )
-                            .build()
-                    },
+            val selected = wallpaperIds
+                .map { it.trim() }
+                .filter { it.isNotBlank() }
+                .distinct()
+            if (selected.isEmpty()) return@withContext
+            try {
+                callRpc(
+                    "reorder_collection",
+                    json.encodeToString(
+                        ReorderCollectionPayload(
+                            collectionId = collectionId,
+                            wallpaperIds = selected,
+                        ),
+                    ),
                 )
+            } catch (error: DannXError) {
+                if (!error.isMissingRpc()) throw error
+                reorderCollectionSequential(collectionId, selected)
             }
+        }
+    }
+
+    /**
+     * Compatibilidad mientras la migración del Estudio no esté aplicada.
+     */
+    private suspend fun reorderCollectionSequential(
+        collectionId: String,
+        wallpaperIds: List<String>,
+    ) {
+        wallpaperIds.forEachIndexed { index, wallpaperId ->
+            executeAuthorized(
+                build = { token ->
+                    Request.Builder()
+                        .url(
+                            "$baseUrl/rest/v1/collection_items" +
+                                "?collection_id=eq.$collectionId" +
+                                "&wallpaper_id=eq.$wallpaperId",
+                        )
+                        .header("apikey", anonKey)
+                        .header("Authorization", "Bearer $token")
+                        .header("Prefer", "return=minimal")
+                        .patch(
+                            json.encodeToString(PositionUpdate(index))
+                                .toRequestBody(JSON_MEDIA),
+                        )
+                        .build()
+                },
+            )
         }
     }
 
@@ -554,15 +582,22 @@ class WallsApi(
         if (!isConfigured) return
         withContext(Dispatchers.IO) {
             val clean = tag.trim().take(40)
-            if (clean.isBlank() || wallpaperIds.isEmpty()) return@withContext
-            val token = requireToken()
-            val selected = wallpaperIds.toSet()
-            adminWallpaperDtos()
-                .filter { it.id in selected }
-                .forEach { dto ->
-                    val tags = cleanTags(dto.tags + clean)
-                    if (tags != dto.tags) updateTags(token, dto.id, tags)
-                }
+            val selected = wallpaperIds
+                .map { it.trim() }
+                .filter { it.isNotBlank() }
+                .distinct()
+            if (clean.isBlank() || selected.isEmpty()) return@withContext
+            try {
+                callRpc(
+                    "add_wallpaper_tag",
+                    json.encodeToString(
+                        AddTagPayload(tag = clean, wallpaperIds = selected),
+                    ),
+                )
+            } catch (error: DannXError) {
+                if (!error.isMissingRpc()) throw error
+                addTagSequential(clean, selected)
+            }
         }
     }
 
@@ -572,15 +607,14 @@ class WallsApi(
             val old = oldTag.trim()
             val new = newTag.trim().take(40)
             if (old.isBlank() || new.isBlank()) return@withContext
-            val token = requireToken()
-            adminWallpaperDtos().forEach { dto ->
-                if (dto.tags.none { it.equals(old, ignoreCase = true) }) {
-                    return@forEach
-                }
-                val tags = cleanTags(
-                    dto.tags.map { if (it.equals(old, ignoreCase = true)) new else it },
+            try {
+                callRpc(
+                    "rename_wallpaper_tag",
+                    json.encodeToString(RenameTagPayload(oldTag = old, newTag = new)),
                 )
-                updateTags(token, dto.id, tags)
+            } catch (error: DannXError) {
+                if (!error.isMissingRpc()) throw error
+                renameTagSequential(old, new)
             }
         }
     }
@@ -590,14 +624,59 @@ class WallsApi(
         withContext(Dispatchers.IO) {
             val clean = tag.trim()
             if (clean.isBlank()) return@withContext
-            val token = requireToken()
-            adminWallpaperDtos().forEach { dto ->
-                if (dto.tags.none { it.equals(clean, ignoreCase = true) }) {
-                    return@forEach
-                }
-                val tags = dto.tags.filterNot { it.equals(clean, ignoreCase = true) }
-                updateTags(token, dto.id, tags)
+            try {
+                callRpc(
+                    "delete_wallpaper_tag",
+                    json.encodeToString(DeleteTagPayload(tag = clean)),
+                )
+            } catch (error: DannXError) {
+                if (!error.isMissingRpc()) throw error
+                deleteTagSequential(clean)
             }
+        }
+    }
+
+    /**
+     * Compatibilidad mientras la migración del Estudio no esté aplicada.
+     */
+    private suspend fun addTagSequential(tag: String, wallpaperIds: List<String>) {
+        val token = requireToken()
+        val selected = wallpaperIds.toSet()
+        adminWallpaperDtos()
+            .filter { it.id in selected }
+            .forEach { dto ->
+                val tags = cleanTags(dto.tags + tag)
+                if (tags != dto.tags) updateTags(token, dto.id, tags)
+            }
+    }
+
+    /**
+     * Compatibilidad mientras la migración del Estudio no esté aplicada.
+     */
+    private suspend fun renameTagSequential(oldTag: String, newTag: String) {
+        val token = requireToken()
+        adminWallpaperDtos().forEach { dto ->
+            if (dto.tags.none { it.equals(oldTag, ignoreCase = true) }) {
+                return@forEach
+            }
+            val tags = cleanTags(
+                dto.tags.map { if (it.equals(oldTag, ignoreCase = true)) newTag else it },
+            )
+            updateTags(token, dto.id, tags)
+        }
+    }
+
+    /**
+     * Compatibilidad mientras la migración del Estudio no esté aplicada.
+     */
+    private suspend fun deleteTagSequential(tag: String) {
+        val token = requireToken()
+        adminWallpaperDtos().forEach { dto ->
+            if (dto.tags.none { it.equals(tag, ignoreCase = true) }) {
+                return@forEach
+            }
+            val tags = dto.tags.filterNot { it.equals(tag, ignoreCase = true) }
+            updateTags(token, dto.id, tags)
         }
     }
 
@@ -763,6 +842,33 @@ class WallsApi(
                     .build()
             },
         )
+    }
+
+    /**
+     * Llama a una función de base de datos. Si la migración todavía no se
+     * aplicó, PostgREST responde PGRST202 y quien llama puede usar el
+     * recorrido de compatibilidad.
+     */
+    private suspend fun callRpc(name: String, payload: String): String =
+        executeAuthorized(
+            build = { token ->
+                Request.Builder()
+                    .url("$baseUrl/rest/v1/rpc/$name")
+                    .header("apikey", anonKey)
+                    .header("Authorization", "Bearer $token")
+                    .header("Prefer", "return=minimal")
+                    .post(payload.toRequestBody(JSON_MEDIA))
+                    .build()
+            },
+        )
+
+    private fun DannXError.isMissingRpc(): Boolean = when (this) {
+        is DannXError.Unexpected ->
+            causeDetail.contains("PGRST202", ignoreCase = true) ||
+                causeDetail.contains("Could not find the function", ignoreCase = true) ||
+                causeDetail.contains("no existe la función", ignoreCase = true) ||
+                causeDetail.contains("respondió 404", ignoreCase = true)
+        else -> false
     }
 
     private fun cleanTags(tags: List<String>): List<String> = tags
