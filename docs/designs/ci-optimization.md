@@ -66,6 +66,27 @@ keep a monotonically increasing version code so Android accepts the update.
 Release builds therefore cannot be warm-cached by design without changing
 versioning semantics.
 
+### First post-change measurement
+
+Source: run `42490677444` on `bf264fe` (2026-11-08), the workflow-only commit
+that introduced the split. The app source was unchanged from the previous run,
+so the app build cache was warm; treat this as a lower bound, not as the
+number for a typical Kotlin change.
+
+| Job | Total | Main step | Notes |
+| --- | --- | --- | --- |
+| `debug` | 42 s | `assembleDebug` 24 s | Warm app cache; a code change will be slower |
+| `checks` | 146 s | `lintDebug testDebugUnitTest` 117 s | Compile 28 s, tests 2 s, lint ~37 s |
+| `build` | 159 s | `assembleRelease` 133 s | R8 58 s on this run |
+| `publish` | 10 s | download + rolling release | After both gates passed |
+
+End-to-end from the first job start to the end of `publish`: ~169 s, versus
+~276 s on the pre-split code-change run. The comparison mixes a code-change
+baseline with a warm-cache workflow-only sample, so the true saving for a
+one-file Kotlin change still needs two more samples. The structural saving is
+real: lint and tests no longer sit on the release critical path, and
+publication cannot start until both jobs pass.
+
 ## Goals
 
 *   **G1**: Keep the fast path at or below its measured baseline. Do not add
@@ -74,7 +95,9 @@ versioning semantics.
     target was not supported by the measured setup floor and is withdrawn.
 *   **G2**: Cut the full path from ~276 s to ≤ 210 s (3.5 min) by running lint
     and tests in parallel with `assembleRelease`, while keeping lint and tests
-    as hard gates for publication. Do not drop either check.
+    as hard gates for publication. Do not drop either check. First sample:
+    ~169 s on a warm app cache; still needs two code-change samples before it is
+    treated as confirmed.
 *   **G3**: Keep every existing safety property: no signing material in the
     repository, no secrets in build logs, `minSdk 29` / `targetSdk 36`
     unchanged, release signing flow unchanged.
@@ -167,7 +190,7 @@ and `checks` + `build` gate `publish`.
 
 | Lever | Expected effect | Status |
 | --- | --- | --- |
-| Parallel `checks` vs `build` | Remove ~30 s lint + ~2 s tests from the release critical path; expected full-path total ~200–210 s | **Implemented in this change** |
+| Parallel `checks` vs `build` | Remove lint and tests from the release critical path; first sample ~169 s total, expected ~200–210 s on a real code change | **Implemented in this change** |
 | Pin `ubuntu-24.04` | Determinism; near-zero timing effect | **Implemented** |
 | Configuration cache | ~0 s across ephemeral runners; not worth a hand-rolled `.gradle` cache | **Rejected** |
 | `setup-gradle` home-cache cleanup | May reduce cache size; adds scan time to every saving job | Not adopted until measured |
