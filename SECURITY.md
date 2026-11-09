@@ -43,3 +43,7 @@ Out of scope: issues in third-party services, the Android system, or other apps.
 - The release APK does not include debug logs.
 - CI runs CodeQL, dependency review and Gradle wrapper validation. Releases
   publish a SHA-256 checksum and a build provenance attestation.
+
+The full checklist, including the GitHub settings that are applied outside the
+repository, lives in
+[`docs/designs/security-hardening.md`](docs/designs/security-hardening.md).

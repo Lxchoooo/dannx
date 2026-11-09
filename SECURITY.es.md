@@ -44,3 +44,7 @@ otras apps.
 - El APK de release no incluye logs de depuración.
 - CI corre CodeQL, dependency review y validación del wrapper de Gradle. Los
   releases publican un checksum SHA-256 y una atestación de procedencia.
+
+La checklist completa, incluidas las opciones de GitHub que se aplican fuera del
+repositorio, está en
+[`docs/designs/security-hardening.md`](docs/designs/security-hardening.md).
