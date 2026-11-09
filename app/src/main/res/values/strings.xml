@@ -166,6 +166,8 @@
     <string name="about_repository">Código en GitHub</string>
     <string name="about_releases">Última versión</string>
     <string name="about_privacy">Política de privacidad</string>
+    <string name="about_share">Compartir DannX</string>
+    <string name="about_share_text">DannX: fondos de pantalla sin anuncios ni rastreo. %1$s</string>
     <string name="about_legal">Legal</string>
     <string name="about_license">Licencia MIT</string>
     <string name="about_license_hint">El código de DannX se distribuye bajo la licencia MIT.</string>

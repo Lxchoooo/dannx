@@ -166,6 +166,8 @@
     <string name="about_repository">Source on GitHub</string>
     <string name="about_releases">Latest release</string>
     <string name="about_privacy">Privacy policy</string>
+    <string name="about_share">Share DannX</string>
+    <string name="about_share_text">DannX: wallpapers without ads or tracking. %1$s</string>
     <string name="about_legal">Legal</string>
     <string name="about_license">MIT License</string>
     <string name="about_license_hint">DannX source code is distributed under the MIT License.</string>
