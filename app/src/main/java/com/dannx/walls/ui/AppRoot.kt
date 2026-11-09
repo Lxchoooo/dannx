@@ -480,6 +480,7 @@ private fun MainApp(
                             isFavorite = wallpaper.id in state.favorites,
                             collections = state.myCollections,
                             canManageCollections = true,
+                            canChooseCollectionDestination = state.session != null,
                             collectionBusy = state.collectionBusy,
                             actionState = actionState,
                             downloadPrompt = state.downloadPrompt

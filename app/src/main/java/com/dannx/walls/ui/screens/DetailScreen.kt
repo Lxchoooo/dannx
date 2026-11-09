@@ -118,6 +118,7 @@ fun DetailScreen(
     isFavorite: Boolean,
     collections: List<WallpaperCollection>,
     canManageCollections: Boolean,
+    canChooseCollectionDestination: Boolean,
     collectionBusy: Boolean,
     actionState: ActionState = ActionState(),
     downloadPrompt: DownloadPrompt? = null,
@@ -641,7 +642,7 @@ fun DetailScreen(
     if (showCreateCollection) {
         NewCollectionDialog(
             busy = collectionBusy,
-            canChooseDestination = state.session != null,
+            canChooseDestination = canChooseCollectionDestination,
             onDismiss = { showCreateCollection = false },
             onCreate = { name, description, isPublic, onDevice ->
                 onCreateCollection(name, description, isPublic, onDevice)
