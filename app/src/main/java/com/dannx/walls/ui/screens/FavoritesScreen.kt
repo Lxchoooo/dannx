@@ -26,6 +26,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.dannx.walls.R
@@ -59,11 +60,11 @@ fun FavoritesScreen(
         item(span = { GridItemSpan(2) }) {
             Column(Modifier.fillMaxWidth()) {
                 Text(
-                    text = "Favoritos",
+                    text = stringResource(R.string.favorites_title),
                     style = MaterialTheme.typography.displayMedium,
                 )
                 Text(
-                    text = "${items.size} fondos guardados",
+                    text = pluralStringResource(R.plurals.favorites_saved_count, items.size, items.size),
                     style = MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )

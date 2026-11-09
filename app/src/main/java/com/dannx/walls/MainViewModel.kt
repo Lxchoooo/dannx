@@ -13,8 +13,11 @@ import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.dannx.walls.data.AdminSession
+import com.dannx.walls.data.AppSettings
 import com.dannx.walls.data.AppearancePrefs
 import com.dannx.walls.data.AppearanceStore
+import com.dannx.walls.data.CategoryAll
+import com.dannx.walls.data.CategoryFeatured
 import com.dannx.walls.data.Connectivity
 import com.dannx.walls.data.DannXError
 import com.dannx.walls.data.FeedCache
@@ -33,6 +36,9 @@ import com.dannx.walls.data.collectTags
 import com.dannx.walls.data.filterWallpapers
 import com.dannx.walls.util.WallpaperFiles
 import com.dannx.walls.util.WallpaperTarget
+import com.dannx.walls.util.StringResolver
+import com.dannx.walls.util.get
+import com.dannx.walls.util.stringResolver
 import java.util.UUID
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
@@ -94,9 +100,11 @@ data class UiState(
     val refreshing: Boolean = false,
     val wallpapers: List<Wallpaper> = emptyList(),
     val adminWallpapers: List<Wallpaper> = emptyList(),
+    val trashWallpapers: List<Wallpaper> = emptyList(),
     val categories: List<WallpaperCategory> = emptyList(),
     val collectionItems: List<WallpaperCollection> = emptyList(),
     val query: String = "",
+    val recentSearches: List<String> = emptyList(),
     val category: String? = null,
     val tag: String? = null,
     val favorites: Set<String> = emptySet(),
@@ -117,15 +125,26 @@ data class UiState(
     val themeMode: ThemeMode = ThemeMode.SYSTEM,
     val liteMode: Boolean = false,
     val openEditorOnApply: Boolean = true,
+    val appSettings: AppSettings = AppSettings(),
 ) {
     val filtered: List<Wallpaper>
         get() = filterWallpapers(wallpapers, query, category, tag)
+            .filterNot { it.isDeleted }
+            .let { items ->
+                if (category == CategoryFeatured) {
+                    items.sortedBy { it.featuredPosition }
+                } else {
+                    items
+                }
+            }
 
     val featured: List<Wallpaper>
-        get() = wallpapers.filter { it.featured }
+        get() = wallpapers
+            .filter { it.featured && !it.isDeleted }
+            .sortedBy { it.featuredPosition }
 
     val favoriteWallpapers: List<Wallpaper>
-        get() = wallpapers.filter { it.id in favorites }
+        get() = wallpapers.filter { it.id in favorites && !it.isDeleted }
 
     val availableTags: List<String>
         get() = collectTags(wallpapers)
@@ -139,7 +158,11 @@ data class UiState(
         }
 
     val studioWallpapers: List<Wallpaper>
-        get() = if (isDemo) wallpapers else adminWallpapers
+        get() = if (isDemo) {
+            (wallpapers + adminWallpapers).distinctBy { it.id }
+        } else {
+            adminWallpapers
+        }
 
     val categoryOptions: List<WallpaperCategory>
         get() = categories.ifEmpty {
@@ -152,7 +175,8 @@ data class UiState(
         }
 
     val categoryNames: List<String>
-        get() = wallpapers.map { categoryNameFor(it) }
+        get() = wallpapers.filterNot { it.isDeleted }
+            .map { categoryNameFor(it) }
             .filter { it.isNotBlank() }
             .distinctBy { it.lowercase() }
             .sorted()
@@ -183,6 +207,7 @@ class MainViewModel(
     private val actions: WallpaperActions,
     private val isOnline: () -> Boolean = { true },
     private val appearance: AppearanceStore = InMemoryAppearanceStore(),
+    private val strings: StringResolver = StringResolver { _, _ -> "" },
 ) : ViewModel() {
     private var actionJob: Job? = null
     private var refreshJob: Job? = null
@@ -196,12 +221,14 @@ class MainViewModel(
             onboardingDone = prefs.onboardingDone(),
             downloadedIds = prefs.downloadedIds(),
             query = savedState.get<String>(KEY_QUERY) ?: "",
+            recentSearches = prefs.recentSearches(),
             category = savedState.get<String>(KEY_CATEGORY),
             tag = savedState.get<String>(KEY_TAG),
             selectedUploadUri = savedState.get<String>(KEY_UPLOAD_URI),
             themeMode = appearance.themeMode(),
             liteMode = appearance.liteMode(),
             openEditorOnApply = appearance.openEditorOnApply(),
+            appSettings = prefs.appSettings(),
         ),
     )
     val state: StateFlow<UiState> = _state.asStateFlow()
@@ -229,7 +256,7 @@ class MainViewModel(
             it.copy(
                 feed = if (cachedWallpapers.isEmpty()) {
                     LoadState.Error(
-                        message = "Sin conexión. Revisá tu internet y probá de nuevo.",
+                        message = strings.get(R.string.error_offline),
                         kind = ErrorKind.OFFLINE,
                     )
                 } else {
@@ -272,7 +299,9 @@ class MainViewModel(
                 }
             }
             try {
+                val trashedIds = state.trashWallpapers.map { it.id }.toSet()
                 val items = api.loadWallpapers()
+                    .filterNot { it.isDeleted || it.id in trashedIds }
                 val collections = try {
                     api.loadCollections()
                 } catch (error: CancellationException) {
@@ -284,6 +313,7 @@ class MainViewModel(
                     _state.value.collectionItems
                 }
                 val categories = loadCategoriesOrEmpty(_state.value.categories)
+                val appSettings = loadAppSettingsOrFallback(_state.value.appSettings)
                 cache.writeWallpapers(items)
                 cache.writeCollections(collections)
                 _state.update {
@@ -297,6 +327,7 @@ class MainViewModel(
                         wallpapers = items,
                         categories = categories,
                         collectionItems = collections,
+                        appSettings = appSettings,
                         isDemo = !api.isConfigured,
                         offline = false,
                         refreshing = false,
@@ -338,6 +369,7 @@ class MainViewModel(
                         collectionItems = fallbackCollections,
                         session = if (expired) null else it.session,
                         adminWallpapers = if (expired) emptyList() else it.adminWallpapers,
+                        trashWallpapers = if (expired) emptyList() else it.trashWallpapers,
                         message = if (expired) error.userMessage() else it.message,
                         offline = fallbackWallpapers.isNotEmpty() && kind == ErrorKind.OFFLINE,
                         refreshing = false,
@@ -365,6 +397,18 @@ class MainViewModel(
         _state.update { it.copy(query = value) }
     }
 
+    fun rememberCurrentSearch() {
+        val query = _state.value.query
+        if (query.isBlank()) return
+        prefs.rememberSearch(query)
+        _state.update { it.copy(recentSearches = prefs.recentSearches()) }
+    }
+
+    fun clearRecentSearches() {
+        prefs.clearRecentSearches()
+        _state.update { it.copy(recentSearches = emptyList()) }
+    }
+
     fun setCategory(value: String?) {
         savedState[KEY_CATEGORY] = value
         _state.update { it.copy(category = value) }
@@ -386,7 +430,7 @@ class MainViewModel(
 
     fun signIn(email: String, password: String) {
         if (email.isBlank() || password.isBlank()) {
-            _state.update { it.copy(message = "Completá tu correo y contraseña.") }
+            _state.update { it.copy(message = strings.get(R.string.msg_enter_credentials)) }
             return
         }
         viewModelScope.launch {
@@ -404,7 +448,7 @@ class MainViewModel(
                         } else {
                             LoadState.Content(collections)
                         },
-                        message = "Sesión iniciada como ${session.email}.",
+                        message = strings.get(R.string.msg_signed_in, session.email),
                         messageAction = null,
                     )
                 }
@@ -439,7 +483,7 @@ class MainViewModel(
                 authBusy = false,
                 studioBusy = false,
                 collectionBusy = false,
-                message = "Sesión cerrada.",
+                message = strings.get(R.string.msg_signed_out),
                 messageAction = null,
                 downloadPrompt = null,
             )
@@ -500,7 +544,11 @@ class MainViewModel(
                             LoadState.Content(collections)
                         },
                         uploadSuccessCount = it.uploadSuccessCount + 1,
-                        message = outcome.warning ?: "Wallpaper publicado.",
+                        message = if (outcome.warning != null) {
+                            strings.get(R.string.msg_uploaded_without_collection)
+                        } else {
+                            strings.get(R.string.msg_wallpaper_published)
+                        },
                         messageAction = null,
                     )
                 }
@@ -532,7 +580,8 @@ class MainViewModel(
                 val categories = loadCategoriesOrEmpty(_state.value.categories)
                 _state.update {
                     it.copy(
-                        adminWallpapers = walls,
+                        adminWallpapers = walls.filterNot { w -> w.isDeleted },
+                        trashWallpapers = walls.filter { w -> w.isDeleted },
                         categories = categories,
                         studioBusy = false,
                     )
@@ -545,14 +594,48 @@ class MainViewModel(
         }
     }
 
+    fun saveAppSettings(tagline: String, bannerText: String, bannerEnabled: Boolean) {
+        val clean = AppSettings(
+            tagline = tagline,
+            bannerText = bannerText,
+            bannerEnabled = bannerEnabled,
+        ).normalized()
+        if (_state.value.isDemo) {
+            prefs.saveAppSettings(clean)
+            _state.update {
+                it.copy(
+                    appSettings = clean,
+                    message = strings.get(R.string.msg_app_settings_saved),
+                )
+            }
+            return
+        }
+        viewModelScope.launch {
+            _state.update { it.copy(studioBusy = true) }
+            try {
+                val saved = api.saveAppSettings(clean)
+                prefs.saveAppSettings(saved)
+                _state.update {
+                    it.copy(
+                        studioBusy = false,
+                        appSettings = saved,
+                        message = strings.get(R.string.msg_app_settings_saved),
+                    )
+                }
+            } catch (error: Exception) {
+                _state.update { it.afterError(error) }
+            }
+        }
+    }
+
     fun createCategory(name: String) {
         val clean = name.trim().take(40)
         if (clean.isBlank()) {
-            _state.update { it.copy(message = "Poné un nombre para la categoría.") }
+            _state.update { it.copy(message = strings.get(R.string.msg_category_name_required)) }
             return
         }
         if (isReservedCategoryName(clean)) {
-            _state.update { it.copy(message = "Ese nombre está reservado. Elegí otro.") }
+            _state.update { it.copy(message = strings.get(R.string.msg_name_reserved)) }
             return
         }
         val position = (_state.value.categories.maxOfOrNull { it.position } ?: -1) + 1
@@ -565,7 +648,7 @@ class MainViewModel(
             _state.update {
                 it.copy(
                     categories = it.categories + created,
-                    message = "Categoría \"$clean\" creada.",
+                    message = strings.get(R.string.msg_category_created, clean),
                 )
             }
             return
@@ -580,7 +663,7 @@ class MainViewModel(
                         categories = (it.categories + created)
                             .distinctBy { c -> c.id }
                             .sortedWith(compareBy({ c -> c.position }, { c -> c.name })),
-                        message = "Categoría \"${created.name}\" creada.",
+                        message = strings.get(R.string.msg_category_created, created.name),
                     )
                 }
             } catch (error: Exception) {
@@ -595,11 +678,11 @@ class MainViewModel(
         val category = _state.value.categories.firstOrNull { it.id == categoryId } ?: return
         val clean = name.trim().take(40)
         if (clean.isBlank()) {
-            _state.update { it.copy(message = "Poné un nombre para la categoría.") }
+            _state.update { it.copy(message = strings.get(R.string.msg_category_name_required)) }
             return
         }
         if (isReservedCategoryName(clean)) {
-            _state.update { it.copy(message = "Ese nombre está reservado. Elegí otro.") }
+            _state.update { it.copy(message = strings.get(R.string.msg_name_reserved)) }
             return
         }
         if (_state.value.isDemo) {
@@ -614,7 +697,7 @@ class MainViewModel(
                     adminWallpapers = it.adminWallpapers.map { w ->
                         if (w.categoryId == categoryId) w.copy(category = clean) else w
                     },
-                    message = "Categoría actualizada.",
+                    message = strings.get(R.string.msg_category_updated),
                 )
             }
             return
@@ -635,7 +718,50 @@ class MainViewModel(
                         adminWallpapers = it.adminWallpapers.map { w ->
                             if (w.categoryId == categoryId) w.copy(category = updated.name) else w
                         },
-                        message = "Categoría renombrada.",
+                        message = strings.get(R.string.msg_category_renamed),
+                    )
+                }
+            } catch (error: Exception) {
+                handleBulkFailure(error)
+            }
+        }
+    }
+
+    fun moveCategory(categoryId: String, direction: Int) {
+        if (direction == 0) return
+        val ordered = _state.value.categories.sortedBy { it.position }
+        val index = ordered.indexOfFirst { it.id == categoryId }
+        if (index < 0) return
+        val targetIndex = index + direction
+        if (targetIndex !in ordered.indices) return
+
+        val reordered = ordered.toMutableList().apply {
+            val item = removeAt(index)
+            add(targetIndex, item)
+        }.mapIndexed { position, category -> category.copy(position = position) }
+        val oldPositions = ordered.associate { it.id to it.position }
+        val changed = reordered.filter { oldPositions[it.id] != it.position }
+
+        if (_state.value.isDemo) {
+            _state.update {
+                it.copy(
+                    categories = reordered,
+                    message = strings.get(R.string.msg_order_updated),
+                )
+            }
+            return
+        }
+        viewModelScope.launch {
+            _state.update { it.copy(studioBusy = true) }
+            try {
+                changed.forEach { category ->
+                    api.updateCategory(category.id, category.name, category.position)
+                }
+                _state.update {
+                    it.copy(
+                        studioBusy = false,
+                        categories = reordered,
+                        message = strings.get(R.string.msg_order_updated),
                     )
                 }
             } catch (error: Exception) {
@@ -651,8 +777,11 @@ class MainViewModel(
         if (affected.isNotEmpty() && target == null) {
             _state.update {
                 it.copy(
-                    message = "La categoría \"${category.name}\" tiene ${affected.size} fondos. " +
-                        "Reasignalos antes de borrarla.",
+                    message = strings.get(
+                        R.string.msg_category_delete_blocked,
+                        category.name,
+                        affected.size,
+                    ),
                 )
             }
             return
@@ -675,7 +804,7 @@ class MainViewModel(
                             w
                         }
                     },
-                    message = "Categoría \"${category.name}\" eliminada.",
+                    message = strings.get(R.string.msg_category_deleted, category.name),
                 )
             }
             return
@@ -706,7 +835,7 @@ class MainViewModel(
                                 w
                             }
                         },
-                        message = "Categoría \"${category.name}\" eliminada.",
+                        message = strings.get(R.string.msg_category_deleted, category.name),
                     )
                 }
             } catch (error: Exception) {
@@ -720,31 +849,41 @@ class MainViewModel(
         title: String,
         category: String,
         categoryId: String?,
+        author: String,
         tags: List<String>,
         featured: Boolean,
     ) {
         val cleanTags = tags.map { it.trim() }
             .filter { it.isNotBlank() }
             .distinctBy { it.lowercase() }
+        val cleanAuthor = author.trim().ifBlank { "DannX" }.take(60)
+        val current = _state.value.studioWallpapers.firstOrNull { it.id == wallpaperId }
+        val nextFeaturedPosition = when {
+            current == null -> 0
+            featured && !current.featured ->
+                (_state.value.studioWallpapers.filter { it.featured }
+                    .maxOfOrNull { it.featuredPosition } ?: -1) + 1
+            else -> current.featuredPosition
+        }
         if (_state.value.isDemo) {
             // En demo los archivados solo están en studioWallpapers. Antes se
             // buscaban en wallpapers y editarlos no hacía nada.
-            val updated = _state.value.studioWallpapers.firstOrNull { it.id == wallpaperId }
-                ?.copy(
-                    title = title,
-                    category = category,
-                    categoryId = categoryId,
-                    tags = cleanTags,
-                    featured = featured,
-                )
-                ?: return
+            val updated = current?.copy(
+                title = title,
+                category = category,
+                categoryId = categoryId,
+                author = cleanAuthor,
+                tags = cleanTags,
+                featured = featured,
+                featuredPosition = nextFeaturedPosition,
+            ) ?: return
             _state.update {
                 it.copy(
                     wallpapers = it.wallpapers.map { w -> if (w.id == wallpaperId) updated else w },
                     adminWallpapers = it.adminWallpapers.map { w ->
                         if (w.id == wallpaperId) updated else w
                     },
-                    message = "Fondo actualizado.",
+                    message = strings.get(R.string.msg_wallpaper_updated),
                 )
             }
             return
@@ -757,8 +896,10 @@ class MainViewModel(
                     title = title,
                     category = category,
                     categoryId = categoryId,
+                    author = cleanAuthor,
                     tags = cleanTags,
                     featured = featured,
+                    featuredPosition = nextFeaturedPosition,
                 )
                 _state.update {
                     it.copy(
@@ -769,7 +910,7 @@ class MainViewModel(
                         adminWallpapers = it.adminWallpapers.map { w ->
                             if (w.id == wallpaperId) updated else w
                         },
-                        message = "Fondo actualizado.",
+                        message = strings.get(R.string.msg_wallpaper_updated),
                     )
                 }
             } catch (error: Exception) {
@@ -790,7 +931,7 @@ class MainViewModel(
                     adminWallpapers = it.adminWallpapers.map { w ->
                         if (w.id == wallpaperId) updated else w
                     },
-                    message = "Imagen actualizada.",
+                    message = strings.get(R.string.msg_image_updated),
                 )
             }
             return
@@ -808,7 +949,7 @@ class MainViewModel(
                         adminWallpapers = it.adminWallpapers.map { w ->
                             if (w.id == wallpaperId) updated else w
                         },
-                        message = "Imagen reemplazada.",
+                        message = strings.get(R.string.msg_image_replaced),
                     )
                 }
             } catch (error: Exception) {
@@ -822,23 +963,24 @@ class MainViewModel(
     fun archiveWallpaper(wallpaperId: String, archived: Boolean) {
         if (_state.value.isDemo) {
             _state.update {
-                val adminUpdated = it.adminWallpapers.map { w ->
-                    if (w.id == wallpaperId) {
-                        w.copy(archivedAt = if (archived) "local" else "")
-                    } else {
-                        w
-                    }
-                }
+                val target = it.studioWallpapers.firstOrNull { w -> w.id == wallpaperId }
+                    ?: return@update it
+                val updated = target.copy(archivedAt = if (archived) "local" else "")
+                val adminUpdated = (it.adminWallpapers.filterNot { w -> w.id == wallpaperId } +
+                    updated).distinctBy { w -> w.id }
                 it.copy(
                     adminWallpapers = adminUpdated,
                     wallpapers = if (archived) {
                         it.wallpapers.filterNot { w -> w.id == wallpaperId }
                     } else {
-                        it.wallpapers + adminUpdated.filter { w ->
-                            w.id == wallpaperId && !w.isArchived
-                        }
+                        (it.wallpapers.filterNot { w -> w.id == wallpaperId } + updated)
+                            .distinctBy { w -> w.id }
                     },
-                    message = if (archived) "Fondo archivado." else "Fondo restaurado.",
+                    message = if (archived) {
+                        strings.get(R.string.msg_wallpaper_archived)
+                    } else {
+                        strings.get(R.string.msg_wallpaper_restored)
+                    },
                 )
             }
             return
@@ -865,7 +1007,11 @@ class MainViewModel(
                                 w.id == wallpaperId && !w.isArchived
                             }
                         },
-                        message = if (archived) "Fondo archivado." else "Fondo restaurado.",
+                        message = if (archived) {
+                            strings.get(R.string.msg_wallpaper_archived)
+                        } else {
+                            strings.get(R.string.msg_wallpaper_restored)
+                        },
                     )
                 }
             } catch (error: Exception) {
@@ -877,18 +1023,78 @@ class MainViewModel(
     }
 
     fun deleteWallpaper(wallpaperId: String) {
-        val wallpaper = _state.value.studioWallpapers.firstOrNull { it.id == wallpaperId }
-            ?: _state.value.wallpapers.firstOrNull { it.id == wallpaperId }
-            ?: return
+        softDeleteWallpapers(setOf(wallpaperId))
+    }
+
+    fun softDeleteWallpapers(ids: Set<String>) {
+        val targets = _state.value.studioWallpapers.filter { it.id in ids }
+        if (targets.isEmpty()) return
+        val message = if (targets.size == 1) {
+            strings.get(R.string.msg_wallpaper_trashed)
+        } else {
+            strings.get(R.string.msg_wallpapers_trashed)
+        }
+        if (_state.value.isDemo) {
+            _state.update {
+                it.withTrash(targets, message)
+            }
+            return
+        }
+        viewModelScope.launch {
+            _state.update { it.copy(studioBusy = true) }
+            try {
+                api.softDeleteWallpapers(targets.map { it.id })
+                _state.update {
+                    it.withTrash(targets, message).copy(studioBusy = false)
+                }
+            } catch (error: Exception) {
+                handleBulkFailure(error)
+            }
+        }
+    }
+
+    fun restoreWallpapers(ids: Set<String>) {
+        val targets = _state.value.trashWallpapers.filter { it.id in ids }
+        if (targets.isEmpty()) return
+        val restored = targets.map { it.copy(deletedAt = "") }
+        val message = strings.get(R.string.msg_wallpapers_restored)
+        if (_state.value.isDemo) {
+            _state.update { it.withRestored(restored, message) }
+            return
+        }
+        viewModelScope.launch {
+            _state.update { it.copy(studioBusy = true) }
+            try {
+                api.restoreWallpapers(targets.map { it.id })
+                _state.update {
+                    it.withRestored(restored, message).copy(studioBusy = false)
+                }
+            } catch (error: Exception) {
+                handleBulkFailure(error)
+            }
+        }
+    }
+
+    fun purgeWallpaper(wallpaperId: String) {
+        val wallpaper = _state.value.trashWallpapers.firstOrNull { it.id == wallpaperId } ?: return
+        purgeWallpapers(listOf(wallpaper))
+    }
+
+    fun emptyTrash() {
+        purgeWallpapers(_state.value.trashWallpapers)
+    }
+
+    private fun purgeWallpapers(targets: List<Wallpaper>) {
+        if (targets.isEmpty()) return
+        val ids = targets.map { it.id }.toSet()
         if (_state.value.isDemo) {
             _state.update {
                 it.copy(
-                    wallpapers = it.wallpapers.filterNot { w -> w.id == wallpaperId },
-                    adminWallpapers = it.adminWallpapers.filterNot { w -> w.id == wallpaperId },
+                    trashWallpapers = it.trashWallpapers.filterNot { w -> w.id in ids },
                     collectionItems = it.collectionItems.map { c ->
-                        c.copy(wallpaperIds = c.wallpaperIds - wallpaperId)
+                        c.copy(wallpaperIds = c.wallpaperIds.filterNot { id -> id in ids })
                     },
-                    message = "Fondo eliminado definitivamente.",
+                    message = strings.get(R.string.msg_trash_emptied),
                 )
             }
             return
@@ -896,24 +1102,196 @@ class MainViewModel(
         viewModelScope.launch {
             _state.update { it.copy(studioBusy = true) }
             try {
-                api.deleteWallpaper(wallpaper)
+                targets.forEach { api.deleteWallpaper(it) }
                 _state.update {
                     it.copy(
                         studioBusy = false,
-                        wallpapers = it.wallpapers.filterNot { w -> w.id == wallpaperId },
-                        adminWallpapers = it.adminWallpapers.filterNot { w -> w.id == wallpaperId },
+                        trashWallpapers = it.trashWallpapers.filterNot { w -> w.id in ids },
                         collectionItems = it.collectionItems.map { c ->
-                            c.copy(wallpaperIds = c.wallpaperIds - wallpaperId)
+                            c.copy(wallpaperIds = c.wallpaperIds.filterNot { id -> id in ids })
                         },
-                        message = "Fondo eliminado definitivamente.",
+                        message = strings.get(R.string.msg_trash_emptied),
                     )
                 }
             } catch (error: Exception) {
-                _state.update {
-                    it.afterError(error)
-                }
+                handleBulkFailure(error)
             }
         }
+    }
+
+    fun bulkSetFeatured(ids: Set<String>, featured: Boolean) {
+        val targets = _state.value.studioWallpapers.filter { it.id in ids }
+        if (targets.isEmpty()) return
+        var next = (_state.value.studioWallpapers
+            .filter { it.featured && !it.isDeleted }
+            .maxOfOrNull { it.featuredPosition } ?: -1) + 1
+        val updated = targets.associate { wallpaper ->
+            wallpaper.id to wallpaper.copy(
+                featured = featured,
+                featuredPosition = if (featured && !wallpaper.featured) {
+                    next++
+                } else {
+                    wallpaper.featuredPosition
+                },
+            )
+        }
+        val message = strings.get(R.string.msg_wallpapers_updated)
+        if (_state.value.isDemo) {
+            _state.update {
+                it.copy(
+                    wallpapers = it.wallpapers.map { w -> updated[w.id] ?: w },
+                    adminWallpapers = it.adminWallpapers.map { w -> updated[w.id] ?: w },
+                    message = message,
+                )
+            }
+            return
+        }
+        viewModelScope.launch {
+            _state.update { it.copy(studioBusy = true) }
+            try {
+                api.bulkSetFeatured(targets.map { it.id }, featured)
+                _state.update {
+                    it.copy(
+                        studioBusy = false,
+                        wallpapers = it.wallpapers.map { w -> updated[w.id] ?: w },
+                        adminWallpapers = it.adminWallpapers.map { w -> updated[w.id] ?: w },
+                        message = message,
+                    )
+                }
+            } catch (error: Exception) {
+                handleBulkFailure(error)
+            }
+        }
+    }
+
+    fun bulkSetArchived(ids: Set<String>, archived: Boolean) {
+        val targets = _state.value.studioWallpapers.filter { it.id in ids }
+        if (targets.isEmpty()) return
+        if (_state.value.isDemo) {
+            _state.update {
+                it.withBulkArchived(targets, archived).copy(
+                    message = if (archived) {
+                        strings.get(R.string.msg_wallpapers_archived)
+                    } else {
+                        strings.get(R.string.msg_wallpapers_restored)
+                    },
+                )
+            }
+            return
+        }
+        viewModelScope.launch {
+            _state.update { it.copy(studioBusy = true) }
+            try {
+                api.bulkSetArchived(targets.map { it.id }, archived)
+                _state.update {
+                    it.withBulkArchived(targets, archived).copy(
+                        studioBusy = false,
+                        message = if (archived) {
+                            strings.get(R.string.msg_wallpapers_archived)
+                        } else {
+                            strings.get(R.string.msg_wallpapers_restored)
+                        },
+                    )
+                }
+            } catch (error: Exception) {
+                handleBulkFailure(error)
+            }
+        }
+    }
+
+    fun bulkDeleteWallpapers(ids: Set<String>) {
+        softDeleteWallpapers(ids)
+    }
+
+    fun bulkSetCategory(ids: Set<String>, categoryId: String) {
+        val category = _state.value.categories.firstOrNull { it.id == categoryId } ?: return
+        val targets = _state.value.studioWallpapers.filter { it.id in ids }
+        if (targets.isEmpty()) return
+        if (_state.value.isDemo) {
+            val updated = targets.associate { wallpaper ->
+                wallpaper.id to wallpaper.copy(
+                    category = category.name,
+                    categoryId = category.id,
+                )
+            }
+            _state.update {
+                it.copy(
+                    wallpapers = it.wallpapers.map { w -> updated[w.id] ?: w },
+                    adminWallpapers = it.adminWallpapers.map { w -> updated[w.id] ?: w },
+                    message = strings.get(
+                        R.string.msg_wallpapers_category_updated,
+                        category.name,
+                    ),
+                )
+            }
+            return
+        }
+        viewModelScope.launch {
+            _state.update { it.copy(studioBusy = true) }
+            try {
+                api.bulkSetCategory(targets.map { it.id }, category.id)
+                val updated = targets.associate { wallpaper ->
+                    wallpaper.id to wallpaper.copy(
+                        category = category.name,
+                        categoryId = category.id,
+                    )
+                }
+                _state.update {
+                    it.copy(
+                        studioBusy = false,
+                        wallpapers = it.wallpapers.map { w -> updated[w.id] ?: w },
+                        adminWallpapers = it.adminWallpapers.map { w -> updated[w.id] ?: w },
+                        message = strings.get(
+                            R.string.msg_wallpapers_category_updated,
+                            category.name,
+                        ),
+                    )
+                }
+            } catch (error: Exception) {
+                handleBulkFailure(error)
+            }
+        }
+    }
+
+    fun reorderFeatured(orderedIds: List<String>) {
+        val ids = orderedIds.distinct()
+        if (ids.isEmpty()) return
+        if (_state.value.isDemo) {
+            _state.update {
+                it.withFeaturedOrder(ids).copy(message = strings.get(R.string.msg_order_updated))
+            }
+            return
+        }
+        viewModelScope.launch {
+            _state.update { it.copy(studioBusy = true) }
+            try {
+                api.reorderFeatured(ids)
+                _state.update {
+                    it.withFeaturedOrder(ids).copy(
+                        studioBusy = false,
+                        message = strings.get(R.string.msg_order_updated),
+                    )
+                }
+            } catch (error: Exception) {
+                handleBulkFailure(error)
+            }
+        }
+    }
+
+    fun moveFeatured(wallpaperId: String, direction: Int) {
+        if (direction == 0) return
+        val ordered = _state.value.studioWallpapers
+            .filter { it.featured && !it.isArchived }
+            .sortedBy { it.featuredPosition }
+        val index = ordered.indexOfFirst { it.id == wallpaperId }
+        if (index < 0) return
+        val targetIndex = index + direction
+        if (targetIndex !in ordered.indices) return
+        val ids = ordered.toMutableList().apply {
+            val item = removeAt(index)
+            add(targetIndex, item)
+        }.map { it.id }
+        reorderFeatured(ids)
     }
 
     fun updateCollection(
@@ -924,7 +1302,7 @@ class MainViewModel(
     ) {
         val clean = name.trim()
         if (clean.isBlank()) {
-            _state.update { it.copy(message = "Poné un nombre para la colección.") }
+            _state.update { it.copy(message = strings.get(R.string.msg_collection_name_required)) }
             return
         }
         if (_state.value.isDemo) {
@@ -937,7 +1315,7 @@ class MainViewModel(
                     }
                 }
                 prefs.saveLocalCollections(updated)
-                it.copy(collectionItems = updated, message = "Colección actualizada.")
+                it.copy(collectionItems = updated, message = strings.get(R.string.msg_collection_updated))
             }
             return
         }
@@ -964,7 +1342,7 @@ class MainViewModel(
                                 c
                             }
                         },
-                        message = "Colección actualizada.",
+                        message = strings.get(R.string.msg_collection_updated),
                     )
                 }
             } catch (error: Exception) {
@@ -981,7 +1359,7 @@ class MainViewModel(
                     if (c.id == collectionId) c.copy(wallpaperIds = wallpaperIds) else c
                 }
                 prefs.saveLocalCollections(updated)
-                it.copy(collectionItems = updated, message = "Orden actualizado.")
+                it.copy(collectionItems = updated, message = strings.get(R.string.msg_order_updated))
             }
             return
         }
@@ -995,7 +1373,7 @@ class MainViewModel(
                         collectionItems = it.collectionItems.map { c ->
                             if (c.id == collectionId) c.copy(wallpaperIds = wallpaperIds) else c
                         },
-                        message = "Orden actualizado.",
+                        message = strings.get(R.string.msg_order_updated),
                     )
                 }
             } catch (error: Exception) {
@@ -1009,7 +1387,7 @@ class MainViewModel(
         val clean = tag.trim().take(40)
         if (clean.isBlank() || wallpaperIds.isEmpty()) {
             _state.update {
-                it.copy(message = "Elegí un nombre y al menos un fondo.")
+                it.copy(message = strings.get(R.string.msg_pick_name_and_wallpaper))
             }
             return
         }
@@ -1032,7 +1410,7 @@ class MainViewModel(
                             w
                         }
                     },
-                    message = "Tag \"$clean\" aplicado.",
+                    message = strings.get(R.string.msg_tag_applied, clean),
                 )
             }
             return
@@ -1058,7 +1436,7 @@ class MainViewModel(
                                 w
                             }
                         },
-                        message = "Tag \"$clean\" aplicado.",
+                        message = strings.get(R.string.msg_tag_applied, clean),
                     )
                 }
             } catch (error: Exception) {
@@ -1071,7 +1449,7 @@ class MainViewModel(
         val old = oldTag.trim()
         val new = newTag.trim().take(40)
         if (old.isBlank() || new.isBlank()) {
-            _state.update { it.copy(message = "Elegí el tag que querés reemplazar.") }
+            _state.update { it.copy(message = strings.get(R.string.msg_tag_replace_required)) }
             return
         }
         val rename: (List<String>) -> List<String> = { tags ->
@@ -1095,7 +1473,7 @@ class MainViewModel(
                             w
                         }
                     },
-                    message = "Tag \"$old\" renombrado a \"$new\".",
+                    message = strings.get(R.string.msg_tag_renamed, old, new),
                 )
             }
             return
@@ -1121,7 +1499,7 @@ class MainViewModel(
                                 w
                             }
                         },
-                        message = "Tag \"$old\" renombrado a \"$new\".",
+                        message = strings.get(R.string.msg_tag_renamed, old, new),
                     )
                 }
             } catch (error: Exception) {
@@ -1153,7 +1531,7 @@ class MainViewModel(
                             w
                         }
                     },
-                    message = "Tag \"$clean\" eliminado.",
+                    message = strings.get(R.string.msg_tag_deleted, clean),
                 )
             }
             return
@@ -1179,7 +1557,7 @@ class MainViewModel(
                                 w
                             }
                         },
-                        message = "Tag \"$clean\" eliminado.",
+                        message = strings.get(R.string.msg_tag_deleted, clean),
                     )
                 }
             } catch (error: Exception) {
@@ -1191,7 +1569,7 @@ class MainViewModel(
     fun createCollection(name: String, description: String, isPublic: Boolean) {
         val cleanName = name.trim()
         if (cleanName.isBlank()) {
-            _state.update { it.copy(message = "Poné un nombre para la colección.") }
+            _state.update { it.copy(message = strings.get(R.string.msg_collection_name_required)) }
             return
         }
         if (_state.value.isDemo) {
@@ -1200,7 +1578,7 @@ class MainViewModel(
                 name = cleanName,
                 description = description.trim(),
                 ownerId = "local",
-                ownerName = "Vos",
+                ownerName = strings.get(R.string.owner_you),
                 isPublic = isPublic,
             )
             val updated = listOf(created) + _state.value.collectionItems
@@ -1208,14 +1586,14 @@ class MainViewModel(
             _state.update {
                 it.copy(
                     collectionItems = updated,
-                    message = "Colección \"$cleanName\" creada.",
+                    message = strings.get(R.string.msg_collection_created, cleanName),
                 )
             }
             return
         }
         val session = _state.value.session
         if (session == null) {
-            _state.update { it.copy(message = "Iniciá sesión en Estudio para crear colecciones.") }
+            _state.update { it.copy(message = strings.get(R.string.msg_login_to_create_collections)) }
             return
         }
         viewModelScope.launch {
@@ -1226,7 +1604,7 @@ class MainViewModel(
                     it.copy(
                         collectionBusy = false,
                         collectionItems = listOf(created) + it.collectionItems,
-                        message = "Colección \"$cleanName\" creada.",
+                        message = strings.get(R.string.msg_collection_created, cleanName),
                     )
                 }
             } catch (error: Exception) {
@@ -1238,7 +1616,7 @@ class MainViewModel(
     fun addToCollection(collectionId: String, wallpaper: Wallpaper) {
         val target = _state.value.collectionItems.firstOrNull { it.id == collectionId } ?: return
         if (wallpaper.id in target.wallpaperIds) {
-            _state.update { it.copy(message = "Ya está en ${target.name}.") }
+            _state.update { it.copy(message = strings.get(R.string.msg_already_in_collection, target.name)) }
             return
         }
         if (_state.value.isDemo) {
@@ -1253,13 +1631,13 @@ class MainViewModel(
             _state.update {
                 it.copy(
                     collectionItems = updated,
-                    message = "Guardado en ${target.name}.",
+                    message = strings.get(R.string.msg_saved_in_collection, target.name),
                 )
             }
             return
         }
         if (_state.value.session == null) {
-            _state.update { it.copy(message = "Iniciá sesión en Estudio para guardar en colecciones.") }
+            _state.update { it.copy(message = strings.get(R.string.msg_login_to_save)) }
             return
         }
         viewModelScope.launch {
@@ -1277,7 +1655,7 @@ class MainViewModel(
                     it.copy(
                         collectionBusy = false,
                         collectionItems = updated,
-                        message = "Guardado en ${target.name}.",
+                        message = strings.get(R.string.msg_saved_in_collection, target.name),
                     )
                 }
             } catch (error: Exception) {
@@ -1298,12 +1676,12 @@ class MainViewModel(
             }
             prefs.saveLocalCollections(updated)
             _state.update {
-                it.copy(collectionItems = updated, message = "Fondo quitado de la colección.")
+                it.copy(collectionItems = updated, message = strings.get(R.string.msg_removed_from_collection))
             }
             return
         }
         if (_state.value.session == null) {
-            _state.update { it.copy(message = "Iniciá sesión en Estudio para editar colecciones.") }
+            _state.update { it.copy(message = strings.get(R.string.msg_login_to_edit_collections)) }
             return
         }
         viewModelScope.launch {
@@ -1321,7 +1699,7 @@ class MainViewModel(
                     it.copy(
                         collectionBusy = false,
                         collectionItems = updated,
-                        message = "Fondo quitado de la colección.",
+                        message = strings.get(R.string.msg_removed_from_collection),
                     )
                 }
             } catch (error: Exception) {
@@ -1350,13 +1728,13 @@ class MainViewModel(
             _state.update {
                 it.copy(
                     collectionItems = updated,
-                    message = "Colección \"${target.name}\" actualizada.",
+                    message = strings.get(R.string.msg_collection_renamed, target.name),
                 )
             }
             return
         }
         if (_state.value.session == null) {
-            _state.update { it.copy(message = "Iniciá sesión en Estudio para editar colecciones.") }
+            _state.update { it.copy(message = strings.get(R.string.msg_login_to_edit_collections)) }
             return
         }
         viewModelScope.launch {
@@ -1373,7 +1751,7 @@ class MainViewModel(
                                 collection
                             }
                         },
-                        message = "Colección \"${target.name}\" actualizada.",
+                        message = strings.get(R.string.msg_collection_renamed, target.name),
                     )
                 }
             } catch (error: CancellationException) {
@@ -1394,13 +1772,13 @@ class MainViewModel(
             _state.update {
                 it.copy(
                     collectionItems = updated,
-                    message = "Colección \"${target.name}\" eliminada.",
+                    message = strings.get(R.string.msg_collection_deleted, target.name),
                 )
             }
             return
         }
         if (_state.value.session == null) {
-            _state.update { it.copy(message = "Iniciá sesión en Estudio para borrar colecciones.") }
+            _state.update { it.copy(message = strings.get(R.string.msg_login_to_delete_collections)) }
             return
         }
         viewModelScope.launch {
@@ -1411,7 +1789,7 @@ class MainViewModel(
                     it.copy(
                         collectionBusy = false,
                         collectionItems = it.collectionItems.filterNot { c -> c.id == collectionId },
-                        message = "Colección \"${target.name}\" eliminada.",
+                        message = strings.get(R.string.msg_collection_deleted, target.name),
                     )
                 }
             } catch (error: Exception) {
@@ -1459,8 +1837,11 @@ class MainViewModel(
                 _state.update {
                     it.copy(
                         downloadedIds = it.downloadedIds + wallpaper.id,
-                        message = "Guardado en Galería, carpeta Pictures/DannX.",
-                        messageAction = MessageAction(label = "Abrir", uri = uri),
+                        message = strings.get(R.string.msg_saved_gallery),
+                        messageAction = MessageAction(
+                            label = strings.get(R.string.action_open),
+                            uri = uri,
+                        ),
                     )
                 }
             } catch (error: CancellationException) {
@@ -1490,7 +1871,7 @@ class MainViewModel(
             } catch (error: Exception) {
                 _state.update {
                     it.copy(
-                        message = "No se pudo aplicar el fondo. Probá de nuevo.",
+                        message = strings.get(R.string.msg_apply_failed),
                     )
                 }
             }
@@ -1506,9 +1887,24 @@ class MainViewModel(
     }
 
     private fun appliedMessage(target: WallpaperTarget): String = when (target) {
-        WallpaperTarget.SYSTEM -> "Listo, tu fondo de pantalla cambió."
-        WallpaperTarget.LOCK -> "Listo, cambiaste el fondo del bloqueo."
-        WallpaperTarget.BOTH -> "Listo, cambiaste el fondo de inicio y del bloqueo."
+        WallpaperTarget.SYSTEM -> strings.get(R.string.msg_applied_system)
+        WallpaperTarget.LOCK -> strings.get(R.string.msg_applied_lock)
+        WallpaperTarget.BOTH -> strings.get(R.string.msg_applied_both)
+    }
+
+    /** Mensaje localizado para el usuario, sin texto crudo del servidor. */
+    private fun Throwable.userMessage(): String = when (kind()) {
+        ErrorKind.OFFLINE -> strings.get(R.string.error_offline)
+        ErrorKind.SERVER -> strings.get(R.string.error_server)
+        ErrorKind.SESSION -> strings.get(R.string.error_session)
+        ErrorKind.PERMISSION -> strings.get(R.string.error_permission)
+        ErrorKind.UNEXPECTED -> strings.get(R.string.error_unexpected)
+    }
+
+    /** Los fallos de carga conservan un mensaje específico para el Estudio. */
+    private fun Throwable.uploadMessage(): String = when (kind()) {
+        ErrorKind.UNEXPECTED -> strings.get(R.string.msg_upload_failed)
+        else -> userMessage()
     }
 
     fun cancelAction() {
@@ -1530,7 +1926,7 @@ class MainViewModel(
             } catch (error: Exception) {
                 _state.update {
                     it.copy(
-                        message = "No se pudo preparar la imagen para compartir.",
+                        message = strings.get(R.string.msg_share_failed),
                     )
                 }
             }
@@ -1567,7 +1963,7 @@ class MainViewModel(
                 themeMode = ThemeMode.SYSTEM,
                 liteMode = false,
                 openEditorOnApply = true,
-                message = "Ajustes restablecidos.",
+                message = strings.get(R.string.msg_settings_reset),
                 messageAction = null,
             )
         }
@@ -1578,7 +1974,9 @@ class MainViewModel(
         viewModelScope.launch {
             cache.writeWallpapers(emptyList())
             cache.writeCollections(emptyList())
-            _state.update { it.copy(message = "Caché borrada.", messageAction = null) }
+            _state.update {
+                it.copy(message = strings.get(R.string.msg_cache_cleared), messageAction = null)
+            }
         }
     }
 
@@ -1683,17 +2081,98 @@ class MainViewModel(
             fallback
         }
 
+    private suspend fun loadAppSettingsOrFallback(fallback: AppSettings): AppSettings =
+        try {
+            val settings = api.loadAppSettings().normalized()
+            prefs.saveAppSettings(settings)
+            settings
+        } catch (error: CancellationException) {
+            throw error
+        } catch (error: Exception) {
+            fallback
+        }
+
     private fun isReservedCategoryName(name: String): Boolean =
         name.equals("Todos", ignoreCase = true) ||
-            name.equals("Destacados", ignoreCase = true)
+            name.equals("Destacados", ignoreCase = true) ||
+            name.equals("All", ignoreCase = true) ||
+            name.equals("Featured", ignoreCase = true) ||
+            name == CategoryAll ||
+            name == CategoryFeatured
+
+    private fun UiState.withBulkArchived(
+        targets: List<Wallpaper>,
+        archived: Boolean,
+    ): UiState {
+        val updated = targets.associate { wallpaper ->
+            wallpaper.id to wallpaper.copy(
+                archivedAt = if (archived) "archivado" else "",
+            )
+        }
+        val admin = (adminWallpapers.map { updated[it.id] ?: it } +
+            updated.values.filter { it.isArchived }).distinctBy { it.id }
+        val feed = if (archived) {
+            wallpapers.filterNot { it.id in updated.keys }
+        } else {
+            (wallpapers.filterNot { it.id in updated.keys } +
+                updated.values.filter { !it.isArchived }).distinctBy { it.id }
+        }
+        return copy(adminWallpapers = admin, wallpapers = feed)
+    }
+
+    private fun UiState.withTrash(
+        targets: List<Wallpaper>,
+        message: String,
+    ): UiState {
+        val ids = targets.map { it.id }.toSet()
+        val trashed = targets.map { it.copy(deletedAt = "local") }
+        return copy(
+            wallpapers = wallpapers.filterNot { it.id in ids },
+            adminWallpapers = adminWallpapers.filterNot { it.id in ids },
+            trashWallpapers = (trashWallpapers.filterNot { it.id in ids } + trashed)
+                .distinctBy { it.id },
+            message = message,
+        )
+    }
+
+    private fun UiState.withRestored(
+        restored: List<Wallpaper>,
+        message: String,
+    ): UiState {
+        val ids = restored.map { it.id }.toSet()
+        return copy(
+            adminWallpapers = (adminWallpapers.filterNot { it.id in ids } + restored)
+                .distinctBy { it.id },
+            wallpapers = (wallpapers.filterNot { it.id in ids } +
+                restored.filter { !it.isArchived && !it.isDeleted }).distinctBy { it.id },
+            trashWallpapers = trashWallpapers.filterNot { it.id in ids },
+            message = message,
+        )
+    }
+
+    private fun UiState.withFeaturedOrder(ids: List<String>): UiState {
+        val positions = ids.withIndex().associate { (index, id) -> id to index }
+        val reorder: (List<Wallpaper>) -> List<Wallpaper> = { list ->
+            list.map { wallpaper ->
+                positions[wallpaper.id]?.let { wallpaper.copy(featuredPosition = it) } ?: wallpaper
+            }
+        }
+        return copy(
+            wallpapers = reorder(wallpapers),
+            adminWallpapers = reorder(adminWallpapers),
+        )
+    }
 
     /**
      * Deja la app en un estado coherente después de un error. Si la sesión
      * venció, se oculta el Estudio y se quitan las colecciones privadas.
      */
+    private fun UiState.afterError(error: Throwable): UiState =
+        afterError(error, error.userMessage())
+
     private fun UiState.afterError(
         error: Throwable,
-        message: String = error.userMessage(),
+        message: String,
     ): UiState {
         val expired = error is DannXError.SessionExpired
         val publicCollections = if (expired) {
@@ -1706,6 +2185,7 @@ class MainViewModel(
             messageAction = null,
             session = if (expired) null else session,
             adminWallpapers = if (expired) emptyList() else adminWallpapers,
+            trashWallpapers = if (expired) emptyList() else trashWallpapers,
             collectionItems = publicCollections,
             collections = if (expired) {
                 if (publicCollections.isEmpty()) {
@@ -1740,6 +2220,7 @@ class MainViewModel(
                     actions = WallpaperFiles(application),
                     isOnline = { Connectivity.isOnline(application) },
                     appearance = AppearancePrefs(application),
+                    strings = application.stringResolver(),
                 )
             }
         }
@@ -1755,24 +2236,4 @@ fun Throwable.kind(): ErrorKind = when (this) {
     is DannXError.SessionExpired -> ErrorKind.SESSION
     is DannXError.Forbidden -> ErrorKind.PERMISSION
     else -> ErrorKind.UNEXPECTED
-}
-
-/**
- * Mensaje claro en español para el usuario, sin texto crudo del servidor.
- */
-fun Throwable.userMessage(): String = when (kind()) {
-    ErrorKind.OFFLINE -> "Sin conexión. Revisá tu internet y probá de nuevo."
-    ErrorKind.SERVER -> "El servidor está teniendo problemas. Probá en un momento."
-    ErrorKind.SESSION -> "Tu sesión venció. Volvé a iniciar sesión."
-    ErrorKind.PERMISSION -> "No tenés permiso para esta acción."
-    ErrorKind.UNEXPECTED -> "Algo salió mal. Intentá de nuevo."
-}
-
-/**
- * Mensaje de la carga de wallpapers: la usa el administrador, así que conviene
- * mostrar el motivo real en vez del genérico "algo salió mal".
- */
-fun Throwable.uploadMessage(): String = when (this) {
-    is DannXError.Unexpected -> "No se pudo subir: ${message ?: "error inesperado"}"
-    else -> userMessage()
 }

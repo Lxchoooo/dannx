@@ -23,6 +23,9 @@ env:
   SUPABASE_URL: ${{ secrets.SUPABASE_URL || vars.SUPABASE_URL }}
   SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY || vars.SUPABASE_ANON_KEY }}
 
+permissions:
+  contents: read
+
 jobs:
   # Modo rápido: APK de prueba en cada PR. En main alcanza con la release
   # rolling que publica `publish`; así no se gasta un runner por push.
@@ -32,6 +35,8 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      - uses: gradle/actions/wrapper-validation@8da46b539cd8fe6ab27ca75128919a18d757604c # v6.4.1
 
       - name: Compute version name
         run: |
@@ -100,6 +105,8 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
+      - uses: gradle/actions/wrapper-validation@8da46b539cd8fe6ab27ca75128919a18d757604c # v6.4.1
+
       - uses: actions/setup-java@77dd5b2ce225ea11469928ac317850245a74ae78 # v6.2.0
         with:
           distribution: temurin
@@ -139,6 +146,8 @@ jobs:
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      - uses: gradle/actions/wrapper-validation@8da46b539cd8fe6ab27ca75128919a18d757604c # v6.4.1
 
       - name: Compute version name
         run: |
@@ -203,6 +212,14 @@ jobs:
           if-no-files-found: error
           retention-days: 7
 
+      - name: Upload R8 mapping
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: r8-mapping-${{ github.run_number }}
+          path: app/build/outputs/mapping/release/mapping.txt
+          if-no-files-found: warn
+          retention-days: 30
+
       - name: Remove keystore
         if: always()
         run: rm -f "$RUNNER_TEMP/release-keystore.p12"
@@ -219,7 +236,9 @@ jobs:
     timeout-minutes: 10
     permissions:
       actions: read
+      attestations: write
       contents: write
+      id-token: write
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
@@ -229,6 +248,14 @@ jobs:
           name: DannX-release-${{ github.run_number }}
           path: release
 
+      - name: Generate release notes
+        run: |
+          python3 scripts/release_notes.py > RELEASE_NOTES.md || true
+          if [ ! -s RELEASE_NOTES.md ]; then
+            echo "Compilado y firmado por GitHub Actions. Ver CHANGELOG.md para el detalle." > RELEASE_NOTES.md
+          fi
+          head -20 RELEASE_NOTES.md
+
       - name: Publish APK on tag
         if: github.ref_type == 'tag'
         env:
@@ -237,9 +264,11 @@ jobs:
           APK=$(find release -name 'app-release.apk' -print -quit)
           test -n "$APK"
           cp "$APK" DannX.apk
-          gh release create "$GITHUB_REF_NAME" DannX.apk \
+          sha256sum DannX.apk > DannX.apk.sha256
+          cat DannX.apk.sha256
+          gh release create "$GITHUB_REF_NAME" DannX.apk DannX.apk.sha256 \
             --title "DannX $GITHUB_REF_NAME" \
-            --notes "Compilado y firmado por GitHub Actions." \
+            --notes-file RELEASE_NOTES.md \
             --verify-tag
 
       - name: Publish rolling release
@@ -250,13 +279,19 @@ jobs:
           APK=$(find release -name 'app-release.apk' -print -quit)
           test -n "$APK"
           cp "$APK" DannX.apk
-          NOTES="Compilado y firmado por GitHub Actions desde main."
+          sha256sum DannX.apk > DannX.apk.sha256
+          cat DannX.apk.sha256
           if gh release view latest >/dev/null 2>&1; then
-            gh release upload latest DannX.apk --clobber
-            gh release edit latest --title "DannX · última versión" --notes "$NOTES"
+            gh release upload latest DannX.apk DannX.apk.sha256 --clobber
+            gh release edit latest --title "DannX · última versión" --notes-file RELEASE_NOTES.md
           else
-            gh release create latest DannX.apk \
+            gh release create latest DannX.apk DannX.apk.sha256 \
               --target "$GITHUB_SHA" \
               --title "DannX · última versión" \
-              --notes "$NOTES"
+              --notes-file RELEASE_NOTES.md
           fi
+
+      - name: Attest APK build provenance
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-path: DannX.apk

@@ -6,10 +6,65 @@ trabajo (fases de la hoja de ruta) y al publicar cada versión.
 Sobre el Estudio: la pantalla de publicación es de uso privado. El acceso está
 reservado a administradores y no se detalla en la documentación.
 
-## Sin publicar
+## v1.5.0
+
+### Estudio 1.5: papelera y operaciones atómicas
+
+- Las acciones en lote del Estudio usan RPC de Supabase y se aplican en una sola
+  transacción: destacar, archivar, mover de categoría, eliminar y restaurar.
+  Si una operación falla, no queda un lote a medias.
+- Nueva papelera: eliminar un fondo ya no borra la imagen. El fondo se puede
+  restaurar, borrar definitivamente o vaciar la papelera desde el Estudio.
+- Los fondos eliminados se purgan automáticamente a los 30 días con `pg_cron`.
+  Las rutas de Storage se guardan en `storage_cleanup_queue` y el workflow
+  `cleanup-storage.yml` borra los archivos con la service role key.
+- Las operaciones de lote tienen fallback secuencial si la migración todavía no
+  está aplicada. La papelera sí requiere la migración nueva.
+- “Contenido” suma una vista previa de la portada con la frase, el aviso y los
+  destacados actuales.
+- Nueva migración `docs/migraciones/20261110_studio_trash_bulk.sql` con
+  `deleted_at`, `deleted_by`, RLS, RPCs, cola de limpieza y programación diaria.
+- Tests nuevos para mover a la papelera, restaurar, vaciar y mantener el estado
+  local después de archivar o cambiar de categoría en lote.
+
+### Traducción y editor
+
+- La interfaz completa pasa a `strings.xml` y se traduce al inglés con
+  `values-en`; no quedan textos hardcodeados en las pantallas.
+- `StringResolver` permite resolver cadenas desde los ViewModels y desde capas
+  que no son de Compose.
+- El editor suma desenfoque progresivo real: tres niveles premoldeados, mezcla
+  entre niveles adyacentes y render final sobre una copia de 512 px.
+- El desenfoque se calcula una sola vez por nivel; mover el control no vuelve a
+  difuminar la imagen.
+- Tests nuevos de `EditorBlur` para uniformidad, varianza, alfa y mezcla.
+
+### Documentación y comunidad
+
+- `CONTRIBUTING.md` y `CONTRIBUTING.es.md` con setup, estilo, tests y checklist
+  de pull requests.
+- `CODE_OF_CONDUCT.md` y `CODE_OF_CONDUCT.es.md` con Contributor Covenant 2.1.
+- `SECURITY.md` y `SECURITY.es.md` con el canal privado y las prácticas de
+  seguridad del proyecto.
+- `docs/designs/security-hardening.md` con la checklist de settings de GitHub.
+- `ROADMAP.md` y `ROADMAP.es.md` con prioridades, estado y cosas que no se van a
+  hacer.
+- `PRIVACY.md` y `PRIVACY.es.md`, enlazados desde el README y desde Ajustes.
+- El README deja de mostrar capturas inexistentes; se actualizan con el build
+  1.5.0.
+- Issue templates al día: versión 1.5.0, apartados Editor y Privacidad, y enlace
+  de contribución corregido.
 
 ### Seguridad
 
+- Se agregó CodeQL para Kotlin (`java-kotlin`, build manual) en `main`, en pull
+  requests que toquen la app y en un análisis semanal.
+- Dependency review bloquea pull requests con dependencias de severidad alta.
+- CI valida el `gradle-wrapper.jar` con `gradle/actions/wrapper-validation`.
+- Los releases publican `DannX.apk.sha256` junto al APK para verificar la
+  descarga.
+- Los releases generan una atestación de procedencia (SLSA) para verificar que
+  el APK salió de este repositorio y de este workflow.
 - Se reparó la columna de privacidad de `collections`, que tenía un nombre
   corrupto: ahora es `is_public`. Crear y editar colecciones vuelve a funcionar
   y la privacidad se respeta en el servidor.
@@ -28,6 +83,44 @@ reservado a administradores y no se detalla en la documentación.
 
 ### Mejoras
 
+- Ajustes suma Acerca de (versión, enlaces y licencias de terceros) y un acceso
+  directo a la política de privacidad.
+- En Android 13 o superior, Ajustes incluye “Idioma” y abre el selector de
+  idioma por app para cambiar entre español e inglés sin tocar el teléfono.
+- Acerca de suma “Compartir DannX” con el enlace del repositorio.
+- La búsqueda del feed muestra un botón para borrar el texto cuando hay una
+  consulta activa.
+- El buscador guarda las últimas 8 búsquedas y las ofrece como chips cuando el
+  campo está vacío, con una acción para borrarlas.
+- El Estudio suma un resumen con contadores y accesos rápidos a publicados,
+  archivados y destacados.
+- “Mis fondos” permite buscar, filtrar por categoría o destacados y ordenar por
+  fecha, título o categoría.
+- Cada fondo se puede destacar o quitar de destacados sin abrir el editor, y el
+  Estudio se puede actualizar desde el encabezado.
+- Las categorías se pueden reordenar con flechas y el nuevo orden se guarda en
+  el catálogo.
+- El Estudio suma “Contenido” para editar la frase de portada y el aviso global
+  de la app. Los textos se guardan en `app_settings` y se leen sin sesión.
+- “Mis fondos” permite seleccionar varios fondos y destacarlos, quitarlos de
+  destacados, archivarlos, restaurarlos, moverlos a una categoría o eliminarlos
+  en lote.
+- La edición de un fondo permite cambiar el autor además del título, la
+  categoría, las etiquetas y el destacado.
+- El Estudio suma “Destacados” para ordenar el carrusel con flechas. El orden se
+  guarda en `wallpapers.featured_position` y lo respeta la portada.
+- Nueva migración `docs/migraciones/20261109_app_editing.sql` con
+  `app_settings`, RLS, la columna `featured_position` y su índice.
+- La ficha del fondo suma botones laterales para pasar al fondo anterior o
+  siguiente sin volver al feed.
+- La caché del feed queda acotada a 400 fondos y 100 colecciones para evitar que
+  crezca sin límite.
+- CI publica el `mapping.txt` de R8 como artifact de 30 días para poder leer
+  crashes ofuscados.
+- Las notas de release se generan desde la sección de la versión publicada del
+  CHANGELOG, con un texto de respaldo si la sección está vacía.
+- Tests nuevos de `FeedCache` (tope y archivo corrupto) y `StringResolver`
+  (argumentos y cadenas sin argumentos).
 - Gradle actualizado a 9.9.0; se elimina el aviso de versión obsoleta del CI.
 - El job `debug` corre solo en pull requests: en `main` alcanza con la release
   rolling, así que se ahorra un runner por push.
@@ -36,7 +129,7 @@ reservado a administradores y no se detalla en la documentación.
   herramientas de build.
 - El editor marca su estado y sus filtros como inmutables para reducir
   recomposiciones.
-- El `versionName` de los builds locales pasa a 1.3.0.
+- El `versionName` de los builds locales pasa a 1.5.0.
 - Actualizados `core-splashscreen` 1.2.0, `kotlinx-coroutines-test` 1.11.0 y
   las actions `setup-java` 6.2.0 y `download-artifact` 8.0.2.
 - Se limpiaron los avisos de lint: extensiones KTX en preferencias, URIs y
@@ -251,41 +344,24 @@ reservado a administradores y no se detalla en la documentación.
 - Tests nuevos: geometría de recorte y muestreo (`WallpaperGeometryTest`),
   límites de zoom (`ZoomGeometryTest`).
 
-## Pendiente (siguientes fases)
+## Pendiente
 
-- Fase 3: robustez (estados de carga/vacío/error, modo sin conexión,
-  reintentos, backpressure de sesión, rotación y proceso muerto).
-- Fase 4: rendimiento (paginación del feed, caché con límites, imágenes
-  livianas en la grilla).
-- Fase 5: experiencia de usuario y accesibilidad (strings.xml, "Acerca de",
-  confirmaciones y deshacer).
-- Fase 6: seguridad y privacidad (RLS solo-admin, tokens, `PRIVACY.md`).
-- Fase 7: distribución por APK (keystore propio, tags, checksum, verificador de
-  actualizaciones).
-- Fase 8: pruebas finales (tests de ViewModel y repositorio, lista manual).
+- Capturas de 1.5.0 para `docs/screenshots/` (explorar, detalle, colecciones y
+  favoritos).
+- Probar en un dispositivo el desenfoque progresivo, el cambio de idioma, el
+  modo avión, el proceso muerto, la papelera y la actualización sobre la versión
+  publicada.
+- Revisar la rama `feat/1.5.0` y, cuando esté aprobada, abrir el PR y publicar
+  el tag `v1.5.0`.
 
 ## Estado actual
 
-- Última CI verde: run `39628290733` (commit `218d413`): compila debug y
-  release (R8) y pasan los 39 tests unitarios.
-- APKs para el teléfono en `Descargas/`: `DannX-debug.apk` (65 MB, con el
-  contador de FPS) y `DannX-release.apk` (3.4 MB, el de uso diario).
-- Guía para conectar el backend y publicar wallpapers: `CONECTAR-SUPABASE.md`.
-- **Pendiente de prueba en dispositivo**: modo avión, proceso matado, token
-  vencido, duplicados y el jank del scroll con las nuevas optimizaciones.
-
-- Rama `main` en GitHub, CI verde en cada push (build debug + release con R8 y
-  tests unitarios).
-- Última CI: run `39535976641` (commit `7550243`). Commits de la Fase 2:
-  `d1aec69` (aplicar fondo), `38cacc4` (descarga), `3cad7bf` (zoom), `f9bf48e`
-  (compartir), `7550243` (fix de compilación), `5b09cac` (este changelog).
-- APKs para instalar en el teléfono: `DannX-debug.apk` (65 MB) y
-  `DannX-release.apk` (3.4 MB) en `Descargas/` del almacenamiento compartido.
-- **Pendiente de prueba manual**: aplicar fondo en las tres pantallas, descarga
-  con progreso/cancelación/duplicado, zoom con doble toque y rotación, y
-  compartir la imagen. Nada de eso está verificado en un dispositivo real.
-- **Pendiente de corrección conocido**: la copia de `cache/shared` que se
-  comparte conserva extensión `.img`; apps muy estrictas podrían no inferir el
-  tipo, aunque el intent usa `image/*`.
-- El APK público sigue firmado con el keystore de debug: no distribuir todavía
-  (Fase 7).
+- La actualización 1.5.0 está en la rama `feat/1.5.0`: traducción al inglés,
+  desenfoque progresivo, documentación de comunidad, CodeQL, dependency review,
+  validación del wrapper, checksums, pantalla Acerca de, operaciones en lote
+  atómicas y papelera con purga automática.
+- La compilación y los tests se validan en GitHub Actions; en el teléfono no hay
+  JDK ni Android SDK para correr Gradle.
+- Tests unitarios nuevos: `EditorBlurTest`, `FeedCacheTest` y
+  `StringResolverTest`; `MainViewModelTest` suma los casos de papelera y lotes.
+- El APK de release se firma en CI; el keystore no está en el repositorio.

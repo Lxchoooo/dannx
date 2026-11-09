@@ -3,6 +3,7 @@
 English | [Español](README.es.md)
 
 [![Android CI](https://github.com/Lxchoooo/dannx/actions/workflows/android.yml/badge.svg)](https://github.com/Lxchoooo/dannx/actions/workflows/android.yml)
+[![CodeQL](https://github.com/Lxchoooo/dannx/actions/workflows/codeql.yml/badge.svg)](https://github.com/Lxchoooo/dannx/actions/workflows/codeql.yml)
 ![Android 10+](https://img.shields.io/badge/Android-10%2B-3DDC84?logo=android&logoColor=white)
 ![Kotlin](https://img.shields.io/badge/Kotlin-2.4.21-7F52FF?logo=kotlin&logoColor=white)
 ![Jetpack Compose](https://img.shields.io/badge/Jetpack%20Compose-BOM%202026.09.00-4285F4?logo=jetpackcompose&logoColor=white)
@@ -16,32 +17,28 @@ right after installing.
 
 ## 📸 Screenshots
 
-| Explore | Detail |
-| --- | --- |
-| ![Explore](docs/screenshots/explore.png) | ![Detail](docs/screenshots/detail.png) |
-
-| Collections | Favorites |
-| --- | --- |
-| ![Collections](docs/screenshots/collections.png) | ![Favorites](docs/screenshots/favorites.png) |
-
-> The screenshots live in [`docs/screenshots/`](docs/screenshots/). See the
-> note there if the images are not available yet.
+Screenshots for the current build live in
+[`docs/screenshots/`](docs/screenshots/). The 1.5.0 set is being refreshed; see
+the note there for how to take them.
 
 ## ✨ Features
 
 - Feed with featured wallpapers, search, categories and free-form tags.
 - Collections you create inside the app, public or private.
 - Detail view with pinch zoom, double-tap zoom and pan.
+- Built-in editor with crop, colour adjustments, filters and real progressive
+  blur.
 - Download to the gallery (`Pictures/DannX`) through the system MediaStore.
 - Apply as home screen, lock screen, or both — cropped automatically.
 - Share any wallpaper with other apps.
 - Favourites saved on the device.
+- Spanish and English interface.
 - Adaptive monochrome icon that follows the system theme (Android 13+),
   splash screen and launcher shortcuts.
 - Works offline: the feed you already loaded stays available.
 - Dark and light themes, with dynamic colour on Android 12+.
-- Settings screen: theme (system, light, dark), lite mode, cache reset and a
-  shortcut to the latest release.
+- Settings screen: theme (system, light, dark), lite mode, cache reset, an
+  About section with the privacy policy and a shortcut to the latest release.
 - Detail buttons take the colour of the wallpaper you are looking at.
 - Welcome screens shown once on first launch.
 
@@ -93,6 +90,9 @@ app/src/main/java/com/dannx/walls/
 docs/          # screenshots and documentation assets
 ```
 
+See [CONTRIBUTING.md](CONTRIBUTING.md) for the full development setup, code
+style and pull request checklist.
+
 ## 🗺 Roadmap
 
 The following are **planned** and not available yet:
@@ -102,11 +102,32 @@ The following are **planned** and not available yet:
 - Signed release distributed outside GitHub.
 - A full in-app updater (for now, Settings opens the releases page).
 
+See [ROADMAP.md](ROADMAP.md) for the full priority list and what is already
+done.
+
 ## 🐞 Contributing
 
 Found a bug or have an idea? Open an
 [issue](https://github.com/Lxchoooo/dannx/issues) with the details. Pull
 requests are welcome.
+
+Read [CONTRIBUTING.md](CONTRIBUTING.md) before sending changes. By participating
+you agree to the [Code of Conduct](CODE_OF_CONDUCT.md).
+
+## 🔒 Privacy
+
+DannX does not include analytics, advertising or tracking SDKs. Favourites,
+collections, settings and the offline cache stay on your device. See
+[PRIVACY.md](PRIVACY.md) for the details.
+
+## 🛡 Security
+
+Please do not open a public issue for vulnerabilities. Follow
+[SECURITY.md](SECURITY.md) to report them privately.
+
+Every release ships `DannX.apk.sha256` and a build provenance attestation. After
+downloading, verify the checksum with `sha256sum -c DannX.apk.sha256` or the
+attestation with `gh attestation verify DannX.apk --repo Lxchoooo/dannx`.
 
 ## 📄 License
 

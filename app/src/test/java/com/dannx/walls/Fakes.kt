@@ -2,6 +2,7 @@ package com.dannx.walls
 
 import android.net.Uri
 import com.dannx.walls.data.AdminSession
+import com.dannx.walls.data.AppSettings
 import com.dannx.walls.data.DannXError
 import com.dannx.walls.data.FeedCacheStore
 import com.dannx.walls.data.LocalStore
@@ -29,6 +30,8 @@ class FakeRepository : WallpapersRepository {
     var uploadWarning: String? = null
     var deletedCategory: Triple<String, String?, String?>? = null
     var lastCollectionWallpapers: Pair<String, List<String>>? = null
+    var appSettings = AppSettings()
+    var featuredOrder: List<String>? = null
 
     override val isConfigured: Boolean = true
 
@@ -53,6 +56,13 @@ class FakeRepository : WallpapersRepository {
             throw error
         }
         return collections
+    }
+
+    override suspend fun loadAppSettings(): AppSettings = appSettings
+
+    override suspend fun saveAppSettings(settings: AppSettings): AppSettings {
+        appSettings = settings.normalized()
+        return appSettings
     }
 
     override suspend fun signIn(email: String, password: String): AdminSession =
@@ -84,41 +94,115 @@ class FakeRepository : WallpapersRepository {
         title: String,
         category: String,
         categoryId: String?,
+        author: String,
         tags: List<String>,
         featured: Boolean,
-    ): Wallpaper = wallpapers.firstOrNull { it.id == wallpaperId }
+        featuredPosition: Int,
+    ): Wallpaper = (wallpapers + adminWallpapers.orEmpty())
+        .firstOrNull { it.id == wallpaperId }
         ?.copy(
             title = title,
             category = category,
             categoryId = categoryId,
+            author = author,
             tags = tags,
             featured = featured,
+            featuredPosition = featuredPosition,
         )
         ?: Wallpaper(
             id = wallpaperId,
             title = title,
             category = category,
             categoryId = categoryId,
+            author = author,
             imageUrl = "url",
             tags = tags,
             featured = featured,
+            featuredPosition = featuredPosition,
         )
+
+    override suspend fun reorderFeatured(ids: List<String>) {
+        featuredOrder = ids
+    }
+
+    override suspend fun bulkSetFeatured(ids: List<String>, featured: Boolean) {
+        val selected = ids.toSet()
+        var next = (wallpapers + adminWallpapers.orEmpty())
+            .filter { it.featured && !it.isDeleted }
+            .maxOfOrNull { it.featuredPosition } ?: -1
+        next += 1
+        fun apply(wallpaper: Wallpaper): Wallpaper {
+            if (wallpaper.id !in selected) return wallpaper
+            val position = if (featured && !wallpaper.featured) next++ else wallpaper.featuredPosition
+            return wallpaper.copy(featured = featured, featuredPosition = position)
+        }
+        wallpapers = wallpapers.map(::apply)
+        adminWallpapers = adminWallpapers?.map(::apply)
+    }
+
+    override suspend fun bulkSetArchived(ids: List<String>, archived: Boolean) {
+        val selected = ids.toSet()
+        fun apply(wallpaper: Wallpaper): Wallpaper {
+            if (wallpaper.id !in selected) return wallpaper
+            return wallpaper.copy(
+                archivedAt = if (archived) "archivado" else "",
+            )
+        }
+        wallpapers = wallpapers.map(::apply)
+        adminWallpapers = adminWallpapers?.map(::apply)
+    }
+
+    override suspend fun bulkSetCategory(ids: List<String>, categoryId: String) {
+        val selected = ids.toSet()
+        val category = categories.firstOrNull { it.id == categoryId }
+        fun apply(wallpaper: Wallpaper): Wallpaper {
+            if (wallpaper.id !in selected) return wallpaper
+            return wallpaper.copy(
+                categoryId = categoryId,
+                category = category?.name ?: wallpaper.category,
+            )
+        }
+        wallpapers = wallpapers.map(::apply)
+        adminWallpapers = adminWallpapers?.map(::apply)
+    }
+
+    override suspend fun softDeleteWallpapers(ids: List<String>) {
+        val selected = ids.toSet()
+        fun apply(wallpaper: Wallpaper): Wallpaper {
+            if (wallpaper.id !in selected) return wallpaper
+            return wallpaper.copy(deletedAt = "eliminado")
+        }
+        wallpapers = wallpapers.map(::apply)
+        adminWallpapers = adminWallpapers?.map(::apply)
+    }
+
+    override suspend fun restoreWallpapers(ids: List<String>) {
+        val selected = ids.toSet()
+        fun apply(wallpaper: Wallpaper): Wallpaper {
+            if (wallpaper.id !in selected) return wallpaper
+            return wallpaper.copy(deletedAt = "")
+        }
+        wallpapers = wallpapers.map(::apply)
+        adminWallpapers = adminWallpapers?.map(::apply)
+    }
 
     override suspend fun replaceWallpaperImage(wallpaper: Wallpaper, uri: Uri): Wallpaper =
         wallpaper.copy(imageUrl = uri.toString(), thumbUrl = "")
 
     override suspend fun archiveWallpaper(wallpaperId: String, archived: Boolean) {
-        wallpapers = wallpapers.map {
-            if (it.id == wallpaperId) {
-                it.copy(archivedAt = if (archived) "archived" else "")
+        fun apply(wallpaper: Wallpaper): Wallpaper =
+            if (wallpaper.id == wallpaperId) {
+                wallpaper.copy(archivedAt = if (archived) "archived" else "")
             } else {
-                it
+                wallpaper
             }
-        }
+        wallpapers = wallpapers.map(::apply)
+        adminWallpapers = adminWallpapers?.map(::apply)
     }
 
     override suspend fun deleteWallpaper(wallpaper: Wallpaper) {
         wallpapers = wallpapers.filterNot { it.id == wallpaper.id }
+        adminWallpapers = adminWallpapers?.filterNot { it.id == wallpaper.id }
     }
 
     override suspend fun createCategory(name: String, position: Int): WallpaperCategory =
@@ -179,16 +263,38 @@ class FakeRepository : WallpapersRepository {
 
 class FakeStore : LocalStore {
     private val favoriteIds = mutableSetOf<String>()
+    private val storedSearches = mutableListOf<String>()
     private val downloads = mutableMapOf<String, String>()
     private var collections: List<WallpaperCollection> = emptyList()
     private var storedSession: AdminSession? = null
     private var onboardingDone = false
+    private var storedAppSettings = AppSettings()
 
     override fun favorites(): Set<String> = favoriteIds.toSet()
 
     override fun toggleFavorite(id: String): Set<String> {
         if (!favoriteIds.add(id)) favoriteIds.remove(id)
         return favoriteIds.toSet()
+    }
+
+    override fun recentSearches(): List<String> = storedSearches.toList()
+
+    override fun rememberSearch(query: String) {
+        val normalized = query.trim()
+        if (normalized.isBlank()) return
+        storedSearches.removeAll { it.equals(normalized, ignoreCase = true) }
+        storedSearches.add(0, normalized)
+        while (storedSearches.size > 8) storedSearches.removeAt(storedSearches.lastIndex)
+    }
+
+    override fun clearRecentSearches() {
+        storedSearches.clear()
+    }
+
+    override fun appSettings(): AppSettings = storedAppSettings
+
+    override fun saveAppSettings(settings: AppSettings) {
+        storedAppSettings = settings
     }
 
     override fun session(): AdminSession? = storedSession

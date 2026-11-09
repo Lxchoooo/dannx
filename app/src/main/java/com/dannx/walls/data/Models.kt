@@ -5,6 +5,12 @@ import java.text.Normalizer
 import java.util.Locale
 import kotlinx.serialization.Serializable
 
+/** Valor interno del chip “Todos”. No se muestra tal cual en la interfaz. */
+const val CategoryAll = "__all__"
+
+/** Valor interno del chip “Destacados”. No se muestra tal cual en la interfaz. */
+const val CategoryFeatured = "__featured__"
+
 @Immutable
 data class Wallpaper(
     val id: String,
@@ -16,6 +22,7 @@ data class Wallpaper(
     val width: Int = 0,
     val height: Int = 0,
     val featured: Boolean = false,
+    val featuredPosition: Int = 0,
     val createdAt: String = "",
     val tags: List<String> = emptyList(),
     val categoryId: String? = null,
@@ -23,12 +30,16 @@ data class Wallpaper(
     val createdBy: String = "",
     val updatedAt: String = "",
     val archivedAt: String = "",
+    val deletedAt: String = "",
 ) {
     val thumbnailUrl: String
         get() = thumbUrl.ifBlank { imageUrl }
 
     val isArchived: Boolean
         get() = archivedAt.isNotBlank()
+
+    val isDeleted: Boolean
+        get() = deletedAt.isNotBlank()
 }
 
 @Immutable
@@ -37,6 +48,26 @@ data class WallpaperCategory(
     val name: String,
     val position: Int = 0,
 )
+
+/**
+ * Contenido editable de la portada. Si un texto queda vacío, la app usa el
+ * valor localizado de siempre.
+ */
+@Immutable
+data class AppSettings(
+    val tagline: String = "",
+    val bannerText: String = "",
+    val bannerEnabled: Boolean = false,
+) {
+    fun normalized(): AppSettings {
+        val cleanBanner = bannerText.trim().take(240)
+        return copy(
+            tagline = tagline.trim().take(120),
+            bannerText = cleanBanner,
+            bannerEnabled = bannerEnabled && cleanBanner.isNotBlank(),
+        )
+    }
+}
 
 @Immutable
 data class AdminSession(
@@ -94,8 +125,8 @@ fun filterWallpapers(
     val term = normalize(query)
     return items.filter { wallpaper ->
         val matchesCategory = when (category) {
-            null, "Todos" -> true
-            "Destacados" -> wallpaper.featured
+            null, CategoryAll, "Todos" -> true
+            CategoryFeatured, "Destacados" -> wallpaper.featured
             else -> wallpaper.category.equals(category, ignoreCase = true)
         }
         val matchesTag = tag == null ||

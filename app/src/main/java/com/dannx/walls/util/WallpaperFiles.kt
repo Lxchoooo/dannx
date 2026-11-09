@@ -17,6 +17,7 @@ import android.view.WindowManager
 import androidx.core.content.FileProvider
 import androidx.core.graphics.scale
 import androidx.core.net.toUri
+import com.dannx.walls.R
 import com.dannx.walls.data.Wallpaper
 import com.dannx.walls.data.WallpaperActions
 import java.io.File
@@ -361,7 +362,7 @@ class WallpaperFiles(private val context: Context) : WallpaperActions {
             clipData = ClipData.newRawUri("DannX", uri)
             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
         }
-        val chooser = Intent.createChooser(send, "Compartir fondo").apply {
+        val chooser = Intent.createChooser(send, context.getString(R.string.share_chooser_title)).apply {
             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
             if (context !is Activity) {
                 addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)

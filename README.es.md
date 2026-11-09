@@ -3,6 +3,7 @@
 [English](README.md) | Español
 
 [![Android CI](https://github.com/Lxchoooo/dannx/actions/workflows/android.yml/badge.svg)](https://github.com/Lxchoooo/dannx/actions/workflows/android.yml)
+[![CodeQL](https://github.com/Lxchoooo/dannx/actions/workflows/codeql.yml/badge.svg)](https://github.com/Lxchoooo/dannx/actions/workflows/codeql.yml)
 ![Android 10+](https://img.shields.io/badge/Android-10%2B-3DDC84?logo=android&logoColor=white)
 ![Kotlin](https://img.shields.io/badge/Kotlin-2.4.21-7F52FF?logo=kotlin&logoColor=white)
 ![Jetpack Compose](https://img.shields.io/badge/Jetpack%20Compose-BOM%202026.09.00-4285F4?logo=jetpackcompose&logoColor=white)
@@ -16,32 +17,29 @@ así que funciona apenas la instalás.
 
 ## 📸 Capturas
 
-| Explorar | Detalle |
-| --- | --- |
-| ![Explorar](docs/screenshots/explore.png) | ![Detalle](docs/screenshots/detail.png) |
-
-| Colecciones | Favoritos |
-| --- | --- |
-| ![Colecciones](docs/screenshots/collections.png) | ![Favoritos](docs/screenshots/favorites.png) |
-
-> Las capturas viven en [`docs/screenshots/`](docs/screenshots/). Fijate en la
-> nota de ahí si todavía no están disponibles.
+Las capturas del build actual viven en
+[`docs/screenshots/`](docs/screenshots/). El set de 1.5.0 se está renovando; mirá
+la nota de ahí para saber cómo tomarlas.
 
 ## ✨ Características
 
 - Feed con destacados, búsqueda, categorías y tags libres.
 - Colecciones que creás dentro de la app, públicas o privadas.
 - Vista de detalle con zoom con dos dedos, doble toque y desplazamiento.
+- Editor integrado con encuadre, ajustes de color, filtros y desenfoque
+  progresivo real.
 - Descarga a la galería (`Pictures/DannX`) usando el MediaStore del sistema.
 - Aplicar en pantalla de inicio, pantalla de bloqueo o ambas, recortado solo.
 - Compartir cualquier fondo con otras apps.
 - Favoritos guardados en el teléfono.
+- Interfaz en español e inglés.
 - Ícono adaptativo monocromo que sigue el tema del sistema (Android 13+),
   splash screen y accesos directos en el launcher.
 - Funciona sin conexión: el feed que ya cargaste sigue disponible.
 - Temas claro y oscuro, con color dinámico en Android 12+.
-- Pantalla de ajustes: tema (sistema, claro, oscuro), modo lite, borrar caché y
-  acceso a la última release.
+- Pantalla de ajustes: tema (sistema, claro, oscuro), modo lite, borrar caché,
+  una sección Acerca de con la política de privacidad y acceso a la última
+  release.
 - Los botones del detalle toman el color del fondo que estás mirando.
 - Pantallas de bienvenida que se muestran una sola vez al inicio.
 
@@ -93,6 +91,9 @@ app/src/main/java/com/dannx/walls/
 docs/          # capturas y assets de documentación
 ```
 
+Mirá [CONTRIBUTING.es.md](CONTRIBUTING.es.md) para el setup completo, el estilo
+de código y la checklist de pull requests.
+
 ## 🗺 Hoja de ruta
 
 Todo lo siguiente está **planeado** y todavía no existe:
@@ -103,11 +104,32 @@ Todo lo siguiente está **planeado** y todavía no existe:
 - Actualizador completo dentro de la app (por ahora, Ajustes abre la página de
   releases).
 
+Mirá [ROADMAP.es.md](ROADMAP.es.md) para la lista completa de prioridades y lo
+que ya está hecho.
+
 ## 🐞 Contribuir
 
 ¿Encontraste un bug o tenés una idea? Abrí un
 [issue](https://github.com/Lxchoooo/dannx/issues) con los detalles. Los pull
 requests son bienvenidos.
+
+Leé [CONTRIBUTING.es.md](CONTRIBUTING.es.md) antes de mandar cambios. Al
+participar aceptás el [Código de Conducta](CODE_OF_CONDUCT.es.md).
+
+## 🔒 Privacidad
+
+DannX no incluye analítica, publicidad ni SDKs de seguimiento. Los favoritos, las
+colecciones, los ajustes y la caché offline quedan en tu dispositivo. Mirá
+[PRIVACY.es.md](PRIVACY.es.md) para el detalle.
+
+## 🛡 Seguridad
+
+No abras un issue público para vulnerabilidades. Seguí
+[SECURITY.es.md](SECURITY.es.md) para reportarlas de forma privada.
+
+Cada release incluye `DannX.apk.sha256` y una atestación de procedencia. Después
+de descargarlo, verificá el checksum con `sha256sum -c DannX.apk.sha256` o la
+atestación con `gh attestation verify DannX.apk --repo Lxchoooo/dannx`.
 
 ## 📄 Licencia
 

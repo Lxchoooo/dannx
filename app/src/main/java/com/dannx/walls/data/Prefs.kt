@@ -50,6 +50,40 @@ class Prefs(context: Context) : LocalStore {
         return updated
     }
 
+    override fun recentSearches(): List<String> {
+        val raw = prefs.getString(KEY_RECENT_SEARCHES, null) ?: return emptyList()
+        return runCatching {
+            json.decodeFromString<List<String>>(raw)
+        }.getOrDefault(emptyList())
+    }
+
+    override fun rememberSearch(query: String) {
+        val normalized = query.trim()
+        if (normalized.isBlank()) return
+        val updated = (listOf(normalized) + recentSearches()
+            .filterNot { it.equals(normalized, ignoreCase = true) })
+            .take(MAX_RECENT_SEARCHES)
+        prefs.edit { putString(KEY_RECENT_SEARCHES, json.encodeToString(updated)) }
+    }
+
+    override fun clearRecentSearches() {
+        prefs.edit { remove(KEY_RECENT_SEARCHES) }
+    }
+
+    override fun appSettings(): AppSettings = AppSettings(
+        tagline = prefs.getString(KEY_APP_TAGLINE, null).orEmpty(),
+        bannerText = prefs.getString(KEY_APP_BANNER_TEXT, null).orEmpty(),
+        bannerEnabled = prefs.getBoolean(KEY_APP_BANNER_ENABLED, false),
+    )
+
+    override fun saveAppSettings(settings: AppSettings) {
+        prefs.edit {
+            putString(KEY_APP_TAGLINE, settings.tagline)
+            putString(KEY_APP_BANNER_TEXT, settings.bannerText)
+            putBoolean(KEY_APP_BANNER_ENABLED, settings.bannerEnabled)
+        }
+    }
+
     var accessToken: String?
         get() = sessionPrefs.getString(KEY_ACCESS_TOKEN, null)
         set(value) = sessionPrefs.edit { putString(KEY_ACCESS_TOKEN, value) }
@@ -135,6 +169,10 @@ class Prefs(context: Context) : LocalStore {
 
     private companion object {
         const val KEY_FAVORITES = "favorites"
+        const val KEY_RECENT_SEARCHES = "recent_searches"
+        const val KEY_APP_TAGLINE = "app_tagline"
+        const val KEY_APP_BANNER_TEXT = "app_banner_text"
+        const val KEY_APP_BANNER_ENABLED = "app_banner_enabled"
         const val KEY_ACCESS_TOKEN = "access_token"
         const val KEY_REFRESH_TOKEN = "refresh_token"
         const val KEY_ADMIN_EMAIL = "admin_email"
@@ -142,5 +180,6 @@ class Prefs(context: Context) : LocalStore {
         const val KEY_LOCAL_COLLECTIONS = "local_collections"
         const val KEY_DOWNLOADS = "downloads"
         const val KEY_ONBOARDING_DONE = "onboarding_done"
+        const val MAX_RECENT_SEARCHES = 8
     }
 }

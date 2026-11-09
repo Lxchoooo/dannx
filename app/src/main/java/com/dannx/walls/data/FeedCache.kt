@@ -14,8 +14,13 @@ import kotlinx.serialization.json.Json
  * Guarda en disco el último feed y las colecciones, para poder mostrar
  * contenido cuando no hay conexión.
  */
-class FeedCache(context: Context) : FeedCacheStore {
-    private val folder = context.cacheDir.resolve("feed-cache").apply { mkdirs() }
+class FeedCache internal constructor(private val folder: File) : FeedCacheStore {
+    constructor(context: Context) : this(context.cacheDir.resolve("feed-cache"))
+
+    init {
+        folder.mkdirs()
+    }
+
     private val json = Json { ignoreUnknownKeys = true; encodeDefaults = true }
 
     override suspend fun readWallpapers(): List<Wallpaper> = withContext(Dispatchers.IO) {
@@ -31,7 +36,7 @@ class FeedCache(context: Context) : FeedCacheStore {
     override suspend fun writeWallpapers(items: List<Wallpaper>) {
         withContext(Dispatchers.IO) {
             runCatching {
-                val payload = items.map { CachedWallpaper.from(it) }
+                val payload = items.take(MAX_WALLPAPERS).map { CachedWallpaper.from(it) }
                 writeAtomically(folder.resolve(WALLPAPERS_FILE), json.encodeToString(payload))
             }
         }
@@ -48,7 +53,10 @@ class FeedCache(context: Context) : FeedCacheStore {
     override suspend fun writeCollections(items: List<WallpaperCollection>) {
         withContext(Dispatchers.IO) {
             runCatching {
-                writeAtomically(folder.resolve(COLLECTIONS_FILE), json.encodeToString(items))
+                writeAtomically(
+                    folder.resolve(COLLECTIONS_FILE),
+                    json.encodeToString(items.take(MAX_COLLECTIONS)),
+                )
             }
         }
     }
@@ -77,7 +85,9 @@ class FeedCache(context: Context) : FeedCacheStore {
         }
     }
 
-    private companion object {
+    internal companion object {
+        const val MAX_WALLPAPERS = 400
+        const val MAX_COLLECTIONS = 100
         const val WALLPAPERS_FILE = "wallpapers.json"
         const val COLLECTIONS_FILE = "collections.json"
     }
@@ -94,6 +104,7 @@ private data class CachedWallpaper(
     val width: Int = 0,
     val height: Int = 0,
     val featured: Boolean = false,
+    val featuredPosition: Int = 0,
     val createdAt: String = "",
     val tags: List<String> = emptyList(),
     val categoryId: String? = null,
@@ -101,6 +112,7 @@ private data class CachedWallpaper(
     val createdBy: String = "",
     val updatedAt: String = "",
     val archivedAt: String = "",
+    val deletedAt: String = "",
 ) {
     fun toWallpaper(): Wallpaper = Wallpaper(
         id = id,
@@ -112,6 +124,7 @@ private data class CachedWallpaper(
         width = width,
         height = height,
         featured = featured,
+        featuredPosition = featuredPosition,
         createdAt = createdAt,
         tags = tags,
         categoryId = categoryId,
@@ -119,6 +132,7 @@ private data class CachedWallpaper(
         createdBy = createdBy,
         updatedAt = updatedAt,
         archivedAt = archivedAt,
+        deletedAt = deletedAt,
     )
 
     companion object {
@@ -132,6 +146,7 @@ private data class CachedWallpaper(
             width = wallpaper.width,
             height = wallpaper.height,
             featured = wallpaper.featured,
+            featuredPosition = wallpaper.featuredPosition,
             createdAt = wallpaper.createdAt,
             tags = wallpaper.tags,
             categoryId = wallpaper.categoryId,
@@ -139,6 +154,7 @@ private data class CachedWallpaper(
             createdBy = wallpaper.createdBy,
             updatedAt = wallpaper.updatedAt,
             archivedAt = wallpaper.archivedAt,
+            deletedAt = wallpaper.deletedAt,
         )
     }
 }

@@ -113,7 +113,30 @@ jobs:
                  from pg_proc p
                  join pg_namespace n on n.oid = p.pronamespace
                  where n.nspname = 'public' and p.proname = 'delete_category'
-               )) as delete_category;
+               )) as delete_category,
+              (select count(*)
+               from information_schema.columns
+               where table_schema = 'public'
+                 and table_name = 'wallpapers'
+                 and column_name in ('deleted_at', 'deleted_by')) as trash_columns,
+              (select relrowsecurity
+               from pg_class c
+               join pg_namespace n on n.oid = c.relnamespace
+               where n.nspname = 'public'
+                 and c.relname = 'storage_cleanup_queue') as trash_queue_rls,
+              (select count(*)
+               from pg_proc p
+               join pg_namespace n on n.oid = p.pronamespace
+               where n.nspname = 'public'
+                 and p.proname in (
+                     'bulk_set_featured',
+                     'bulk_set_archived',
+                     'bulk_set_category',
+                     'soft_delete_wallpapers',
+                     'restore_wallpapers',
+                     'reorder_featured',
+                     'purge_expired_wallpapers'
+                 )) as trash_rpcs;
           SQL
           )
           jq -n --arg q "$query" '{query: $q}' > verify.json
@@ -129,5 +152,8 @@ jobs:
             and .collections_rls
             and .items_rls
             and .policies_with_is_public >= 2
-            and .delete_category' verify-response.json > /dev/null
+            and .delete_category
+            and .trash_columns == 2
+            and .trash_queue_rls
+            and .trash_rpcs == 7' verify-response.json > /dev/null
           echo "Esquema y RLS verificados."

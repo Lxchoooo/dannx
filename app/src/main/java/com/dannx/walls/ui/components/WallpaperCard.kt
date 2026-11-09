@@ -43,6 +43,7 @@ import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
@@ -52,6 +53,7 @@ import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import coil.imageLoader
 import coil.request.ImageRequest
+import com.dannx.walls.R
 import com.dannx.walls.data.Wallpaper
 import com.dannx.walls.ui.theme.LocalLiteMode
 
@@ -116,6 +118,12 @@ fun WallpaperCard(
         animationSpec = spring(dampingRatio = 0.6f, stiffness = 650f),
         label = "cardPress",
     )
+    val description = stringResource(
+        R.string.wallpaper_card_description,
+        wallpaper.title,
+        wallpaper.category,
+        wallpaper.author,
+    )
     Box(
         modifier = modifier
             .graphicsLayer {
@@ -127,8 +135,7 @@ fun WallpaperCard(
             // Una sola frase para TalkBack en cada tarjeta, en vez de leer
             // piezas sueltas.
             .semantics(mergeDescendants = true) {
-                contentDescription =
-                    "Fondo ${wallpaper.title}, ${wallpaper.category}, de ${wallpaper.author}"
+                contentDescription = description
             }
             .clickable(interactionSource = interactionSource, indication = null) {
                 onClick()
@@ -197,6 +204,12 @@ fun FeaturedCard(
         animationSpec = spring(dampingRatio = 0.6f, stiffness = 650f),
         label = "featuredPress",
     )
+    val description = stringResource(
+        R.string.wallpaper_featured_description,
+        wallpaper.title,
+        wallpaper.category,
+        wallpaper.author,
+    )
     Box(
         modifier = modifier
             .graphicsLayer {
@@ -206,8 +219,7 @@ fun FeaturedCard(
             .clip(MaterialTheme.shapes.extraLarge)
             .background(MaterialTheme.colorScheme.surfaceVariant)
             .semantics(mergeDescendants = true) {
-                contentDescription =
-                    "Fondo destacado ${wallpaper.title}, ${wallpaper.category}, de ${wallpaper.author}"
+                contentDescription = description
             }
             .clickable(interactionSource = interactionSource, indication = null) {
                 onClick()
@@ -238,7 +250,7 @@ fun FeaturedCard(
             color = Color.White.copy(alpha = 0.22f),
         ) {
             Text(
-                text = "Destacado",
+                text = stringResource(R.string.wallpaper_featured_badge),
                 style = MaterialTheme.typography.labelMedium,
                 color = Color.White,
                 modifier = Modifier.padding(horizontal = 14.dp, vertical = 7.dp),
@@ -345,9 +357,9 @@ private fun FavoriteButton(
                 Icons.Rounded.FavoriteBorder
             },
             contentDescription = if (isFavorite) {
-                "Quitar de favoritos"
+                stringResource(R.string.action_remove_favorite)
             } else {
-                "Añadir a favoritos"
+                stringResource(R.string.action_add_favorite)
             },
         )
     }

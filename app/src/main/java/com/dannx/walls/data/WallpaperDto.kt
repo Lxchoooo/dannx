@@ -13,12 +13,14 @@ data class WallpaperDto(
     val width: Int = 0,
     val height: Int = 0,
     val featured: Boolean = false,
+    @SerialName("featured_position") val featuredPosition: Int = 0,
     @SerialName("created_at") val createdAt: String = "",
     val tags: List<String> = emptyList(),
     @SerialName("category_id") val categoryId: String? = null,
     @SerialName("created_by") val createdBy: String? = null,
     @SerialName("updated_at") val updatedAt: String = "",
     @SerialName("archived_at") val archivedAt: String? = null,
+    @SerialName("deleted_at") val deletedAt: String? = null,
     val categories: CategoryRefDto? = null,
 )
 
@@ -45,8 +47,27 @@ data class WallpaperUpdate(
     val title: String,
     val category: String,
     @SerialName("category_id") val categoryId: String? = null,
+    val author: String,
     val tags: List<String> = emptyList(),
     val featured: Boolean = false,
+    @SerialName("featured_position") val featuredPosition: Int = 0,
+)
+
+@Serializable
+data class FeaturedPositionUpdate(
+    @SerialName("featured_position") val featuredPosition: Int,
+)
+
+@Serializable
+data class AppSettingDto(
+    val key: String,
+    val value: String = "",
+)
+
+@Serializable
+data class AppSettingUpdate(
+    val key: String,
+    val value: String,
 )
 
 @Serializable
@@ -142,6 +163,56 @@ data class DeleteCategoryPayload(
 )
 
 @Serializable
+data class BulkFeaturedPayload(
+    @SerialName("p_ids") val ids: List<String>,
+    @SerialName("p_featured") val featured: Boolean,
+)
+
+@Serializable
+data class BulkArchivedPayload(
+    @SerialName("p_ids") val ids: List<String>,
+    @SerialName("p_archived") val archived: Boolean,
+)
+
+@Serializable
+data class BulkCategoryPayload(
+    @SerialName("p_ids") val ids: List<String>,
+    @SerialName("p_category_id") val categoryId: String,
+)
+
+@Serializable
+data class BulkIdsPayload(
+    @SerialName("p_ids") val ids: List<String>,
+)
+
+@Serializable
+data class ReorderFeaturedPayload(
+    @SerialName("p_ids") val ids: List<String>,
+)
+
+@Serializable
+data class FeaturedPatch(
+    val featured: Boolean,
+    @SerialName("featured_position") val featuredPosition: Int,
+)
+
+@Serializable
+data class ArchivedPatch(
+    @SerialName("archived_at") val archivedAt: String?,
+)
+
+@Serializable
+data class DeletedPatch(
+    @SerialName("deleted_at") val deletedAt: String?,
+    @SerialName("deleted_by") val deletedBy: String?,
+)
+
+@Serializable
+data class CategoryPatch(
+    @SerialName("category_id") val categoryId: String,
+)
+
+@Serializable
 data class CollectionDto(
     val id: String,
     val name: String = "",
@@ -214,6 +285,7 @@ fun WallpaperDto.toWallpaper(baseUrl: String): Wallpaper = Wallpaper(
     width = width,
     height = height,
     featured = featured,
+    featuredPosition = featuredPosition,
     createdAt = createdAt,
     tags = tags.map { it.trim() }.filter { it.isNotEmpty() },
     categoryId = categoryId,
@@ -221,7 +293,27 @@ fun WallpaperDto.toWallpaper(baseUrl: String): Wallpaper = Wallpaper(
     createdBy = createdBy.orEmpty(),
     updatedAt = updatedAt,
     archivedAt = archivedAt.orEmpty(),
+    deletedAt = deletedAt.orEmpty(),
 )
+
+fun List<AppSettingDto>.toAppSettings(): AppSettings {
+    val values = associate { it.key to it.value }
+    return AppSettings(
+        tagline = values[AppSettingsKeyTagline].orEmpty(),
+        bannerText = values[AppSettingsKeyBannerText].orEmpty(),
+        bannerEnabled = values[AppSettingsKeyBannerEnabled].toBoolean(),
+    )
+}
+
+fun AppSettings.toAppSettingRows(): List<AppSettingUpdate> = listOf(
+    AppSettingUpdate(AppSettingsKeyTagline, tagline),
+    AppSettingUpdate(AppSettingsKeyBannerText, bannerText),
+    AppSettingUpdate(AppSettingsKeyBannerEnabled, bannerEnabled.toString()),
+)
+
+const val AppSettingsKeyTagline = "home_tagline"
+const val AppSettingsKeyBannerText = "home_banner_text"
+const val AppSettingsKeyBannerEnabled = "home_banner_enabled"
 
 fun CategoryDto.toCategory(): WallpaperCategory = WallpaperCategory(
     id = id,

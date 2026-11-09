@@ -41,6 +41,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
@@ -54,11 +55,14 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import androidx.annotation.StringRes
 import com.dannx.walls.LoadState
 import com.dannx.walls.MainViewModel
+import com.dannx.walls.R
 import com.dannx.walls.UiState
 import com.dannx.walls.ui.components.DebugFpsOverlay
 import com.dannx.walls.ui.editor.WallpaperEditorScreen
+import com.dannx.walls.ui.screens.AboutScreen
 import com.dannx.walls.ui.screens.CollectionDetailScreen
 import com.dannx.walls.ui.screens.CollectionsScreen
 import com.dannx.walls.ui.screens.DetailScreen
@@ -72,14 +76,14 @@ import com.dannx.walls.util.WallpaperFiles
 
 private data class TopLevelTab(
     val route: String,
-    val label: String,
+    @StringRes val labelRes: Int,
     val icon: ImageVector,
 )
 
 private val tabs = listOf(
-    TopLevelTab("home", "Explorar", Icons.Rounded.Explore),
-    TopLevelTab("collections", "Colecciones", Icons.Rounded.CollectionsBookmark),
-    TopLevelTab("favorites", "Favoritos", Icons.Rounded.FavoriteBorder),
+    TopLevelTab("home", R.string.home_section_explore, Icons.Rounded.Explore),
+    TopLevelTab("collections", R.string.collections_title, Icons.Rounded.CollectionsBookmark),
+    TopLevelTab("favorites", R.string.favorites_title, Icons.Rounded.FavoriteBorder),
 )
 
 @Composable
@@ -271,6 +275,7 @@ private fun MainApp(
                         onTagChange = viewModel::setTag,
                         onRefresh = viewModel::refresh,
                         onOpenWallpaper = { wallpaper ->
+                            viewModel.rememberCurrentSearch()
                             navController.navigate("detail/${wallpaper.id}") {
                                 launchSingleTop = true
                             }
@@ -278,6 +283,8 @@ private fun MainApp(
                         onToggleFavorite = viewModel::toggleFavorite,
                         onOpenStudio = { navController.navigateTopLevel("studio") },
                         onOpenSettings = { navController.navigate("settings") },
+                        onSearchSubmit = viewModel::rememberCurrentSearch,
+                        onClearRecentSearches = viewModel::clearRecentSearches,
                     )
                 }
             }
@@ -370,12 +377,16 @@ private fun MainApp(
                     onLiteModeChange = viewModel::setLiteMode,
                     onOpenEditorOnApplyChange = viewModel::setOpenEditorOnApply,
                     onClearCache = viewModel::clearCache,
+                    onOpenAbout = { navController.navigate("about") },
                     onResetAppearance = viewModel::resetAppearance,
                     onSignOut = {
                         viewModel.signOut()
                         navController.popBackStack()
                     },
                 )
+            }
+            composable("about") {
+                AboutScreen(onBack = { navController.popBackStack() })
             }
             composable("studio") {
                 StudioScreen(
@@ -389,11 +400,21 @@ private fun MainApp(
                     onLoadStudio = viewModel::loadStudio,
                     onCreateCategory = viewModel::createCategory,
                     onUpdateCategory = viewModel::updateCategory,
+                    onMoveCategory = viewModel::moveCategory,
                     onDeleteCategory = viewModel::deleteCategory,
                     onUpdateWallpaper = viewModel::updateWallpaper,
                     onReplaceImage = viewModel::replaceWallpaperImage,
                     onArchiveWallpaper = viewModel::archiveWallpaper,
                     onDeleteWallpaper = viewModel::deleteWallpaper,
+                    onRestoreWallpapers = viewModel::restoreWallpapers,
+                    onPurgeWallpaper = viewModel::purgeWallpaper,
+                    onEmptyTrash = viewModel::emptyTrash,
+                    onBulkSetFeatured = viewModel::bulkSetFeatured,
+                    onBulkSetArchived = viewModel::bulkSetArchived,
+                    onBulkDeleteWallpapers = viewModel::bulkDeleteWallpapers,
+                    onBulkSetCategory = viewModel::bulkSetCategory,
+                    onSaveAppSettings = viewModel::saveAppSettings,
+                    onMoveFeatured = viewModel::moveFeatured,
                     onCreateCollection = viewModel::createCollection,
                     onUpdateCollection = viewModel::updateCollection,
                     onDeleteCollection = viewModel::deleteCollection,
@@ -426,6 +447,10 @@ private fun MainApp(
                         }
                     }
                 } else {
+                    val detailIndex = state.wallpapers.indexOfFirst { it.id == wallpaper.id }
+                    val previous = state.wallpapers.getOrNull(detailIndex - 1)
+                    val next = state.wallpapers.getOrNull(detailIndex + 1)
+                    val detailDestinationId = entry.destination.id
                     DetailScreen(
                         wallpaper = wallpaper,
                         isFavorite = wallpaper.id in state.favorites,
@@ -457,6 +482,22 @@ private fun MainApp(
                         },
                         onCreateCollection = { name, description, isPublic ->
                             viewModel.createCollection(name, description, isPublic)
+                        },
+                        onPrevious = previous?.let { target ->
+                            {
+                                navController.navigate("detail/${target.id}") {
+                                    launchSingleTop = true
+                                    popUpTo(detailDestinationId) { inclusive = true }
+                                }
+                            }
+                        },
+                        onNext = next?.let { target ->
+                            {
+                                navController.navigate("detail/${target.id}") {
+                                    launchSingleTop = true
+                                    popUpTo(detailDestinationId) { inclusive = true }
+                                }
+                            }
                         },
                     )
                 }
@@ -529,7 +570,7 @@ private fun TopLevelScaffold(
                             Icon(tab.icon, contentDescription = null)
                         },
                         label = {
-                            Text(tab.label)
+                            Text(stringResource(tab.labelRes))
                         },
                     )
                 }

@@ -43,7 +43,8 @@ internal data class EditorFilterThumb(
  */
 internal object EditorImage {
     private const val PreviewMaxSide = 1080
-    private const val BlurMaxSide = 320
+    private const val BlurPreviewMaxSide = 480
+    private const val BlurFinalMaxSide = 512
     private const val ThumbWidth = 84
     private const val ThumbHeight = 140
 
@@ -67,28 +68,82 @@ internal object EditorImage {
             ?: throw IOException("La imagen no se pudo decodificar.")
     }
 
-    /** Copia chica y desenfocada. Se dibuja encima de la original con alfa. */
-    fun createBlurred(source: Bitmap): Bitmap {
+    /**
+     * Pila de niveles desenfocados, del más suave al más fuerte. Se calcula una
+     * sola vez por imagen: la intensidad solo elige qué niveles se mezclan.
+     */
+    fun createBlurLevels(
+        source: Bitmap,
+        maxSide: Int = BlurPreviewMaxSide,
+    ): List<Bitmap> {
+        val scaled = downscalePixels(source, maxSide)
+        val radii = EditorBlur.radiiFor(min(scaled.width, scaled.height))
+        val levels = ArrayList<Bitmap>(radii.size)
+        try {
+            radii.forEach { radius ->
+                val pixels = scaled.pixels.copyOf()
+                EditorBlur.boxBlur(pixels, scaled.width, scaled.height, radius)
+                levels += bitmapFrom(pixels, scaled.width, scaled.height)
+            }
+        } catch (error: Throwable) {
+            levels.forEach { it.recycle() }
+            throw error
+        }
+        return levels
+    }
+
+    /**
+     * Dibuja el desenfoque de una intensidad concreta sobre [canvas]. Genera
+     * cada nivel, lo pinta y lo recicla enseguida: nunca hay dos bitmaps
+     * grandes vivos a la vez.
+     */
+    fun drawBlurred(
+        canvas: Canvas,
+        source: Bitmap,
+        blur: Float,
+        maxSide: Int = BlurFinalMaxSide,
+    ) {
+        val mix = EditorBlur.mixFor(blur) ?: return
+        val destination = RectF(0f, 0f, source.width.toFloat(), source.height.toFloat())
+        val scaled = downscalePixels(source, maxSide)
+        val radii = EditorBlur.radiiFor(min(scaled.width, scaled.height))
+        val indices = listOfNotNull(mix.baseLevel, mix.overlayLevel).distinct().sorted()
+        val paint = Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG)
+        indices.forEach { index ->
+            val pixels = scaled.pixels.copyOf()
+            EditorBlur.boxBlur(pixels, scaled.width, scaled.height, radii[index])
+            val bitmap = bitmapFrom(pixels, scaled.width, scaled.height)
+            if (index == mix.overlayLevel) {
+                paint.alpha = (mix.overlayAlpha * 255f).roundToInt().coerceIn(0, 255)
+            }
+            canvas.drawBitmap(bitmap, null, destination, paint)
+            paint.alpha = 255
+            bitmap.recycle()
+        }
+    }
+
+    private class ScaledPixels(val pixels: IntArray, val width: Int, val height: Int)
+
+    private fun downscalePixels(source: Bitmap, maxSide: Int): ScaledPixels {
         val longest = max(source.width, source.height)
-        val scale = if (longest > BlurMaxSide) BlurMaxSide.toFloat() / longest else 1f
+        val scale = if (longest > maxSide) maxSide.toFloat() / longest else 1f
         val width = max(1, (source.width * scale).roundToInt())
         val height = max(1, (source.height * scale).roundToInt())
-        val small = if (width == source.width && height == source.height) {
-            source.copy(Bitmap.Config.ARGB_8888, false)
-                ?: throw IOException("No se pudo preparar el desenfoque.")
-        } else {
-            source.scale(width, height, true)
-        }
         val pixels = IntArray(width * height)
-        small.getPixels(pixels, 0, width, 0, 0, width, height)
-        boxBlur(pixels, width, height, max(1, min(width, height) / 40))
-        val output = createBitmap(width, height, Bitmap.Config.ARGB_8888)
-        output.setPixels(pixels, 0, width, 0, 0, width, height)
-        if (small !== source) {
-            small.recycle()
+        if (width == source.width && height == source.height) {
+            source.getPixels(pixels, 0, width, 0, 0, width, height)
+        } else {
+            val small = source.scale(width, height, true)
+            small.getPixels(pixels, 0, width, 0, 0, width, height)
+            if (small !== source) small.recycle()
         }
-        return output
+        return ScaledPixels(pixels, width, height)
     }
+
+    private fun bitmapFrom(pixels: IntArray, width: Int, height: Int): Bitmap =
+        createBitmap(width, height, Bitmap.Config.ARGB_8888).apply {
+            setPixels(pixels, 0, width, 0, 0, width, height)
+        }
 
     fun createGrainTile(size: Int = 128): Bitmap {
         val random = Random(7L)
@@ -127,7 +182,7 @@ internal object EditorImage {
         width: Float,
         height: Float,
         source: Bitmap,
-        blurred: Bitmap?,
+        blurLevels: List<Bitmap>,
         grain: Bitmap?,
         settings: EditorSettings,
         showOriginal: Boolean,
@@ -147,11 +202,16 @@ internal object EditorImage {
                 height,
                 settings.crop,
             )
-            canvas.drawBitmap(source, null, destination, paint)
+            // La capa base se dibuja opaca; la siguiente se mezcla encima con
+            // alfa, así los pesos suman 1 y no queda imagen doble.
+            val mix = if (showOriginal) null else EditorBlur.mixFor(settings.blur)
+            val base = mix?.baseLevel?.let { blurLevels.getOrNull(it) } ?: source
+            canvas.drawBitmap(base, null, destination, paint)
 
-            if (!showOriginal && settings.blur > 0f && blurred != null) {
-                paint.alpha = (settings.blur * 255f).roundToInt().coerceIn(0, 255)
-                canvas.drawBitmap(blurred, null, destination, paint)
+            val overlay = mix?.overlayLevel?.let { blurLevels.getOrNull(it) }
+            if (!showOriginal && overlay != null && mix != null && mix.overlayAlpha > 0f) {
+                paint.alpha = (mix.overlayAlpha * 255f).roundToInt().coerceIn(0, 255)
+                canvas.drawBitmap(overlay, null, destination, paint)
                 paint.alpha = 255
             }
             if (!showOriginal) {
@@ -194,17 +254,7 @@ internal object EditorImage {
         onProgress(52)
 
         if (settings.blur > 0f) {
-            val blurred = createBlurred(output)
-            val blurPaint = Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG).apply {
-                alpha = (settings.blur * 255f).roundToInt().coerceIn(0, 255)
-            }
-            canvas.drawBitmap(
-                blurred,
-                null,
-                RectF(0f, 0f, output.width.toFloat(), output.height.toFloat()),
-                blurPaint,
-            )
-            blurred.recycle()
+            drawBlurred(canvas, output, settings.blur)
         }
         onProgress(72)
 
@@ -393,74 +443,5 @@ internal object EditorImage {
             alpha = (strength * 70f).roundToInt().coerceIn(0, 255)
         }
         canvas.drawRect(0f, 0f, width, height, paint)
-    }
-
-    /** Box blur de una pasada por eje sobre una copia chica. */
-    private fun boxBlur(pixels: IntArray, width: Int, height: Int, radius: Int) {
-        if (radius <= 0 || width <= 0 || height <= 0) return
-        val diameter = radius * 2 + 1
-        val temporary = IntArray(pixels.size)
-
-        for (y in 0 until height) {
-            var alpha = 0
-            var red = 0
-            var green = 0
-            var blue = 0
-            for (offset in -radius..radius) {
-                val pixel = pixels[y * width + offset.coerceIn(0, width - 1)]
-                alpha += (pixel ushr 24) and 0xFF
-                red += (pixel ushr 16) and 0xFF
-                green += (pixel ushr 8) and 0xFF
-                blue += pixel and 0xFF
-            }
-            for (x in 0 until width) {
-                temporary[y * width + x] =
-                    ((alpha / diameter) shl 24) or
-                        ((red / diameter) shl 16) or
-                        ((green / diameter) shl 8) or
-                        (blue / diameter)
-                val remove = pixels[
-                    y * width + (x - radius).coerceIn(0, width - 1)
-                ]
-                val add = pixels[
-                    y * width + (x + radius + 1).coerceIn(0, width - 1)
-                ]
-                alpha += ((add ushr 24) and 0xFF) - ((remove ushr 24) and 0xFF)
-                red += ((add ushr 16) and 0xFF) - ((remove ushr 16) and 0xFF)
-                green += ((add ushr 8) and 0xFF) - ((remove ushr 8) and 0xFF)
-                blue += (add and 0xFF) - (remove and 0xFF)
-            }
-        }
-
-        for (x in 0 until width) {
-            var alpha = 0
-            var red = 0
-            var green = 0
-            var blue = 0
-            for (offset in -radius..radius) {
-                val pixel = temporary[offset.coerceIn(0, height - 1) * width + x]
-                alpha += (pixel ushr 24) and 0xFF
-                red += (pixel ushr 16) and 0xFF
-                green += (pixel ushr 8) and 0xFF
-                blue += pixel and 0xFF
-            }
-            for (y in 0 until height) {
-                pixels[y * width + x] =
-                    ((alpha / diameter) shl 24) or
-                        ((red / diameter) shl 16) or
-                        ((green / diameter) shl 8) or
-                        (blue / diameter)
-                val remove = temporary[
-                    (y - radius).coerceIn(0, height - 1) * width + x
-                ]
-                val add = temporary[
-                    (y + radius + 1).coerceIn(0, height - 1) * width + x
-                ]
-                alpha += ((add ushr 24) and 0xFF) - ((remove ushr 24) and 0xFF)
-                red += ((add ushr 16) and 0xFF) - ((remove ushr 16) and 0xFF)
-                green += ((add ushr 8) and 0xFF) - ((remove ushr 8) and 0xFF)
-                blue += (add and 0xFF) - (remove and 0xFF)
-            }
-        }
     }
 }
