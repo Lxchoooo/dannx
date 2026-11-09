@@ -54,6 +54,11 @@
     <string name="state_empty_collections_title">Tu primera colección empieza aquí</string>
     <string name="state_empty_collections_body">Creá una carpeta con lo que te guste: una serie, un color, una temporada.</string>
 
+    <!-- Pantalla señuelo del acceso al Estudio -->
+    <string name="decoy_title">Acá no hay nada</string>
+    <string name="decoy_body">Seguí circulando.</string>
+    <string name="decoy_illustration">Ilustración de una sala vacía</string>
+
     <!-- Acciones y campos compartidos -->
     <string name="action_back">Volver</string>
     <string name="action_close">Cerrar</string>

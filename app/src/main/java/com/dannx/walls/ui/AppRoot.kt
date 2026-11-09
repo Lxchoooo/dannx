@@ -71,6 +71,7 @@ import com.dannx.walls.ui.editor.WallpaperEditorScreen
 import com.dannx.walls.ui.screens.AboutScreen
 import com.dannx.walls.ui.screens.CollectionDetailScreen
 import com.dannx.walls.ui.screens.CollectionsScreen
+import com.dannx.walls.ui.screens.DecoyScreen
 import com.dannx.walls.ui.screens.DetailScreen
 import com.dannx.walls.ui.screens.FavoritesScreen
 import com.dannx.walls.ui.screens.HomeScreen
@@ -300,7 +301,16 @@ private fun MainApp(
                             }
                         },
                         onToggleFavorite = viewModel::toggleFavorite,
-                        onOpenStudio = { navController.navigateTopLevel("studio") },
+                        onOpenStudio = {
+                            if (state.session != null || state.isDemo) {
+                                navController.navigateTopLevel("studio")
+                            } else {
+                                viewModel.rememberDecoyOpened()
+                                navController.navigate("decoy") {
+                                    launchSingleTop = true
+                                }
+                            }
+                        },
                         onOpenSettings = { navController.navigate("settings") },
                         onSearchSubmit = viewModel::rememberCurrentSearch,
                         onClearRecentSearches = viewModel::clearRecentSearches,
@@ -421,49 +431,77 @@ private fun MainApp(
             composable("about") {
                 AboutScreen(onBack = { navController.popBackStack() })
             }
+            composable("decoy") {
+                if (viewModel.decoyVisited) {
+                    DecoyScreen(
+                        onBack = { navController.popBackStack() },
+                        onOpenStudio = {
+                            navController.navigate("studio") {
+                                launchSingleTop = true
+                            }
+                        },
+                    )
+                } else {
+                    // Restaurada desde estado guardado de un proceso anterior:
+                    // el señuelo nunca se restaura, siempre vuelve al Inicio.
+                    LaunchedEffect(Unit) {
+                        navController.popBackStack("home", inclusive = false)
+                    }
+                }
+            }
             composable("studio") {
-                StudioScreen(
-                    state = state,
-                    onSignIn = viewModel::signIn,
-                    onSignOut = viewModel::signOut,
-                    onUpload = viewModel::uploadWallpaper,
-                    onRefresh = viewModel::refresh,
-                    onSelectUploadUri = { uri -> viewModel.setSelectedUploadUri(uri?.toString()) },
-                    onBack = { navController.popBackStack() },
-                    onLoadStudio = viewModel::loadStudio,
-                    onCreateCategory = viewModel::createCategory,
-                    onUpdateCategory = viewModel::updateCategory,
-                    onMoveCategory = viewModel::moveCategory,
-                    onDeleteCategory = viewModel::deleteCategory,
-                    onUpdateWallpaper = viewModel::updateWallpaper,
-                    onReplaceImage = viewModel::replaceWallpaperImage,
-                    onArchiveWallpaper = viewModel::archiveWallpaper,
-                    onDeleteWallpaper = viewModel::deleteWallpaper,
-                    onRestoreWallpapers = viewModel::restoreWallpapers,
-                    onPurgeWallpaper = viewModel::purgeWallpaper,
-                    onEmptyTrash = viewModel::emptyTrash,
-                    onBulkSetFeatured = viewModel::bulkSetFeatured,
-                    onBulkSetArchived = viewModel::bulkSetArchived,
-                    onBulkDeleteWallpapers = viewModel::bulkDeleteWallpapers,
-                    onBulkSetCategory = viewModel::bulkSetCategory,
-                    onSaveAppSettings = viewModel::saveAppSettings,
-                    onMoveFeatured = viewModel::moveFeatured,
-                    onCreateCollection = { name, description, isPublic ->
-                        viewModel.createCollection(name, description, isPublic, onDevice = false)
-                    },
-                    onUpdateCollection = viewModel::updateCollection,
-                    onDeleteCollection = viewModel::deleteCollection,
-                    onSetCollectionWallpapers = viewModel::setCollectionWallpapers,
-                    onReorderCollection = viewModel::reorderCollection,
-                    onAddTag = viewModel::addTag,
-                    onRenameTag = viewModel::renameTag,
-                    onDeleteTag = viewModel::deleteTag,
-                    onOpenCollection = { collection ->
-                        navController.navigate("collection/${collection.id}") {
-                            launchSingleTop = true
-                        }
-                    },
-                )
+                // Al restaurar la app el Estudio se conserva solo con sesión
+                // iniciada o si se entró por el señuelo durante esta corrida
+                // del proceso. Sin eso, se vuelve al Inicio.
+                val enteredThroughDecoy = viewModel.decoyVisited
+                if (!state.isDemo && state.session == null && !enteredThroughDecoy) {
+                    LaunchedEffect(Unit) {
+                        navController.popBackStack("home", inclusive = false)
+                    }
+                } else {
+                    StudioScreen(
+                        state = state,
+                        onSignIn = viewModel::signIn,
+                        onSignOut = viewModel::signOut,
+                        onUpload = viewModel::uploadWallpaper,
+                        onRefresh = viewModel::refresh,
+                        onSelectUploadUri = { uri -> viewModel.setSelectedUploadUri(uri?.toString()) },
+                        onBack = { navController.popBackStack() },
+                        onLoadStudio = viewModel::loadStudio,
+                        onCreateCategory = viewModel::createCategory,
+                        onUpdateCategory = viewModel::updateCategory,
+                        onMoveCategory = viewModel::moveCategory,
+                        onDeleteCategory = viewModel::deleteCategory,
+                        onUpdateWallpaper = viewModel::updateWallpaper,
+                        onReplaceImage = viewModel::replaceWallpaperImage,
+                        onArchiveWallpaper = viewModel::archiveWallpaper,
+                        onDeleteWallpaper = viewModel::deleteWallpaper,
+                        onRestoreWallpapers = viewModel::restoreWallpapers,
+                        onPurgeWallpaper = viewModel::purgeWallpaper,
+                        onEmptyTrash = viewModel::emptyTrash,
+                        onBulkSetFeatured = viewModel::bulkSetFeatured,
+                        onBulkSetArchived = viewModel::bulkSetArchived,
+                        onBulkDeleteWallpapers = viewModel::bulkDeleteWallpapers,
+                        onBulkSetCategory = viewModel::bulkSetCategory,
+                        onSaveAppSettings = viewModel::saveAppSettings,
+                        onMoveFeatured = viewModel::moveFeatured,
+                        onCreateCollection = { name, description, isPublic ->
+                            viewModel.createCollection(name, description, isPublic, onDevice = false)
+                        },
+                        onUpdateCollection = viewModel::updateCollection,
+                        onDeleteCollection = viewModel::deleteCollection,
+                        onSetCollectionWallpapers = viewModel::setCollectionWallpapers,
+                        onReorderCollection = viewModel::reorderCollection,
+                        onAddTag = viewModel::addTag,
+                        onRenameTag = viewModel::renameTag,
+                        onDeleteTag = viewModel::deleteTag,
+                        onOpenCollection = { collection ->
+                            navController.navigate("collection/${collection.id}") {
+                                launchSingleTop = true
+                            }
+                        },
+                    )
+                }
             }
             composable(
                 route = "detail/{id}",

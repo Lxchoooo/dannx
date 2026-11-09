@@ -54,6 +54,11 @@
     <string name="state_empty_collections_title">Your first collection starts here</string>
     <string name="state_empty_collections_body">Make a folder with what you like: a series, a color, a season.</string>
 
+    <!-- Decoy screen for the Studio secret access -->
+    <string name="decoy_title">Nothing to see here</string>
+    <string name="decoy_body">Keep it moving.</string>
+    <string name="decoy_illustration">Illustration of an empty room</string>
+
     <!-- Shared actions and fields -->
     <string name="action_back">Back</string>
     <string name="action_close">Close</string>

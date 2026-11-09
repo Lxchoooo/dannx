@@ -1093,6 +1093,21 @@ class MainViewModel(
         }
     }
 
+    /**
+     * Señal en la memoria del proceso de que la pantalla señuelo se abrió en
+     * esta corrida de la app. Al girar el teléfono el ViewModel sobrevive y la
+     * marca sigue en pie; si Android recreó el proceso, arranca en false y la
+     * navegación vuelve al Inicio en lugar de restaurar pantallas privadas.
+     */
+    private var decoyOpenedInThisProcess = false
+
+    val decoyVisited: Boolean
+        get() = decoyOpenedInThisProcess
+
+    fun rememberDecoyOpened() {
+        decoyOpenedInThisProcess = true
+    }
+
     fun signOut() {
         studioJob?.cancel()
         refreshJob?.cancel()
