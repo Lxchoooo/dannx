@@ -50,6 +50,11 @@ class Prefs(context: Context) : LocalStore {
         return updated
     }
 
+    override fun removeFavorites(ids: Set<String>) {
+        if (ids.isEmpty()) return
+        prefs.edit { putStringSet(KEY_FAVORITES, favorites() - ids) }
+    }
+
     override fun recentSearches(): List<String> {
         val raw = prefs.getString(KEY_RECENT_SEARCHES, null) ?: return emptyList()
         return runCatching {

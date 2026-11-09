@@ -87,7 +87,13 @@ interface WallpapersRepository {
     suspend fun restoreWallpapers(ids: List<String>)
     suspend fun replaceWallpaperImage(wallpaper: Wallpaper, uri: Uri): Wallpaper
     suspend fun archiveWallpaper(wallpaperId: String, archived: Boolean)
-    suspend fun deleteWallpaper(wallpaper: Wallpaper)
+
+    /**
+     * Borra el registro primero y después la imagen. Devuelve false cuando el
+     * registro ya no existe pero el archivo de imagen quedó en Storage, para
+     * que la interfaz avise en lugar de dar la baja por terminada en silencio.
+     */
+    suspend fun deleteWallpaper(wallpaper: Wallpaper): Boolean
 
     suspend fun createCategory(name: String, position: Int): WallpaperCategory
     suspend fun updateCategory(id: String, name: String, position: Int): WallpaperCategory
@@ -123,6 +129,12 @@ interface WallpapersRepository {
 interface LocalStore {
     fun favorites(): Set<String>
     fun toggleFavorite(id: String): Set<String>
+
+    /**
+     * Quita ids del listado de favoritos. Se usa cuando un fondo se borra de
+     * verdad: los favoritos no deben recordar fondos inexistentes.
+     */
+    fun removeFavorites(ids: Set<String>)
     fun recentSearches(): List<String>
     fun rememberSearch(query: String)
     fun clearRecentSearches()

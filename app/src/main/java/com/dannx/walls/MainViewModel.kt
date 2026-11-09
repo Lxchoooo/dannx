@@ -1681,6 +1681,7 @@ class MainViewModel(
             _state.update {
                 it.withTrash(targets, message)
             }
+            viewModelScope.launch { removeFromWallpaperCache(ids) }
             return
         }
         viewModelScope.launch {
@@ -1690,6 +1691,7 @@ class MainViewModel(
                 _state.update {
                     it.withTrash(targets, message).copy(studioBusy = false)
                 }
+                removeFromWallpaperCache(ids)
             } catch (error: Exception) {
                 handleBulkFailure(error)
             }
@@ -1727,40 +1729,112 @@ class MainViewModel(
         purgeWallpapers(_state.value.trashWallpapers)
     }
 
+    /**
+     * Borrado definitivo desde la papelera. El registro se borra primero y la
+     * imagen después: si el archivo no se pudo borrar, la lista queda
+     * consistente y se avisa con un mensaje claro.
+     */
     private fun purgeWallpapers(targets: List<Wallpaper>) {
         if (targets.isEmpty()) return
         val ids = targets.map { it.id }.toSet()
+        // El registro se borra siempre; lo único que puede fallar es el
+        // archivo de imagen, y por eso tiene un mensaje aparte.
+        val partialMessage = if (targets.size == 1) {
+            strings.get(R.string.msg_image_delete_failed)
+        } else {
+            strings.get(R.string.msg_image_delete_failed_many)
+        }
         if (_state.value.isDemo) {
-            _state.update {
-                it.copy(
-                    trashWallpapers = it.trashWallpapers.filterNot { w -> w.id in ids },
-                    collectionItems = it.collectionItems.map { c ->
-                        c.copy(wallpaperIds = c.wallpaperIds.filterNot { id -> id in ids })
-                    },
-                    message = strings.get(R.string.msg_trash_emptied),
-                )
+            viewModelScope.launch {
+                cleanupAfterPurge(ids)
+                _state.update {
+                    it.withPurged(ids, strings.get(R.string.msg_trash_emptied))
+                }
             }
             return
         }
         viewModelScope.launch {
             _state.update { it.copy(studioBusy = true) }
             try {
-                targets.forEach { api.deleteWallpaper(it) }
+                var imageFailed = false
+                targets.forEach { wallpaper ->
+                    if (!api.deleteWallpaper(wallpaper)) imageFailed = true
+                }
+                cleanupAfterPurge(ids)
                 _state.update {
-                    it.copy(
-                        studioBusy = false,
-                        trashWallpapers = it.trashWallpapers.filterNot { w -> w.id in ids },
-                        collectionItems = it.collectionItems.map { c ->
-                            c.copy(wallpaperIds = c.wallpaperIds.filterNot { id -> id in ids })
+                    it.withPurged(
+                        ids = ids,
+                        message = if (imageFailed) partialMessage else {
+                            strings.get(R.string.msg_trash_emptied)
                         },
-                        message = strings.get(R.string.msg_trash_emptied),
-                    )
+                    ).copy(studioBusy = false)
                 }
             } catch (error: Exception) {
                 handleBulkFailure(error)
             }
         }
     }
+
+    /**
+     * La caché offline del feed no debe volver a mostrar fondos que ya no
+     * están en el catálogo ni en el Estudio.
+     */
+    private suspend fun removeFromWallpaperCache(ids: Set<String>) {
+        runCatching {
+            cache.writeWallpapers(
+                cache.readWallpapers().filterNot { it.id in ids },
+            )
+        }
+    }
+
+    /**
+     * Quita del teléfono los restos de los fondos borrados: favoritos,
+     * colecciones locales y la caché del feed, para que ningún contador ni
+     * lista queden apuntando a un fondo que ya no existe.
+     */
+    private suspend fun cleanupAfterPurge(ids: Set<String>) {
+        prefs.removeFavorites(ids)
+        saveLocalCollections(
+            prefs.localCollections().map { collection ->
+                if (collection.wallpaperIds.none { it in ids }) {
+                    collection
+                } else {
+                    collection.copy(
+                        wallpaperIds = collection.wallpaperIds.filterNot { it in ids },
+                    )
+                }
+            },
+        )
+        removeFromWallpaperCache(ids)
+        runCatching {
+            cache.writeCollections(
+                cache.readCollections().map { collection ->
+                    if (collection.wallpaperIds.none { it in ids }) {
+                        collection
+                    } else {
+                        collection.copy(
+                            wallpaperIds = collection.wallpaperIds.filterNot { it in ids },
+                        )
+                    }
+                },
+            )
+        }
+    }
+
+    private fun UiState.withPurged(ids: Set<String>, message: String): UiState = copy(
+        wallpapers = wallpapers.filterNot { it.id in ids },
+        adminWallpapers = adminWallpapers.filterNot { it.id in ids },
+        trashWallpapers = trashWallpapers.filterNot { it.id in ids },
+        favorites = favorites - ids,
+        collectionItems = collectionItems.map { collection ->
+            if (collection.wallpaperIds.none { it in ids }) {
+                collection
+            } else {
+                collection.copy(wallpaperIds = collection.wallpaperIds.filterNot { it in ids })
+            }
+        },
+        message = message,
+    )
 
     fun bulkSetFeatured(ids: Set<String>, featured: Boolean) {
         val targets = _state.value.studioWallpapers.filter { it.id in ids }

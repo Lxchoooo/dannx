@@ -13,7 +13,9 @@ import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -399,6 +401,10 @@ fun StudioScreen(
                             } else {
                                 selectedIds + id
                             }
+                        },
+                        onStartSelection = { id ->
+                            selectionMode = true
+                            selectedIds = selectedIds + id
                         },
                         onSelectAll = { ids -> selectedIds = ids },
                         onClearSelection = { selectedIds = emptySet() },
@@ -1437,6 +1443,7 @@ private fun LazyListScope.wallsPanel(
     onReplace: (Wallpaper) -> Unit,
     onArchive: (String, Boolean) -> Unit,
     onDelete: (Wallpaper) -> Unit,
+    onStartSelection: (String) -> Unit,
 ) {
     val term = query.trim()
     val hasFilters = query.isNotBlank() || categoryId != null || featuredOnly
@@ -1777,6 +1784,7 @@ private fun LazyListScope.wallsPanel(
                 selectable = selectionMode,
                 selected = wallpaper.id in selectedIds,
                 onToggleSelected = { onToggleSelected(wallpaper.id) },
+                onStartSelection = { onStartSelection(wallpaper.id) },
                 onEdit = { onEdit(wallpaper) },
                 onReplace = { onReplace(wallpaper) },
                 onToggleFeatured = { onToggleFeatured(wallpaper) },
@@ -1903,12 +1911,14 @@ private fun LazyListScope.trashPanel(
 }
 
 @Composable
+@OptIn(ExperimentalFoundationApi::class)
 private fun StudioWallpaperRow(
     wallpaper: Wallpaper,
     categoryName: String,
     selectable: Boolean,
     selected: Boolean,
     onToggleSelected: () -> Unit,
+    onStartSelection: () -> Unit,
     onEdit: () -> Unit,
     onReplace: () -> Unit,
     onToggleFeatured: () -> Unit,
@@ -1919,7 +1929,10 @@ private fun StudioWallpaperRow(
         modifier = Modifier
             .fillMaxWidth()
             .padding(bottom = 10.dp)
-            .clickable(enabled = selectable, onClick = onToggleSelected),
+            .combinedClickable(
+                onClick = { if (selectable) onToggleSelected() },
+                onLongClick = { if (!selectable) onStartSelection() },
+            ),
         shape = MaterialTheme.shapes.large,
         colors = CardDefaults.cardColors(
             containerColor = if (selected) {

@@ -39,6 +39,11 @@ class MainViewModelTest {
             R.string.msg_category_delete_blocked ->
                 "La categoría tiene fondos. Reasignalos antes de borrarla."
             R.string.msg_download_cancelled -> "Descarga cancelada."
+            R.string.msg_trash_emptied -> "Papelera vaciada."
+            R.string.msg_image_delete_failed ->
+                "El fondo ya no se ve en la app, pero no se pudo borrar el archivo de imagen."
+            R.string.msg_image_delete_failed_many ->
+                "Los fondos ya no se ven en la app, pero hubo archivos de imagen que no se pudieron borrar."
             else -> "string"
         }
     }
@@ -912,6 +917,102 @@ class MainViewModelTest {
             advanceUntilIdle()
 
             assertTrue(model.state.value.detailCollection is LoadState.Error)
+        }
+
+    @Test
+    fun `favorites ignore wallpapers that no longer exist without errors`() =
+        runTest(dispatcher) {
+            store.toggleFavorite("gone")
+            store.toggleFavorite("ok")
+            repository.wallpapers = listOf(wallpaper("ok"))
+            val model = viewModel()
+            advanceUntilIdle()
+
+            assertEquals(emptyList<Wallpaper>(), model.state.value.favoriteWallpapers.filter { it.id == "gone" })
+            assertEquals(listOf("ok"), model.state.value.favoriteWallpapers.map { it.id })
+            assertNull(model.state.value.message)
+        }
+
+    @Test
+    fun `purging cleans favorites, local collections and the feed cache`() =
+        runTest(dispatcher) {
+            store.saveSession("admin@test", "token", null, "u1")
+            repository.session = AdminSession("admin@test", "token", "u1")
+            repository.wallpapers = listOf(wallpaper("1"), wallpaper("2"), wallpaper("3"))
+            store.saveLocalCollections(
+                listOf(
+                    WallpaperCollection(
+                        id = "local-1",
+                        name = "Local",
+                        ownerId = "local",
+                        wallpaperIds = listOf("1", "2"),
+                    ),
+                ),
+            )
+            val model = viewModel()
+            advanceUntilIdle()
+            model.toggleFavorite("1")
+            model.toggleFavorite("2")
+            model.refresh()
+            advanceUntilIdle()
+
+            model.deleteWallpaper("1")
+            advanceUntilIdle()
+            model.emptyTrash()
+            advanceUntilIdle()
+
+            assertEquals(setOf("2"), model.state.value.favorites)
+            assertEquals(setOf("2"), store.favorites())
+            assertEquals(listOf("2"), store.localCollections().single().wallpaperIds)
+            assertEquals(listOf("2"), model.state.value.collectionItems.single { it.isLocal }.wallpaperIds)
+            assertEquals(emptyList<Wallpaper>(), cache.readWallpapers().filter { it.id == "1" })
+            assertTrue(model.state.value.collectionItems.none { it.wallpaperIds.contains("1") })
+        }
+
+    @Test
+    fun `a purged wallpaper disappears from the feed and cache right away`() =
+        runTest(dispatcher) {
+            store.saveSession("admin@test", "token", null, "u1")
+            repository.session = AdminSession("admin@test", "token", "u1")
+            repository.wallpapers = listOf(wallpaper("1"), wallpaper("2"))
+            val model = viewModel()
+            advanceUntilIdle()
+            model.refresh()
+            advanceUntilIdle()
+
+            model.deleteWallpaper("1")
+            advanceUntilIdle()
+
+            assertTrue(model.state.value.wallpapers.none { it.id == "1" })
+            assertTrue(model.state.value.adminWallpapers.none { it.id == "1" })
+            assertTrue(model.state.value.filtered.none { it.id == "1" })
+            assertEquals(emptyList<Wallpaper>(), cache.readWallpapers().filter { it.id == "1" })
+        }
+
+    @Test
+    fun `a failed image delete is reported without leaving the list inconsistent`() =
+        runTest(dispatcher) {
+            store.saveSession("admin@test", "token", null, "u1")
+            repository.session = AdminSession("admin@test", "token", "u1")
+            repository.wallpapers = listOf(wallpaper("1"), wallpaper("2"))
+            repository.imageDeletedOnPurge = false
+            val model = viewModel()
+            advanceUntilIdle()
+            model.loadStudio()
+            advanceUntilIdle()
+
+            model.deleteWallpaper("1")
+            advanceUntilIdle()
+            model.purgeWallpaper("1")
+            advanceUntilIdle()
+
+            assertEquals(
+                "El fondo ya no se ve en la app, pero no se pudo borrar el archivo de imagen.",
+                model.state.value.message,
+            )
+            assertTrue(model.state.value.trashWallpapers.none { it.id == "1" })
+            assertTrue(model.state.value.wallpapers.none { it.id == "1" })
+            assertTrue(repository.wallpapers.none { it.id == "1" })
         }
 
     private fun wallpaper(id: String) = Wallpaper(

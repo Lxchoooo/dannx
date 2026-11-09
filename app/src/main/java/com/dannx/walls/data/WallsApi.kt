@@ -2,12 +2,14 @@ package com.dannx.walls.data
 
 import android.content.Context
 import android.net.Uri
+import android.util.Log
 import com.dannx.walls.BuildConfig
 import java.time.Instant
 import java.util.UUID
 import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
@@ -674,29 +676,66 @@ class WallsApi(
         }
     }
 
-    override suspend fun deleteWallpaper(wallpaper: Wallpaper) {
-        if (!isConfigured) return
-        withContext(Dispatchers.IO) {
-            val token = requireToken()
-            executeAuthorized(
-                build = { token ->
-                    Request.Builder()
-                        .url("$baseUrl/rest/v1/wallpapers?id=eq.${wallpaper.id}")
-                        .header("apikey", anonKey)
-                        .header("Authorization", "Bearer $token")
-                        .delete()
-                        .build()
-                },
-            )
-            val path = wallpaper.storagePath.ifBlank {
-                wallpaper.imageUrl.substringAfter("/object/public/wallpapers/", "")
+    override suspend fun deleteWallpaper(wallpaper: Wallpaper): Boolean = withContext(Dispatchers.IO) {
+        if (!isConfigured) return@withContext true
+        executeAuthorized(
+            build = { authToken ->
+                Request.Builder()
+                    .url("$baseUrl/rest/v1/wallpapers?id=eq.${wallpaper.id}")
+                    .header("apikey", anonKey)
+                    .header("Authorization", "Bearer $authToken")
+                    .delete()
+                    .build()
+            },
+        )
+        val path = wallpaper.storagePath.ifBlank {
+            wallpaper.imageUrl.substringAfter("/object/public/wallpapers/", "")
+        }
+        if (path.isBlank()) return@withContext true
+        // El registro ya no existe: borrar la imagen es limpiar detrás. Hasta
+        // 3 intentos y, si el archivo se resiste, false para poder avisar.
+        // Cada intento pide el token actual por si la sesión se renovó.
+        var deletedImage = false
+        var lastError: Throwable? = null
+        var attempt = 0
+        while (attempt < IMAGE_DELETE_ATTEMPTS && !deletedImage) {
+            try {
+                deleteObject(requireToken(), path)
+                deletedImage = true
+            } catch (error: CancellationException) {
+                throw error
+            } catch (error: Throwable) {
+                lastError = error
+                when {
+                    error.isAlreadyGone() -> deletedImage = true
+                    // Un fallo sin vuelta atrás (permiso, sesión vencida) no
+                    // mejora con otra espera igual.
+                    !error.isRetryable() -> break
+                    attempt < IMAGE_DELETE_ATTEMPTS - 1 ->
+                        delay(IMAGE_DELETE_RETRY_DELAY_MS)
+                    else -> Unit
+                }
             }
-            if (path.isNotBlank()) {
-                // La ficha ya no existe; si falla el archivo no se rompe el catálogo.
-                runCatching { deleteObject(token, path) }
+            attempt++
+        }
+        if (!deletedImage) {
+            lastError?.let { error ->
+                Log.w(
+                    "DannX",
+                    "No se pudo borrar la imagen tras $IMAGE_DELETE_ATTEMPTS intentos",
+                    error,
+                )
             }
         }
+        deletedImage
     }
+
+    /**
+     * Un archivo que ya no existe cuenta como borrado: el objetivo era que no
+     * quede en Storage, y efecto ya lo tiene.
+     */
+    private fun Throwable.isAlreadyGone(): Boolean =
+        (this as? DannXError.Unexpected)?.message?.contains("404") == true
 
     override suspend fun createCategory(
         name: String,
@@ -1489,6 +1528,8 @@ class WallsApi(
     companion object {
         const val MAX_BYTES = 25L * 1024 * 1024
         private const val MAX_DETAIL_IDS = 100
+        private const val IMAGE_DELETE_ATTEMPTS = 3
+        private const val IMAGE_DELETE_RETRY_DELAY_MS = 800L
         val JSON_MEDIA: MediaType = "application/json".toMediaType()
 
         fun defaultClient(): OkHttpClient = OkHttpClient.Builder()

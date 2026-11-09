@@ -286,6 +286,8 @@
     <string name="msg_wallpaper_trashed">Wallpaper moved to the trash.</string>
     <string name="msg_wallpapers_trashed">Wallpapers moved to the trash.</string>
     <string name="msg_trash_emptied">Trash emptied.</string>
+    <string name="msg_image_delete_failed">The wallpaper is gone from the app, but its image file could not be deleted.</string>
+    <string name="msg_image_delete_failed_many">The wallpapers are gone from the app, but some image files could not be deleted.</string>
     <string name="msg_wallpapers_category_updated">Wallpapers moved to “%1$s”.</string>
     <string name="studio_overview">Overview</string>
     <string name="studio_refresh">Refresh studio</string>

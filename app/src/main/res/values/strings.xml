@@ -286,6 +286,8 @@
     <string name="msg_wallpaper_trashed">Fondo movido a la papelera.</string>
     <string name="msg_wallpapers_trashed">Fondos movidos a la papelera.</string>
     <string name="msg_trash_emptied">Papelera vaciada.</string>
+    <string name="msg_image_delete_failed">El fondo ya no se ve en la app, pero no se pudo borrar el archivo de imagen.</string>
+    <string name="msg_image_delete_failed_many">Los fondos ya no se ven en la app, pero hubo archivos de imagen que no se pudieron borrar.</string>
     <string name="msg_wallpapers_category_updated">Fondos movidos a “%1$s”.</string>
     <string name="studio_overview">Resumen</string>
     <string name="studio_refresh">Actualizar estudio</string>

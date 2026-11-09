@@ -38,6 +38,9 @@ class FakeRepository : WallpapersRepository {
     var appSettings = AppSettings()
     var featuredOrder: List<String>? = null
 
+    /** Cuando no es null, define si el borrado definitivo logró borrar la imagen. */
+    var imageDeletedOnPurge: Boolean? = null
+
     override val isConfigured: Boolean = true
 
     override suspend fun loadWallpapersPage(filter: WallpaperFilter): WallpaperPage {
@@ -235,9 +238,11 @@ class FakeRepository : WallpapersRepository {
         adminWallpapers = adminWallpapers?.map(::apply)
     }
 
-    override suspend fun deleteWallpaper(wallpaper: Wallpaper) {
+    override suspend fun deleteWallpaper(wallpaper: Wallpaper): Boolean {
         wallpapers = wallpapers.filterNot { it.id == wallpaper.id }
         adminWallpapers = adminWallpapers?.filterNot { it.id == wallpaper.id }
+        imageDeletedOnPurge?.let { return it }
+        return true
     }
 
     override suspend fun createCategory(name: String, position: Int): WallpaperCategory =
@@ -310,6 +315,10 @@ class FakeStore : LocalStore {
     override fun toggleFavorite(id: String): Set<String> {
         if (!favoriteIds.add(id)) favoriteIds.remove(id)
         return favoriteIds.toSet()
+    }
+
+    override fun removeFavorites(ids: Set<String>) {
+        favoriteIds.removeAll(ids)
     }
 
     override fun recentSearches(): List<String> = storedSearches.toList()
