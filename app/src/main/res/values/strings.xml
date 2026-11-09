@@ -58,6 +58,7 @@
     <string name="share_chooser_title">Compartir fondo</string>
     <string name="action_share">Compartir</string>
     <string name="action_clear">Borrar</string>
+    <string name="action_change">Cambiar</string>
     <string name="action_settings">Ajustes</string>
     <string name="action_add_favorite">Añadir a favoritos</string>
     <string name="action_remove_favorite">Quitar de favoritos</string>
@@ -134,6 +135,8 @@
     <string name="settings_appearance">Apariencia</string>
     <string name="settings_theme">Tema</string>
     <string name="settings_theme_hint">Elegí cómo se ve la app.</string>
+    <string name="settings_language">Idioma</string>
+    <string name="settings_language_hint">Cambiá el idioma de DannX sin cambiar el del teléfono.</string>
     <string name="theme_system">Sistema</string>
     <string name="theme_light">Claro</string>
     <string name="theme_dark">Oscuro</string>

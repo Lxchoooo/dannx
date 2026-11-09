@@ -58,6 +58,7 @@
     <string name="share_chooser_title">Share wallpaper</string>
     <string name="action_share">Share</string>
     <string name="action_clear">Clear</string>
+    <string name="action_change">Change</string>
     <string name="action_settings">Settings</string>
     <string name="action_add_favorite">Add to favorites</string>
     <string name="action_remove_favorite">Remove from favorites</string>
@@ -134,6 +135,8 @@
     <string name="settings_appearance">Appearance</string>
     <string name="settings_theme">Theme</string>
     <string name="settings_theme_hint">Choose how the app looks.</string>
+    <string name="settings_language">Language</string>
+    <string name="settings_language_hint">Change DannX\'s language without changing your phone\'s.</string>
     <string name="theme_system">System</string>
     <string name="theme_light">Light</string>
     <string name="theme_dark">Dark</string>

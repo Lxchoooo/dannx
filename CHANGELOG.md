@@ -66,6 +66,8 @@ reservado a administradores y no se detalla en la documentación.
 
 - Ajustes suma Acerca de (versión, enlaces y licencias de terceros) y un acceso
   directo a la política de privacidad.
+- En Android 13 o superior, Ajustes incluye “Idioma” y abre el selector de
+  idioma por app para cambiar entre español e inglés sin tocar el teléfono.
 - La caché del feed queda acotada a 400 fondos y 100 colecciones para evitar que
   crezca sin límite.
 - CI publica el `mapping.txt` de R8 como artifact de 30 días para poder leer

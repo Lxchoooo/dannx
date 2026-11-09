@@ -1,5 +1,11 @@
 package com.dannx.walls.ui.screens
 
+import android.content.Context
+import android.content.Intent
+import android.net.Uri
+import android.os.Build
+import android.provider.Settings
+import androidx.annotation.RequiresApi
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -106,6 +112,32 @@ fun SettingsScreen(
                                     ),
                                     label = { Text(stringResource(mode.labelRes())) },
                                 )
+                            }
+                        }
+                    }
+                }
+            }
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                item {
+                    Card(Modifier.fillMaxWidth()) {
+                        Row(
+                            modifier = Modifier.padding(16.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Column(Modifier.weight(1f)) {
+                                Text(
+                                    stringResource(R.string.settings_language),
+                                    style = MaterialTheme.typography.titleMedium,
+                                )
+                                Text(
+                                    stringResource(R.string.settings_language_hint),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                            Spacer(Modifier.width(12.dp))
+                            TextButton(onClick = { openAppLanguageSettings(context) }) {
+                                Text(stringResource(R.string.action_change))
                             }
                         }
                     }
@@ -268,6 +300,18 @@ private fun SectionTitle(text: String) {
         color = MaterialTheme.colorScheme.primary,
         modifier = Modifier.padding(top = 8.dp, start = 4.dp),
     )
+}
+
+@RequiresApi(Build.VERSION_CODES.TIRAMISU)
+private fun openAppLanguageSettings(context: Context) {
+    val packageUri = Uri.parse("package:${context.packageName}")
+    val localeIntent = Intent(Settings.ACTION_APP_LOCALE_SETTINGS, packageUri)
+    if (runCatching { context.startActivity(localeIntent) }.isSuccess) return
+    runCatching {
+        context.startActivity(
+            Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, packageUri),
+        )
+    }
 }
 
 private fun ThemeMode.labelRes(): Int = when (this) {
