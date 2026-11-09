@@ -104,6 +104,9 @@ Todo lo siguiente está **planeado** y todavía no existe:
 - Actualizador completo dentro de la app (por ahora, Ajustes abre la página de
   releases).
 
+Mirá [ROADMAP.es.md](ROADMAP.es.md) para la lista completa de prioridades y lo
+que ya está hecho.
+
 ## 🐞 Contribuir
 
 ¿Encontraste un bug o tenés una idea? Abrí un

@@ -102,6 +102,9 @@ The following are **planned** and not available yet:
 - Signed release distributed outside GitHub.
 - A full in-app updater (for now, Settings opens the releases page).
 
+See [ROADMAP.md](ROADMAP.md) for the full priority list and what is already
+done.
+
 ## 🐞 Contributing
 
 Found a bug or have an idea? Open an

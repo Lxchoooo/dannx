@@ -28,6 +28,8 @@ reservado a administradores y no se detalla en la documentación.
 - `SECURITY.md` y `SECURITY.es.md` con el canal privado y las prácticas de
   seguridad del proyecto.
 - `docs/designs/security-hardening.md` con la checklist de settings de GitHub.
+- `ROADMAP.md` y `ROADMAP.es.md` con prioridades, estado y cosas que no se van a
+  hacer.
 - `PRIVACY.md` y `PRIVACY.es.md`, enlazados desde el README y desde Ajustes.
 - El README deja de mostrar capturas inexistentes; se actualizan con el build
   1.4.0.
