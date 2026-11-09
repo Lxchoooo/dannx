@@ -22,8 +22,8 @@ están probados y cuando hay tiempo para mantenerlos.
 - [x] **Sorprendeme** para abrir un fondo aleatorio del filtro actual.
 - [x] **Repaso de accesibilidad**: TalkBack, áreas táctiles y fuentes grandes.
 - [x] Notas de release en inglés desde `docs/releases/`.
-- [ ] CI en verde para la rama de release.
-- [ ] Tag y publicación de `v1.6.0`.
+- [x] CI en verde para la rama de release.
+- [x] Tag y publicación de `v1.6.0`.
 
 ## 1.5.0
 

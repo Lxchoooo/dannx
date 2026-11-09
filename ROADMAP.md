@@ -23,8 +23,8 @@ maintain them.
 - [x] **Accessibility pass**: TalkBack labels and states, larger touch targets
       and better large-font behaviour.
 - [x] Release notes read from an English file under `docs/releases/`.
-- [ ] Green CI run for the release branch.
-- [ ] Tag and publish `v1.6.0`.
+- [x] Green CI run for the release branch.
+- [x] Tag and publish `v1.6.0`.
 
 ## 1.5.0
 
