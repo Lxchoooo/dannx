@@ -13,7 +13,19 @@ están probados y cuando hay tiempo para mantenerlos.
 - **Planeado**: aceptado, pero sin empezar.
 - **Explorando**: necesita una decisión de diseño primero.
 
-## 1.5.0 (en preparación)
+## 1.6.0 (en preparación)
+
+- [x] **Actualizador dentro de la app** que consulta la última release de
+      GitHub, descarga el APK, verifica su SHA-256 y abre el instalador.
+- [x] **Paginación y caché incremental**: 30 fondos por página, búsqueda y
+      filtros en el servidor, y caché offline de 400 fondos.
+- [x] **Sorprendeme** para abrir un fondo aleatorio del filtro actual.
+- [x] **Repaso de accesibilidad**: TalkBack, áreas táctiles y fuentes grandes.
+- [x] Notas de release en inglés desde `docs/releases/`.
+- [ ] CI en verde para la rama de release.
+- [ ] Tag y publicación de `v1.6.0`.
+
+## 1.5.0
 
 - [x] Traducción completa al inglés y desenfoque progresivo en el editor.
 - [x] Pantalla Acerca de, acceso a privacidad en Ajustes y enlaces públicos del
@@ -25,20 +37,12 @@ están probados y cuando hay tiempo para mantenerlos.
 - [x] Papelera con restauración, borrado definitivo y purga automática a los 30
       días.
 - [x] Vista previa de portada en el editor de Contenido.
-- [ ] CI en verde para la rama de release.
-- [ ] Capturas para el README.
-- [ ] Tag y publicación de `v1.5.0`.
+- [x] Tag y publicación de `v1.5.0`.
 
 ## Siguiente
 
 - [ ] **Baseline profile y Macrobenchmark** para mejorar el arranque y el scroll
       en equipos de gama baja.
-- [ ] **Actualizador dentro de la app** que consulte la última release, compare
-      versiones y abra la descarga. Hoy Ajustes abre la página de releases.
-- [ ] **Paginación y caché incremental del feed** para no descargar y guardar
-      todos los fondos de una vez.
-- [ ] **Repaso de accesibilidad**: TalkBack, contraste, fuentes grandes y áreas
-      táctiles.
 
 ## Producto
 
@@ -54,7 +58,7 @@ están probados y cuando hay tiempo para mantenerlos.
 - [ ] Tests instrumentados para aplicar, descargar, favoritos y el editor.
 - [ ] Screenshot tests (Roborazzi o Paparazzi) para detectar cambios visuales.
 - [ ] Chequeos de `actionlint` y `zizmor` para GitHub Actions.
-- [ ] Notas de release generadas desde el changelog o los commits.
+- [x] Notas de release generadas desde un archivo versionado en inglés.
 
 ## Backend y seguridad
 

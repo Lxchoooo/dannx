@@ -15,6 +15,7 @@ import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -144,6 +145,78 @@ class MainViewModelTest {
         advanceUntilIdle()
 
         assertTrue(model.state.value.feed is LoadState.Empty)
+    }
+
+    @Test
+    fun `the first page has 30 items and load more appends the next page`() =
+        runTest(dispatcher) {
+            repository.wallpapers = (1..45).map { wallpaper("$it") }
+            val model = viewModel()
+            advanceUntilIdle()
+
+            assertEquals(30, model.state.value.wallpapers.size)
+            assertTrue(model.state.value.hasMore)
+
+            model.loadMore()
+            advanceUntilIdle()
+
+            val state = model.state.value
+            assertEquals(45, state.wallpapers.size)
+            assertEquals(45, state.wallpapers.map { it.id }.distinct().size)
+            assertFalse(state.hasMore)
+            assertEquals(30, repository.pageFilters.last().offset)
+        }
+
+    @Test
+    fun `load more keeps the current feed when the request fails`() = runTest(dispatcher) {
+        repository.wallpapers = (1..45).map { wallpaper("$it") }
+        val model = viewModel()
+        advanceUntilIdle()
+
+        repository.failWith = DannXError.Offline("sin red")
+        repository.failTimes = 5
+        model.loadMore()
+        advanceUntilIdle()
+
+        val state = model.state.value
+        assertEquals(30, state.wallpapers.size)
+        assertTrue(state.loadMoreError.orEmpty().contains("conexión"))
+        assertFalse(state.loadingMore)
+    }
+
+    @Test
+    fun `changing a category resets the page and sends the filter to the api`() =
+        runTest(dispatcher) {
+            repository.wallpapers = listOf(
+                wallpaper("1").copy(category = "Ciudad"),
+                wallpaper("2").copy(category = "Abstracto"),
+            )
+            val model = viewModel()
+            advanceUntilIdle()
+
+            model.setCategory("Ciudad")
+            advanceUntilIdle()
+
+            val last = repository.pageFilters.last()
+            assertEquals(0, last.offset)
+            assertEquals("Ciudad", last.category)
+            assertEquals(listOf("1"), model.state.value.wallpapers.map { it.id })
+        }
+
+    @Test
+    fun `the cache merges fresh pages and keeps old downloads`() = runTest(dispatcher) {
+        cache.writeWallpapers(listOf(wallpaper("old")))
+        repository.wallpapers = (1..40).map { wallpaper("$it") }
+        val model = viewModel()
+        advanceUntilIdle()
+
+        model.loadMore()
+        advanceUntilIdle()
+
+        val cachedIds = cache.readWallpapers().map { it.id }
+        assertEquals(41, cachedIds.size)
+        assertTrue(cachedIds.contains("old"))
+        assertTrue(cachedIds.contains("40"))
     }
 
     @Test

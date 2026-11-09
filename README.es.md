@@ -18,12 +18,17 @@ así que funciona apenas la instalás.
 ## 📸 Capturas
 
 Las capturas del build actual viven en
-[`docs/screenshots/`](docs/screenshots/). El set de 1.5.0 se está renovando; mirá
-la nota de ahí para saber cómo tomarlas.
+[`docs/screenshots/`](docs/screenshots/). El set de 1.5.0 se está renovando para
+1.6.0; mirá la nota de ahí para saber cómo tomarlas.
 
 ## ✨ Características
 
 - Feed con destacados, búsqueda, categorías y tags libres.
+- Carga de a 30 fondos con búsqueda y filtros en el servidor; la caché offline
+  guarda hasta 400.
+- Actualizador dentro de la app con verificación SHA-256 antes de abrir el
+  instalador.
+- **Sorprendeme** abre un fondo aleatorio del filtro actual.
 - Colecciones que creás dentro de la app, públicas o privadas.
 - Vista de detalle con zoom con dos dedos, doble toque y desplazamiento.
 - Editor integrado con encuadre, ajustes de color, filtros y desenfoque
@@ -101,8 +106,6 @@ Todo lo siguiente está **planeado** y todavía no existe:
 - Panel web de administración para gestionar fondos.
 - Perfil de base para mejorar el rendimiento en equipos de gama baja.
 - Release firmado distribuido fuera de GitHub.
-- Actualizador completo dentro de la app (por ahora, Ajustes abre la página de
-  releases).
 
 Mirá [ROADMAP.es.md](ROADMAP.es.md) para la lista completa de prioridades y lo
 que ya está hecho.

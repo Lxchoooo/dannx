@@ -44,8 +44,11 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
@@ -136,6 +139,7 @@ fun WallpaperCard(
             // piezas sueltas.
             .semantics(mergeDescendants = true) {
                 contentDescription = description
+                role = Role.Button
             }
             .clickable(interactionSource = interactionSource, indication = null) {
                 onClick()
@@ -220,6 +224,7 @@ fun FeaturedCard(
             .background(MaterialTheme.colorScheme.surfaceVariant)
             .semantics(mergeDescendants = true) {
                 contentDescription = description
+                role = Role.Button
             }
             .clickable(interactionSource = interactionSource, indication = null) {
                 onClick()
@@ -338,13 +343,20 @@ private fun FavoriteButton(
     modifier: Modifier = Modifier,
 ) {
     val haptics = LocalHapticFeedback.current
+    val favoriteState = if (isFavorite) {
+        stringResource(R.string.favorite_state_on)
+    } else {
+        stringResource(R.string.favorite_state_off)
+    }
     FilledIconButton(
         onClick = {
             haptics.performHapticFeedback(HapticFeedbackType.LongPress)
             onClick()
         },
         // Mínimo 48 dp para que el dedo acierte y TalkBack lo tome como botón.
-    modifier = modifier.size(48.dp),
+        modifier = modifier
+            .size(48.dp)
+            .semantics { stateDescription = favoriteState },
         colors = IconButtonDefaults.filledIconButtonColors(
             containerColor = Color.Black.copy(alpha = 0.32f),
             contentColor = Color.White,

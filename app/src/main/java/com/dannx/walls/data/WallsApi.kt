@@ -41,21 +41,73 @@ class WallsApi(
     override val isConfigured: Boolean =
         baseUrl.startsWith("https://") && anonKey.isNotBlank()
 
-    override suspend fun loadWallpapers(): List<Wallpaper> = withContext(Dispatchers.IO) {
+    override suspend fun loadWallpapersPage(
+        filter: WallpaperFilter,
+    ): WallpaperPage = withContext(Dispatchers.IO) {
+        val limit = filter.limit.coerceIn(1, 100)
+        val offset = filter.offset.coerceAtLeast(0)
         if (!isConfigured) {
-            return@withContext DemoWallpapers.items
+            val items = filterWallpapers(
+                items = DemoWallpapers.items,
+                query = filter.query,
+                category = filter.category,
+                tag = filter.tag,
+            ).filterNot { it.isArchived || it.isDeleted }
+            val page = items.drop(offset).take(limit)
+            return@withContext WallpaperPage(
+                items = page,
+                hasMore = offset + page.size < items.size,
+            )
         }
-        retryPolicy.run { attempt ->
+        retryPolicy.run {
             try {
-                getList<WallpaperDto>("wallpapers?select=*&order=created_at.desc")
+                val items = getList<WallpaperDto>(feedPath(filter, limit, offset))
                     .filter { it.storagePath.isNotBlank() }
                     .map { it.toWallpaper(baseUrl) }
                     .filterNot { it.isArchived || it.isDeleted }
+                    .distinctBy { it.id }
+                WallpaperPage(
+                    items = items.take(limit),
+                    hasMore = items.size > limit,
+                )
             } catch (error: Throwable) {
                 throw error.toDannXError()
             }
         }
     }
+
+    /**
+     * La respuesta pide un elemento de más para saber si queda otra página.
+     * Los filtros viven en PostgREST para que la búsqueda no dependa de lo que
+     * ya se descargó en el teléfono.
+     */
+    private fun feedPath(filter: WallpaperFilter, limit: Int, offset: Int): String {
+        val params = mutableListOf(
+            "select=*",
+            "order=created_at.desc,id.desc",
+            "limit=${limit + 1}",
+            "offset=$offset",
+            "archived_at=is.null",
+        )
+        when (filter.category) {
+            null, CategoryAll, "Todos" -> Unit
+            CategoryFeatured, "Destacados" -> params += "featured=eq.true"
+            else -> params += "category=eq.${encodeQueryValue(filter.category)}"
+        }
+        filter.tag?.takeIf { it.isNotBlank() }?.let { tag ->
+            params += "tags=cs.{${encodeQueryValue(tag)}}"
+        }
+        filter.query.trim().takeIf { it.isNotEmpty() }?.let { query ->
+            val value = encodeQueryValue(query)
+            params += "or=(title.ilike.*$value*,category.ilike.*$value*," +
+                "author.ilike.*$value*,tags.cs.{$value})"
+        }
+        return "wallpapers?${params.joinToString("&")}"
+    }
+
+    private fun encodeQueryValue(value: String): String =
+        java.net.URLEncoder.encode(value, java.nio.charset.StandardCharsets.UTF_8.name())
+            .replace("+", "%20")
 
     override suspend fun loadAdminWallpapers(): List<Wallpaper> = withContext(Dispatchers.IO) {
         if (!isConfigured) {

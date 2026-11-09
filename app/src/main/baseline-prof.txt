@@ -12,7 +12,7 @@ HSPLcom/dannx/walls/MainViewModel$Companion;->factory(Landroid/app/Application;)
 
 # --- App: carga de datos ---
 HSPLcom/dannx/walls/data/WallsApi;-><init>(Landroid/content/Context;Lcom/dannx/walls/data/Prefs;)V
-HSPLcom/dannx/walls/data/WallsApi;->loadWallpapers()Ljava/util/List;
+HSPLcom/dannx/walls/data/WallsApi;->loadWallpapersPage(Lcom/dannx/walls/data/WallpaperFilter;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 HSPLcom/dannx/walls/data/WallsApi;->loadCollections()Ljava/util/List;
 HSPLcom/dannx/walls/data/WallsApi;->getList(Ljava/lang/String;)Ljava/util/List;
 HSPLcom/dannx/walls/data/Prefs;->favorites()Ljava/util/Set;

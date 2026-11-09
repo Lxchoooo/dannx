@@ -285,6 +285,7 @@ private fun MainApp(
                         onOpenSettings = { navController.navigate("settings") },
                         onSearchSubmit = viewModel::rememberCurrentSearch,
                         onClearRecentSearches = viewModel::clearRecentSearches,
+                        onLoadMore = viewModel::loadMore,
                     )
                 }
             }

@@ -134,6 +134,7 @@ fun filterWallpapers(
         val matchesQuery = term.isBlank() ||
             normalize(wallpaper.title).contains(term) ||
             normalize(wallpaper.category).contains(term) ||
+            normalize(wallpaper.author).contains(term) ||
             wallpaper.tags.any { normalize(it).contains(term) }
         matchesCategory && matchesTag && matchesQuery
     }

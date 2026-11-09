@@ -249,10 +249,12 @@ jobs:
           path: release
 
       - name: Generate release notes
+        env:
+          VERSION_NAME: ${{ github.ref_type == 'tag' && github.ref_name || '' }}
         run: |
           python3 scripts/release_notes.py > RELEASE_NOTES.md || true
           if [ ! -s RELEASE_NOTES.md ]; then
-            echo "Compilado y firmado por GitHub Actions. Ver CHANGELOG.md para el detalle." > RELEASE_NOTES.md
+            echo "See CHANGELOG.md for the full list of changes." > RELEASE_NOTES.md
           fi
           head -20 RELEASE_NOTES.md
 

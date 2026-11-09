@@ -14,13 +14,32 @@ data class UploadOutcome(
     val warning: String? = null,
 )
 
+/** Filtros y ventana que pide el feed paginado. */
+data class WallpaperFilter(
+    val query: String = "",
+    val category: String? = null,
+    val tag: String? = null,
+    val offset: Int = 0,
+    val limit: Int = FEED_PAGE_SIZE,
+) {
+    val hasActiveFilters: Boolean
+        get() = query.isNotBlank() || category != null || tag != null
+}
+
+data class WallpaperPage(
+    val items: List<Wallpaper>,
+    val hasMore: Boolean,
+)
+
+const val FEED_PAGE_SIZE = 30
+
 /**
  * Contrato de los datos remotos. Permite probar el ViewModel con un fake.
  */
 interface WallpapersRepository {
     val isConfigured: Boolean
 
-    suspend fun loadWallpapers(): List<Wallpaper>
+    suspend fun loadWallpapersPage(filter: WallpaperFilter): WallpaperPage
     suspend fun loadAdminWallpapers(): List<Wallpaper>
     suspend fun loadCategories(): List<WallpaperCategory>
     suspend fun loadCollections(): List<WallpaperCollection>

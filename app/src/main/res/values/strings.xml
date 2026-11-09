@@ -60,8 +60,11 @@
     <string name="action_clear">Borrar</string>
     <string name="action_change">Cambiar</string>
     <string name="action_settings">Ajustes</string>
+    <string name="action_retry">Reintentar</string>
     <string name="action_add_favorite">Añadir a favoritos</string>
     <string name="action_remove_favorite">Quitar de favoritos</string>
+    <string name="favorite_state_on">Favorito</string>
+    <string name="favorite_state_off">No favorito</string>
 
     <string name="field_name">Nombre</string>
     <string name="field_description">Descripción</string>
@@ -81,6 +84,9 @@
     <!-- Explorar -->
     <string name="home_tagline">Wallpapers que se sienten tuyos.</string>
     <string name="action_refresh_feed">Actualizar feed</string>
+    <string name="action_random_wallpaper">Sorprendeme</string>
+    <string name="feed_loading_more">Cargando más fondos…</string>
+    <string name="feed_no_more">No hay más fondos.</string>
     <string name="home_search_hint">Buscar fondos o tags</string>
     <string name="home_clear_search">Borrar búsqueda</string>
     <string name="home_recent_searches">Búsquedas recientes</string>
@@ -163,6 +169,31 @@
     <string name="settings_sign_out">Cerrar sesión</string>
     <string name="settings_about">Acerca de</string>
     <string name="settings_privacy">Privacidad</string>
+
+    <!-- Actualizador -->
+    <string name="update_checking">Buscando actualizaciones…</string>
+    <string name="update_up_to_date">Ya tenés la última versión.</string>
+    <string name="update_available_title">DannX %1$s está disponible</string>
+    <string name="update_available_body">Descargá la nueva versión y verificá su integridad antes de instalar.</string>
+    <string name="update_notes">Novedades</string>
+    <string name="update_download">Descargar</string>
+    <string name="update_downloading_title">Descargando DannX</string>
+    <string name="update_downloading">Descargando… %1$d%%</string>
+    <string name="update_ready">Descarga verificada. Podés instalar la nueva versión.</string>
+    <string name="update_install">Instalar</string>
+    <string name="update_later">Más tarde</string>
+    <string name="update_close">Cerrar</string>
+    <string name="update_open_github">Abrir en GitHub</string>
+    <string name="update_error_title">No se pudo actualizar</string>
+    <string name="update_error_network">Revisá tu conexión e intentá de nuevo.</string>
+    <string name="update_error_no_release">No hay una versión publicada para descargar.</string>
+    <string name="update_error_asset">La release no incluye el APK o su checksum.</string>
+    <string name="update_error_checksum">La descarga no coincide con el checksum. No se instalará.</string>
+    <string name="update_error_download">No se pudo descargar el APK.</string>
+    <string name="update_error_format">El servidor devolvió una versión que no se puede leer.</string>
+    <string name="update_error_install">No se pudo abrir el instalador de Android.</string>
+    <string name="update_permission">Permití instalar apps desconocidas para DannX y volvé a intentar.</string>
+    <string name="update_permission_action">Abrir ajustes</string>
 
     <!-- Acerca de -->
     <string name="about_title">Acerca de</string>

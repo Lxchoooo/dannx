@@ -13,7 +13,20 @@ maintain them.
 - **Planned**: accepted, but not started.
 - **Exploring**: needs a design decision first.
 
-## 1.5.0 (in progress)
+## 1.6.0 (in progress)
+
+- [x] **In-app updater** that checks the latest GitHub release, downloads the
+      APK, verifies its SHA-256 checksum and opens the Android installer.
+- [x] **Feed pagination and incremental cache**: 30 wallpapers per page,
+      server-side search and filters, and a 400-wallpaper offline cache.
+- [x] **Surprise me** button for a random wallpaper from the current filter.
+- [x] **Accessibility pass**: TalkBack labels and states, larger touch targets
+      and better large-font behaviour.
+- [x] Release notes read from an English file under `docs/releases/`.
+- [ ] Green CI run for the release branch.
+- [ ] Tag and publish `v1.6.0`.
+
+## 1.5.0
 
 - [x] Full English translation and progressive blur in the editor.
 - [x] About screen, privacy link in Settings and public project links.
@@ -23,20 +36,12 @@ maintain them.
 - [x] Atomic bulk actions with Supabase RPCs.
 - [x] Trash with restore, permanent delete and automatic 30-day purge.
 - [x] Home preview in the Studio content editor.
-- [ ] Green CI run for the release branch.
-- [ ] Screenshots for the README.
-- [ ] Tag and publish `v1.5.0`.
+- [x] Tag and publish `v1.5.0`.
 
 ## Next
 
 - [ ] **Baseline profile and Macrobenchmark** to improve startup and scrolling
       on low-end devices.
-- [ ] **In-app updater** that checks the latest release, compares versions and
-      opens the download. Settings currently opens the releases page.
-- [ ] **Feed pagination and incremental cache** so the app does not download and
-      keep every wallpaper at once.
-- [ ] **Accessibility pass**: TalkBack, contrast, large font sizes and touch
-      targets.
 
 ## Product
 
@@ -53,7 +58,7 @@ maintain them.
 - [ ] Instrumented tests for applying, downloading, favourites and the editor.
 - [ ] Screenshot tests (Roborazzi or Paparazzi) to catch visual changes.
 - [ ] `actionlint` and `zizmor` checks for GitHub Actions.
-- [ ] Release notes generated from the changelog or commits.
+- [x] Release notes generated from a versioned English file.
 
 ## Backend and security
 
