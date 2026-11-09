@@ -41,7 +41,6 @@ import androidx.compose.material.icons.rounded.Favorite
 import androidx.compose.material.icons.rounded.FavoriteBorder
 import androidx.compose.material.icons.rounded.Link
 import androidx.compose.material.icons.rounded.MoreVert
-import androidx.compose.material.icons.rounded.OpenInNew
 import androidx.compose.material.icons.rounded.Share
 import androidx.compose.material.icons.rounded.Wallpaper
 import androidx.compose.material3.AlertDialog
@@ -107,7 +106,6 @@ import com.dannx.walls.util.DoubleTapZoom
 import com.dannx.walls.util.MinZoom
 import com.dannx.walls.util.PanOffset
 import com.dannx.walls.util.WallpaperTarget
-import com.dannx.walls.util.openUrl
 import com.dannx.walls.util.ZoomState
 import com.dannx.walls.util.clampPan
 import com.dannx.walls.util.clampScale
@@ -404,19 +402,6 @@ fun DetailScreen(
                             onClick = {
                                 showActions = false
                                 copyWallpaperLink(context, wallpaper.imageUrl)
-                            },
-                        )
-                        DropdownMenuItem(
-                            text = { Text(stringResource(R.string.detail_open_original)) },
-                            leadingIcon = {
-                                Icon(
-                                    Icons.Rounded.OpenInNew,
-                                    contentDescription = null,
-                                )
-                            },
-                            onClick = {
-                                showActions = false
-                                openUrl(context, wallpaper.imageUrl)
                             },
                         )
                     }

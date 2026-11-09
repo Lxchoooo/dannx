@@ -131,7 +131,6 @@
     <string name="detail_by_author">by %1$s</string>
     <string name="detail_copy_link">Copy link</string>
     <string name="detail_link_copied">Link copied</string>
-    <string name="detail_open_original">Open original</string>
     <string name="detail_save_collection">Save to collection</string>
     <string name="detail_no_collections">You don\'t have any collections yet. Create one to group your wallpapers.</string>
 
