@@ -1,5 +1,9 @@
 package com.dannx.walls.ui.screens
 
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
+import android.widget.Toast
 import androidx.activity.compose.LocalActivity
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
@@ -35,12 +39,16 @@ import androidx.compose.material.icons.rounded.CollectionsBookmark
 import androidx.compose.material.icons.rounded.Download
 import androidx.compose.material.icons.rounded.Favorite
 import androidx.compose.material.icons.rounded.FavoriteBorder
+import androidx.compose.material.icons.rounded.Link
+import androidx.compose.material.icons.rounded.MoreVert
 import androidx.compose.material.icons.rounded.Share
 import androidx.compose.material.icons.rounded.Wallpaper
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.LinearWavyProgressIndicator
 import androidx.compose.material3.FilledIconButton
@@ -138,6 +146,7 @@ fun DetailScreen(
     var showCollections by rememberSaveable { mutableStateOf(false) }
     var showCreateCollection by rememberSaveable { mutableStateOf(false) }
     var showApplySheet by rememberSaveable { mutableStateOf(false) }
+    var showActions by rememberSaveable { mutableStateOf(false) }
     val haptics = LocalHapticFeedback.current
     // El botón principal toma el color de la imagen para sentirse parte de ella.
     val accent = rememberWallpaperAccent(wallpaper.imageUrl, MaterialTheme.colorScheme.primary)
@@ -364,6 +373,38 @@ fun DetailScreen(
                             stringResource(R.string.action_add_favorite)
                         },
                     )
+                }
+                Box {
+                    FilledIconButton(
+                        onClick = { showActions = true },
+                        colors = IconButtonDefaults.filledIconButtonColors(
+                            containerColor = Color.Black.copy(alpha = 0.35f),
+                            contentColor = Color.White,
+                        ),
+                    ) {
+                        Icon(
+                            Icons.Rounded.MoreVert,
+                            contentDescription = stringResource(R.string.action_more),
+                        )
+                    }
+                    DropdownMenu(
+                        expanded = showActions,
+                        onDismissRequest = { showActions = false },
+                    ) {
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.detail_copy_link)) },
+                            leadingIcon = {
+                                Icon(
+                                    Icons.Rounded.Link,
+                                    contentDescription = null,
+                                )
+                            },
+                            onClick = {
+                                showActions = false
+                                copyWallpaperLink(context, wallpaper.imageUrl)
+                            },
+                        )
+                    }
                 }
             }
         }
@@ -752,4 +793,11 @@ private fun NewCollectionDialog(
             }
         },
     )
+}
+
+private fun copyWallpaperLink(context: Context, url: String) {
+    val clipboard =
+        context.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager ?: return
+    clipboard.setPrimaryClip(ClipData.newPlainText("DannX", url))
+    Toast.makeText(context, R.string.detail_link_copied, Toast.LENGTH_SHORT).show()
 }

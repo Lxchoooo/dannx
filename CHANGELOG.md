@@ -71,6 +71,7 @@ reservado a administradores y no se detalla en la documentación.
 - Acerca de suma “Compartir DannX” con el enlace del repositorio.
 - La búsqueda del feed muestra un botón para borrar el texto cuando hay una
   consulta activa.
+- La ficha del fondo suma un menú de acciones con “Copiar enlace”.
 - La caché del feed queda acotada a 400 fondos y 100 colecciones para evitar que
   crezca sin límite.
 - CI publica el `mapping.txt` de R8 como artifact de 30 días para poder leer

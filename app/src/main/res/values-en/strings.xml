@@ -59,6 +59,7 @@
     <string name="action_share">Share</string>
     <string name="action_clear">Clear</string>
     <string name="action_change">Change</string>
+    <string name="action_more">More actions</string>
     <string name="action_settings">Settings</string>
     <string name="action_add_favorite">Add to favorites</string>
     <string name="action_remove_favorite">Remove from favorites</string>
@@ -128,6 +129,8 @@
 
     <!-- Detail -->
     <string name="detail_by_author">by %1$s</string>
+    <string name="detail_copy_link">Copy link</string>
+    <string name="detail_link_copied">Link copied</string>
     <string name="detail_save_collection">Save to collection</string>
     <string name="detail_no_collections">You don\'t have any collections yet. Create one to group your wallpapers.</string>
 
