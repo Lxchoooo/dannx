@@ -17,6 +17,8 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -76,6 +78,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -94,6 +97,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextAlign
@@ -1315,6 +1319,7 @@ private fun PublishPanel(
                 singleLine = true,
                 shape = MaterialTheme.shapes.medium,
             )
+            TagPreviewChips(parseTags(tagsText))
             Spacer(Modifier.height(14.dp))
             Text(
                 stringResource(R.string.studio_collection_optional),
@@ -2159,6 +2164,45 @@ private fun CategoriesPanel(
     }
 }
 
+/**
+ * Vista previa de los tags cargados en un formulario. El primero queda
+ * destacado porque es el principal: es el que aparece en la fila de Inicio.
+ */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun TagPreviewChips(tags: List<String>) {
+    if (tags.isEmpty()) return
+    FlowRow(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
+        tags.forEachIndexed { index, tag ->
+            val primary = index == 0
+            Surface(
+                shape = CircleShape,
+                color = if (primary) {
+                    MaterialTheme.colorScheme.primaryContainer
+                } else {
+                    MaterialTheme.colorScheme.surfaceVariant
+                },
+                contentColor = if (primary) {
+                    MaterialTheme.colorScheme.onPrimaryContainer
+                } else {
+                    MaterialTheme.colorScheme.onSurfaceVariant
+                },
+            ) {
+                Text(
+                    text = "#$tag",
+                    style = MaterialTheme.typography.labelLarge,
+                    fontWeight = if (primary) FontWeight.SemiBold else null,
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                )
+            }
+        }
+    }
+}
+
 @Composable
 private fun TagsPanel(
     state: UiState,
@@ -2490,6 +2534,7 @@ private fun WallpaperEditDialog(
                     modifier = Modifier.fillMaxWidth(),
                 )
                 Spacer(Modifier.height(8.dp))
+                TagPreviewChips(parseTags(tags))
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
                         stringResource(R.string.studio_featured),

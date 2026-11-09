@@ -304,7 +304,7 @@
     <string name="studio_change_image">Cambiar imagen</string>
     <string name="studio_title_hint">Ej. Atardecer en la playa</string>
     <string name="studio_tags_hint">anime, noche, flores</string>
-    <string name="studio_tags_help">Sepáralos con comas. Los usás para filtrar en Explorar.</string>
+    <string name="studio_tags_help">Sepáralos con comas. El primer tag es el principal y es el que aparece en Inicio.</string>
     <string name="studio_collection_optional">Colección (opcional)</string>
     <string name="studio_no_collections_hint">Creá una colección desde esta sección para agrupar el fondo.</string>
     <string name="studio_no_collection">Sin colección</string>
@@ -337,7 +337,7 @@
     <string name="studio_open">Abrir</string>
     <string name="studio_no_category">Sin categoría</string>
     <string name="studio_edit_wallpaper">Editar fondo</string>
-    <string name="studio_tags_comma">Separados por comas.</string>
+    <string name="studio_tags_comma">Separados por comas. El primero es el principal y aparece en Inicio.</string>
     <string name="studio_featured">Destacado</string>
     <string name="studio_rename_category">Renombrar categoría</string>
     <string name="studio_delete_category">Borrar categoría</string>

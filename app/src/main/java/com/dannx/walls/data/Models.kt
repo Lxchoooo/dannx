@@ -119,10 +119,31 @@ fun parseTags(value: String): List<String> =
         .distinctBy { it.lowercase(Locale.ROOT) }
         .take(12)
 
-fun collectTags(items: List<Wallpaper>): List<String> =
-    items.flatMap { wallpaper -> wallpaper.tags }
-        .distinctBy { it.lowercase(Locale.ROOT) }
-        .sortedBy { it.lowercase(Locale.ROOT) }
+/**
+ * Etiquetas de la fila de Inicio: solo el primer tag de cada fondo (el principal),
+ * sin repetir y ordenadas de más a menos usadas; el desempate es alfabético.
+ * Los fondos sin tags no aportan etiqueta. Los demás tags solo guardan y se
+ * usan para buscar, no aparecen acá.
+ */
+fun collectTags(items: List<Wallpaper>): List<String> {
+    val counts = linkedMapOf<String, Pair<String, Int>>()
+    items.forEach { wallpaper ->
+        val primary = wallpaper.tags.firstOrNull() ?: return@forEach
+        val key = primary.lowercase(Locale.ROOT)
+        val previous = counts[key]
+        counts[key] = if (previous == null) {
+            primary to 1
+        } else {
+            previous.first to previous.second + 1
+        }
+    }
+    return counts.values
+        .sortedWith(
+            compareByDescending<Pair<String, Int>> { it.second }
+                .thenBy { it.first.lowercase(Locale.ROOT) },
+        )
+        .map { it.first }
+}
 
 fun filterWallpapers(
     items: List<Wallpaper>,

@@ -304,7 +304,7 @@
     <string name="studio_change_image">Change image</string>
     <string name="studio_title_hint">E.g. Sunset on the beach</string>
     <string name="studio_tags_hint">anime, night, flowers</string>
-    <string name="studio_tags_help">Separate them with commas. They\'re used to filter in Explore.</string>
+    <string name="studio_tags_help">Separate them with commas. The first tag is the primary one and is what appears in Home.</string>
     <string name="studio_collection_optional">Collection (optional)</string>
     <string name="studio_no_collections_hint">Create a collection from this section to group the wallpaper.</string>
     <string name="studio_no_collection">No collection</string>
@@ -337,7 +337,7 @@
     <string name="studio_open">Open</string>
     <string name="studio_no_category">Uncategorized</string>
     <string name="studio_edit_wallpaper">Edit wallpaper</string>
-    <string name="studio_tags_comma">Separated by commas.</string>
+    <string name="studio_tags_comma">Separated by commas. The first one is primary and appears in Home.</string>
     <string name="studio_featured">Featured</string>
     <string name="studio_rename_category">Rename category</string>
     <string name="studio_delete_category">Delete category</string>
