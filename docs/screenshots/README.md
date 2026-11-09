@@ -22,7 +22,9 @@ How to take them:
    export as PNG.
 4. Name the files exactly as in the table and drop them in this folder.
 
-Until the files exist, the README shows broken image links. That is expected.
+The 1.4.0 set should use the same theme (light or dark) and the same device for
+all four shots. Until the files exist, the main README does not show images
+instead of showing broken links.
 
 <a id="español"></a>
 ## Español
@@ -44,5 +46,6 @@ Cómo sacarlas:
    exportalas en PNG.
 4. Poneles los nombres exactos de la tabla y dejalas en esta carpeta.
 
-Mientras los archivos no existan, el README muestra imágenes rotas. Es
-esperado.
+El set de 1.4.0 debería usar el mismo tema (claro u oscuro) y el mismo
+dispositivo en las cuatro capturas. Mientras los archivos no existan, el README
+principal no muestra imágenes en vez de mostrar enlaces rotos.
