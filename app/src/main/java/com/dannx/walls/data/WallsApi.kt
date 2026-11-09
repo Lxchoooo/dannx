@@ -710,7 +710,7 @@ class WallsApi(
                     error.isAlreadyGone() -> deletedImage = true
                     // Un fallo sin vuelta atrás (permiso, sesión vencida) no
                     // mejora con otra espera igual.
-                    !error.isRetryable() -> break
+                    !error.isRetryableForImageDelete() -> break
                     attempt < IMAGE_DELETE_ATTEMPTS - 1 ->
                         delay(IMAGE_DELETE_RETRY_DELAY_MS)
                     else -> Unit
@@ -736,6 +736,17 @@ class WallsApi(
      */
     private fun Throwable.isAlreadyGone(): Boolean =
         (this as? DannXError.Unexpected)?.message?.contains("404") == true
+
+    /**
+     * Solo los errores del catálogo consultan si valen un reintento; cualquier
+     * otro imprevisto (una IOException puntual, un NPE del SDK) se reintenta:
+     * dejar la imagen a medias es peor que esperar un poco más.
+     */
+    private fun Throwable.isRetryableForImageDelete(): Boolean =
+        when (this) {
+            is DannXError -> this.isRetryable()
+            else -> true
+        }
 
     override suspend fun createCategory(
         name: String,
