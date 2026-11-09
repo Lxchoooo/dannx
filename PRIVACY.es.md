@@ -87,4 +87,4 @@ importantes se van a mencionar en las notas del release.
 
 Para consultas de privacidad, abrí un issue en
 <https://github.com/Lxchoooo/dannx/issues>. Para reportes sensibles, usá el canal
-privado descrito en [SECURITY.md](SECURITY.md).
+privado descrito en [SECURITY.es.md](SECURITY.es.md).

@@ -10,7 +10,7 @@ Al participar, aceptás seguir nuestro [Código de Conducta](CODE_OF_CONDUCT.es.
 
 - Para bugs o ideas de funciones, abrí un issue primero.
 - Para problemas de seguridad, **no** abras un issue público: seguí
-  [SECURITY.md](SECURITY.md).
+  [SECURITY.es.md](SECURITY.es.md).
 - Mantené las pull requests chicas y enfocadas. Un tema por PR es más fácil de
   revisar y más rápido de validar en CI.
 

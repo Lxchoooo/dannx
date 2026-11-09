@@ -121,7 +121,7 @@ colecciones, los ajustes y la caché offline quedan en tu dispositivo. Mirá
 ## 🛡 Seguridad
 
 No abras un issue público para vulnerabilidades. Seguí
-[SECURITY.md](SECURITY.md) para reportarlas de forma privada.
+[SECURITY.es.md](SECURITY.es.md) para reportarlas de forma privada.
 
 Cada release incluye `DannX.apk.sha256` y una atestación de procedencia. Después
 de descargarlo, verificá el checksum con `sha256sum -c DannX.apk.sha256` o la

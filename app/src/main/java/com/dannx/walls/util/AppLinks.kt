@@ -13,7 +13,6 @@ object AppLinks {
     const val Repo = "https://github.com/Lxchoooo/dannx"
     const val Releases = "https://github.com/Lxchoooo/dannx/releases/latest"
     const val License = "https://github.com/Lxchoooo/dannx/blob/main/LICENSE"
-    const val Security = "https://github.com/Lxchoooo/dannx/blob/main/SECURITY.md"
 
     val privacy: String
         get() = if (Locale.getDefault().language == "es") {

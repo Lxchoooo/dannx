@@ -25,6 +25,8 @@ reservado a administradores y no se detalla en la documentación.
 - `CONTRIBUTING.md` y `CONTRIBUTING.es.md` con setup, estilo, tests y checklist
   de pull requests.
 - `CODE_OF_CONDUCT.md` y `CODE_OF_CONDUCT.es.md` con Contributor Covenant 2.1.
+- `SECURITY.md` y `SECURITY.es.md` con el canal privado y las prácticas de
+  seguridad del proyecto.
 - `PRIVACY.md` y `PRIVACY.es.md`, enlazados desde el README y desde Ajustes.
 - El README deja de mostrar capturas inexistentes; se actualizan con el build
   1.4.0.
