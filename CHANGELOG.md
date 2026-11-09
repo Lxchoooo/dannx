@@ -73,6 +73,14 @@ reservado a administradores y no se detalla en la documentación.
   consulta activa.
 - El buscador guarda las últimas 8 búsquedas y las ofrece como chips cuando el
   campo está vacío, con una acción para borrarlas.
+- El Estudio suma un resumen con contadores y accesos rápidos a publicados,
+  archivados y destacados.
+- “Mis fondos” permite buscar, filtrar por categoría o destacados y ordenar por
+  fecha, título o categoría.
+- Cada fondo se puede destacar o quitar de destacados sin abrir el editor, y el
+  Estudio se puede actualizar desde el encabezado.
+- Las categorías se pueden reordenar con flechas y el nuevo orden se guarda en
+  el catálogo.
 - La ficha del fondo suma botones laterales para pasar al fondo anterior o
   siguiente sin volver al feed.
 - La caché del feed queda acotada a 400 fondos y 100 colecciones para evitar que

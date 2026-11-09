@@ -668,6 +668,49 @@ class MainViewModel(
         }
     }
 
+    fun moveCategory(categoryId: String, direction: Int) {
+        if (direction == 0) return
+        val ordered = _state.value.categories.sortedBy { it.position }
+        val index = ordered.indexOfFirst { it.id == categoryId }
+        if (index < 0) return
+        val targetIndex = index + direction
+        if (targetIndex !in ordered.indices) return
+
+        val reordered = ordered.toMutableList().apply {
+            val item = removeAt(index)
+            add(targetIndex, item)
+        }.mapIndexed { position, category -> category.copy(position = position) }
+        val oldPositions = ordered.associate { it.id to it.position }
+        val changed = reordered.filter { oldPositions[it.id] != it.position }
+
+        if (_state.value.isDemo) {
+            _state.update {
+                it.copy(
+                    categories = reordered,
+                    message = strings.get(R.string.msg_order_updated),
+                )
+            }
+            return
+        }
+        viewModelScope.launch {
+            _state.update { it.copy(studioBusy = true) }
+            try {
+                changed.forEach { category ->
+                    api.updateCategory(category.id, category.name, category.position)
+                }
+                _state.update {
+                    it.copy(
+                        studioBusy = false,
+                        categories = reordered,
+                        message = strings.get(R.string.msg_order_updated),
+                    )
+                }
+            } catch (error: Exception) {
+                handleBulkFailure(error)
+            }
+        }
+    }
+
     fun deleteCategory(categoryId: String, reassignToId: String? = null) {
         val category = _state.value.categories.firstOrNull { it.id == categoryId } ?: return
         val affected = _state.value.studioWallpapers.filter { it.categoryId == categoryId }

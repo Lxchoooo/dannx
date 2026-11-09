@@ -204,6 +204,16 @@
     <string name="studio_sign_in">Sign in</string>
     <string name="studio_section_publish">Publish</string>
     <string name="studio_section_tags">Tags</string>
+    <string name="studio_overview">Overview</string>
+    <string name="studio_refresh">Refresh studio</string>
+    <string name="studio_search_walls">Search my wallpapers</string>
+    <string name="studio_sort">Sort</string>
+    <string name="studio_sort_recent">Recent</string>
+    <string name="studio_sort_title">Title</string>
+    <string name="studio_sort_category">Category</string>
+    <string name="studio_no_results">No wallpapers match those filters.</string>
+    <string name="studio_feature">Feature</string>
+    <string name="studio_unfeature">Remove from featured</string>
     <string name="studio_new_wallpaper">New wallpaper</string>
     <string name="studio_choose_image">Choose image</string>
     <string name="studio_image_hint">JPG, PNG, or WebP up to 25 MB</string>

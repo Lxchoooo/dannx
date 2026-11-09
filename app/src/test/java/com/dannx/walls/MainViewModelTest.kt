@@ -381,6 +381,27 @@ class MainViewModelTest {
     }
 
     @Test
+    fun `moving a category updates its position and order`() = runTest(dispatcher) {
+        store.saveSession("admin@test", "token", null, "u1")
+        repository.session = AdminSession("admin@test", "token", "u1")
+        repository.categories = listOf(
+            com.dannx.walls.data.WallpaperCategory(id = "a", name = "A", position = 0),
+            com.dannx.walls.data.WallpaperCategory(id = "b", name = "B", position = 1),
+        )
+        val model = viewModel()
+        advanceUntilIdle()
+        model.loadStudio()
+        advanceUntilIdle()
+
+        model.moveCategory("a", 1)
+        advanceUntilIdle()
+
+        val categories = model.state.value.categories
+        assertEquals(listOf("b", "a"), categories.map { it.id })
+        assertEquals(listOf(0, 1), categories.map { it.position })
+    }
+
+    @Test
     fun `deleting a category reassigns its wallpapers in bulk`() = runTest(dispatcher) {
         store.saveSession("admin@test", "token", null, "u1")
         repository.session = AdminSession("admin@test", "token", "u1")

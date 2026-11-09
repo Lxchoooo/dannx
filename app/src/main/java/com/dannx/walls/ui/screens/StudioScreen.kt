@@ -45,6 +45,7 @@ import androidx.compose.material.icons.rounded.AddPhotoAlternate
 import androidx.compose.material.icons.rounded.Archive
 import androidx.compose.material.icons.rounded.Category
 import androidx.compose.material.icons.rounded.Check
+import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.CloudUpload
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Edit
@@ -56,6 +57,10 @@ import androidx.compose.material.icons.rounded.LocalOffer
 import androidx.compose.material.icons.rounded.Lock
 import androidx.compose.material.icons.rounded.Logout
 import androidx.compose.material.icons.rounded.Person
+import androidx.compose.material.icons.rounded.Refresh
+import androidx.compose.material.icons.rounded.Search
+import androidx.compose.material.icons.rounded.Star
+import androidx.compose.material.icons.rounded.StarBorder
 import androidx.compose.material.icons.rounded.Unarchive
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -114,6 +119,12 @@ private enum class StudioSection(
     COLLECTIONS(R.string.studio_collections, Icons.Rounded.Folder),
 }
 
+private enum class StudioWallSort(@StringRes val labelRes: Int) {
+    RECENT(R.string.studio_sort_recent),
+    TITLE(R.string.studio_sort_title),
+    CATEGORY(R.string.studio_sort_category),
+}
+
 @Composable
 fun StudioScreen(
     state: UiState,
@@ -126,6 +137,7 @@ fun StudioScreen(
     onLoadStudio: () -> Unit = {},
     onCreateCategory: (String) -> Unit = {},
     onUpdateCategory: (String, String) -> Unit = { _, _ -> },
+    onMoveCategory: (String, Int) -> Unit = { _, _ -> },
     onDeleteCategory: (String, String?) -> Unit = { _, _ -> },
     onUpdateWallpaper: (String, String, String, String?, List<String>, Boolean) -> Unit =
         { _, _, _, _, _, _ -> },
@@ -157,6 +169,12 @@ fun StudioScreen(
     var tagToDelete by remember { mutableStateOf<String?>(null) }
     var showTagCreate by remember { mutableStateOf(false) }
     var showArchivedWalls by rememberSaveable { mutableStateOf(false) }
+    var wallsQuery by rememberSaveable { mutableStateOf("") }
+    var wallsCategoryId by rememberSaveable { mutableStateOf<String?>(null) }
+    var wallsFeaturedOnly by rememberSaveable { mutableStateOf(false) }
+    var wallsSortName by rememberSaveable { mutableStateOf(StudioWallSort.RECENT.name) }
+    val wallsSort = StudioWallSort.entries.firstOrNull { it.name == wallsSortName }
+        ?: StudioWallSort.RECENT
     var replacingWallpaperId by remember { mutableStateOf<String?>(null) }
     val replacePicker = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.PickVisualMedia(),
@@ -203,6 +221,13 @@ fun StudioScreen(
                             overflow = TextOverflow.Ellipsis,
                             modifier = Modifier.padding(end = 8.dp),
                         )
+                        FilledTonalIconButton(onClick = onLoadStudio) {
+                            Icon(
+                                Icons.Rounded.Refresh,
+                                contentDescription = stringResource(R.string.studio_refresh),
+                            )
+                        }
+                        Spacer(Modifier.width(8.dp))
                         FilledTonalIconButton(onClick = onSignOut) {
                             Icon(
                                 Icons.Rounded.Logout,
@@ -238,6 +263,29 @@ fun StudioScreen(
             }
 
             else -> {
+                item(key = "studio-overview") {
+                    Column {
+                        StudioOverview(
+                            state = state,
+                            onOpenPublish = { sectionName = StudioSection.PUBLISH.name },
+                            onOpenArchived = {
+                                showArchivedWalls = true
+                                wallsQuery = ""
+                                wallsCategoryId = null
+                                wallsFeaturedOnly = false
+                                sectionName = StudioSection.WALLS.name
+                            },
+                            onOpenFeatured = {
+                                showArchivedWalls = false
+                                wallsQuery = ""
+                                wallsCategoryId = null
+                                wallsFeaturedOnly = true
+                                sectionName = StudioSection.WALLS.name
+                            },
+                        )
+                        Spacer(Modifier.height(14.dp))
+                    }
+                }
                 item(key = "studio-tabs") {
                     Column {
                         StudioTabs(
@@ -281,7 +329,35 @@ fun StudioScreen(
                     StudioSection.WALLS -> wallsPanel(
                         state = state,
                         showArchived = showArchivedWalls,
-                        onToggleArchived = { showArchivedWalls = !showArchivedWalls },
+                        onToggleArchived = {
+                            showArchivedWalls = !showArchivedWalls
+                            wallsFeaturedOnly = false
+                        },
+                        query = wallsQuery,
+                        onQueryChange = { wallsQuery = it },
+                        categoryId = wallsCategoryId,
+                        onCategoryChange = { wallsCategoryId = it },
+                        featuredOnly = wallsFeaturedOnly,
+                        onFeaturedOnlyChange = { wallsFeaturedOnly = it },
+                        sort = wallsSort,
+                        onSortChange = { wallsSortName = it.name },
+                        onClearFilters = {
+                            wallsQuery = ""
+                            wallsCategoryId = null
+                            wallsFeaturedOnly = false
+                            wallsSortName = StudioWallSort.RECENT.name
+                        },
+                        onPublish = { sectionName = StudioSection.PUBLISH.name },
+                        onToggleFeatured = { wallpaper ->
+                            onUpdateWallpaper(
+                                wallpaper.id,
+                                wallpaper.title,
+                                wallpaper.category,
+                                wallpaper.categoryId,
+                                wallpaper.tags,
+                                !wallpaper.featured,
+                            )
+                        },
                         onEdit = { editWallpaper = it },
                         onReplace = { wallpaper ->
                             replacingWallpaperId = wallpaper.id
@@ -300,6 +376,7 @@ fun StudioScreen(
                             state = state,
                             onCreate = onCreateCategory,
                             onEdit = { categoryEditor = it },
+                            onMove = onMoveCategory,
                             onDelete = { categoryToDelete = it },
                         )
                     }
@@ -464,6 +541,110 @@ fun StudioScreen(
                 showTagCreate = false
             },
         )
+    }
+}
+
+@Composable
+private fun StudioOverview(
+    state: UiState,
+    onOpenPublish: () -> Unit,
+    onOpenArchived: () -> Unit,
+    onOpenFeatured: () -> Unit,
+) {
+    val archived = state.studioWallpapers.count { it.isArchived }
+    val published = state.studioWallpapers.size - archived
+    val featured = state.studioWallpapers.count { it.featured }
+
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = MaterialTheme.shapes.extraLarge,
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+        ),
+    ) {
+        Column(Modifier.padding(16.dp)) {
+            Text(
+                text = stringResource(R.string.studio_overview),
+                style = MaterialTheme.typography.titleMedium,
+            )
+            Spacer(Modifier.height(10.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                StudioStat(
+                    modifier = Modifier.weight(1f),
+                    icon = Icons.Rounded.Image,
+                    label = stringResource(R.string.studio_published),
+                    value = published,
+                )
+                StudioStat(
+                    modifier = Modifier.weight(1f),
+                    icon = Icons.Rounded.Archive,
+                    label = stringResource(R.string.studio_archived),
+                    value = archived,
+                )
+            }
+            Spacer(Modifier.height(10.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                StudioStat(
+                    modifier = Modifier.weight(1f),
+                    icon = Icons.Rounded.Star,
+                    label = stringResource(R.string.studio_featured),
+                    value = featured,
+                )
+                StudioStat(
+                    modifier = Modifier.weight(1f),
+                    icon = Icons.Rounded.Folder,
+                    label = stringResource(R.string.studio_collections),
+                    value = state.myCollections.size,
+                )
+            }
+            Spacer(Modifier.height(6.dp))
+            LazyRow(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                item(key = "overview-publish") {
+                    TextButton(onClick = onOpenPublish) {
+                        Text(stringResource(R.string.studio_new_wallpaper))
+                    }
+                }
+                item(key = "overview-archived") {
+                    TextButton(onClick = onOpenArchived) {
+                        Text(stringResource(R.string.studio_archived))
+                    }
+                }
+                item(key = "overview-featured") {
+                    TextButton(onClick = onOpenFeatured) {
+                        Text(stringResource(R.string.studio_featured))
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun StudioStat(
+    modifier: Modifier = Modifier,
+    icon: ImageVector,
+    label: String,
+    value: Int,
+) {
+    Row(modifier = modifier, verticalAlignment = Alignment.CenterVertically) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            modifier = Modifier.size(20.dp),
+            tint = MaterialTheme.colorScheme.primary,
+        )
+        Spacer(Modifier.width(8.dp))
+        Column {
+            Text(
+                text = value.toString(),
+                style = MaterialTheme.typography.titleLarge,
+            )
+            Text(
+                text = label,
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
     }
 }
 
@@ -849,13 +1030,46 @@ private fun LazyListScope.wallsPanel(
     state: UiState,
     showArchived: Boolean,
     onToggleArchived: () -> Unit,
+    query: String,
+    onQueryChange: (String) -> Unit,
+    categoryId: String?,
+    onCategoryChange: (String?) -> Unit,
+    featuredOnly: Boolean,
+    onFeaturedOnlyChange: (Boolean) -> Unit,
+    sort: StudioWallSort,
+    onSortChange: (StudioWallSort) -> Unit,
+    onClearFilters: () -> Unit,
+    onPublish: () -> Unit,
+    onToggleFeatured: (Wallpaper) -> Unit,
     onEdit: (Wallpaper) -> Unit,
     onReplace: (Wallpaper) -> Unit,
     onArchive: (String, Boolean) -> Unit,
     onDelete: (Wallpaper) -> Unit,
 ) {
-    val walls = state.studioWallpapers.filter { it.isArchived == showArchived }
+    val term = query.trim()
+    val hasFilters = query.isNotBlank() || categoryId != null || featuredOnly
     val archivedCount = state.studioWallpapers.count { it.isArchived }
+    val walls = state.studioWallpapers
+        .filter { it.isArchived == showArchived }
+        .filter { categoryId == null || it.categoryId == categoryId }
+        .filter { !featuredOnly || it.featured }
+        .filter { wallpaper ->
+            term.isBlank() ||
+                wallpaper.title.contains(term, ignoreCase = true) ||
+                wallpaper.tags.any { tag -> tag.contains(term, ignoreCase = true) }
+        }
+        .let { filtered ->
+            when (sort) {
+                StudioWallSort.RECENT -> filtered.sortedByDescending {
+                    it.createdAt.ifBlank { it.id }
+                }
+                StudioWallSort.TITLE -> filtered.sortedBy { it.title.lowercase() }
+                StudioWallSort.CATEGORY -> filtered.sortedWith(
+                    compareBy<Wallpaper> { state.categoryNameFor(it).lowercase() }
+                        .thenBy { it.title.lowercase() },
+                )
+            }
+        }
 
     item(key = "walls-header") {
         Column {
@@ -896,19 +1110,25 @@ private fun LazyListScope.wallsPanel(
             }
             Spacer(Modifier.height(4.dp))
             Text(
-                text = if (showArchived) {
-                    pluralStringResource(
+                text = when {
+                    hasFilters -> pluralStringResource(
+                        R.plurals.wallpapers_count,
+                        walls.size,
+                        walls.size,
+                    )
+                    showArchived -> pluralStringResource(
                         R.plurals.studio_archived_count,
                         archivedCount,
                         archivedCount,
                     )
-                } else {
-                    val publishedCount = state.studioWallpapers.size - archivedCount
-                    pluralStringResource(
-                        R.plurals.studio_published_count,
-                        publishedCount,
-                        publishedCount,
-                    )
+                    else -> {
+                        val publishedCount = state.studioWallpapers.size - archivedCount
+                        pluralStringResource(
+                            R.plurals.studio_published_count,
+                            publishedCount,
+                            publishedCount,
+                        )
+                    }
                 },
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -917,17 +1137,139 @@ private fun LazyListScope.wallsPanel(
         }
     }
 
+    item(key = "walls-filters") {
+        Column {
+            OutlinedTextField(
+                value = query,
+                onValueChange = onQueryChange,
+                modifier = Modifier.fillMaxWidth(),
+                placeholder = { Text(stringResource(R.string.studio_search_walls)) },
+                leadingIcon = {
+                    Icon(Icons.Rounded.Search, contentDescription = null)
+                },
+                trailingIcon = {
+                    if (query.isNotEmpty()) {
+                        IconButton(onClick = { onQueryChange("") }) {
+                            Icon(
+                                Icons.Rounded.Close,
+                                contentDescription = stringResource(R.string.home_clear_search),
+                            )
+                        }
+                    }
+                },
+                singleLine = true,
+                shape = MaterialTheme.shapes.medium,
+            )
+            Spacer(Modifier.height(8.dp))
+            LazyRow(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                contentPadding = PaddingValues(end = 12.dp),
+            ) {
+                item(key = "walls-featured-filter") {
+                    FilterChip(
+                        selected = featuredOnly,
+                        onClick = { onFeaturedOnlyChange(!featuredOnly) },
+                        label = { Text(stringResource(R.string.studio_featured)) },
+                        leadingIcon = {
+                            Icon(
+                                Icons.Rounded.Star,
+                                contentDescription = null,
+                                modifier = Modifier.size(18.dp),
+                            )
+                        },
+                        shape = CircleShape,
+                    )
+                }
+                if (state.categories.isNotEmpty()) {
+                    item(key = "walls-all-categories") {
+                        FilterChip(
+                            selected = categoryId == null,
+                            onClick = { onCategoryChange(null) },
+                            label = { Text(stringResource(R.string.studio_all)) },
+                            shape = CircleShape,
+                        )
+                    }
+                    items(
+                        items = state.categories,
+                        key = { "walls-category-${it.id}" },
+                    ) { category ->
+                        FilterChip(
+                            selected = categoryId == category.id,
+                            onClick = {
+                                onCategoryChange(
+                                    if (categoryId == category.id) null else category.id,
+                                )
+                            },
+                            label = { Text(category.name) },
+                            shape = CircleShape,
+                        )
+                    }
+                }
+            }
+            Spacer(Modifier.height(8.dp))
+            LazyRow(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                contentPadding = PaddingValues(end = 12.dp),
+            ) {
+                item(key = "walls-sort-label") {
+                    Text(
+                        text = stringResource(R.string.studio_sort),
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                items(
+                    items = StudioWallSort.entries,
+                    key = { "walls-sort-${it.name}" },
+                ) { option ->
+                    FilterChip(
+                        selected = sort == option,
+                        onClick = { onSortChange(option) },
+                        label = { Text(stringResource(option.labelRes)) },
+                        shape = CircleShape,
+                    )
+                }
+            }
+            if (hasFilters) {
+                TextButton(onClick = onClearFilters) {
+                    Text(stringResource(R.string.state_clear_filters))
+                }
+            }
+            Spacer(Modifier.height(12.dp))
+        }
+    }
+
     if (walls.isEmpty()) {
         item(key = "walls-empty") {
-            Text(
-                text = if (showArchived) {
-                    stringResource(R.string.studio_walls_empty_archived)
-                } else {
-                    stringResource(R.string.studio_walls_empty)
-                },
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+            Column {
+                Text(
+                    text = when {
+                        hasFilters -> stringResource(R.string.studio_no_results)
+                        showArchived -> stringResource(R.string.studio_walls_empty_archived)
+                        else -> stringResource(R.string.studio_walls_empty)
+                    },
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Spacer(Modifier.height(10.dp))
+                when {
+                    hasFilters -> TextButton(onClick = onClearFilters) {
+                        Text(stringResource(R.string.state_clear_filters))
+                    }
+                    showArchived -> TextButton(onClick = onToggleArchived) {
+                        Text(stringResource(R.string.studio_published))
+                    }
+                    else -> Button(onClick = onPublish, shape = CircleShape) {
+                        Icon(
+                            Icons.Rounded.Add,
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp),
+                        )
+                        Spacer(Modifier.width(6.dp))
+                        Text(stringResource(R.string.studio_new_wallpaper))
+                    }
+                }
+            }
         }
     } else {
         items(items = walls, key = { it.id }) { wallpaper ->
@@ -936,6 +1278,7 @@ private fun LazyListScope.wallsPanel(
                 categoryName = state.categoryNameFor(wallpaper),
                 onEdit = { onEdit(wallpaper) },
                 onReplace = { onReplace(wallpaper) },
+                onToggleFeatured = { onToggleFeatured(wallpaper) },
                 onArchive = { onArchive(wallpaper.id, !wallpaper.isArchived) },
                 onDelete = { onDelete(wallpaper) },
             )
@@ -949,6 +1292,7 @@ private fun StudioWallpaperRow(
     categoryName: String,
     onEdit: () -> Unit,
     onReplace: () -> Unit,
+    onToggleFeatured: () -> Unit,
     onArchive: () -> Unit,
     onDelete: () -> Unit,
 ) {
@@ -1020,6 +1364,27 @@ private fun StudioWallpaperRow(
                             contentDescription = stringResource(R.string.studio_image),
                         )
                     }
+                    IconButton(onClick = onToggleFeatured) {
+                        Icon(
+                            imageVector = if (wallpaper.featured) {
+                                Icons.Rounded.Star
+                            } else {
+                                Icons.Rounded.StarBorder
+                            },
+                            contentDescription = stringResource(
+                                if (wallpaper.featured) {
+                                    R.string.studio_unfeature
+                                } else {
+                                    R.string.studio_feature
+                                },
+                            ),
+                            tint = if (wallpaper.featured) {
+                                MaterialTheme.colorScheme.primary
+                            } else {
+                                MaterialTheme.colorScheme.onSurfaceVariant
+                            },
+                        )
+                    }
                 }
                 Row {
                     IconButton(onClick = onArchive) {
@@ -1054,6 +1419,7 @@ private fun CategoriesPanel(
     state: UiState,
     onCreate: (String) -> Unit,
     onEdit: (WallpaperCategory) -> Unit,
+    onMove: (String, Int) -> Unit,
     onDelete: (WallpaperCategory) -> Unit,
 ) {
     var name by rememberSaveable { mutableStateOf("") }
@@ -1108,7 +1474,7 @@ private fun CategoriesPanel(
         )
         return
     }
-    state.categories.forEach { category ->
+    state.categories.forEachIndexed { index, category ->
         val count = counts[category.id] ?: 0
         Row(
             modifier = Modifier
@@ -1128,6 +1494,24 @@ private fun CategoriesPanel(
                     text = pluralStringResource(R.plurals.wallpapers_count, count, count),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            IconButton(
+                onClick = { onMove(category.id, -1) },
+                enabled = index > 0 && !state.studioBusy,
+            ) {
+                Icon(
+                    Icons.Rounded.KeyboardArrowUp,
+                    contentDescription = stringResource(R.string.studio_move_up),
+                )
+            }
+            IconButton(
+                onClick = { onMove(category.id, 1) },
+                enabled = index < state.categories.lastIndex && !state.studioBusy,
+            ) {
+                Icon(
+                    Icons.Rounded.KeyboardArrowDown,
+                    contentDescription = stringResource(R.string.studio_move_down),
                 )
             }
             IconButton(onClick = { onEdit(category) }) {

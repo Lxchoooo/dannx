@@ -400,6 +400,7 @@ private fun MainApp(
                     onLoadStudio = viewModel::loadStudio,
                     onCreateCategory = viewModel::createCategory,
                     onUpdateCategory = viewModel::updateCategory,
+                    onMoveCategory = viewModel::moveCategory,
                     onDeleteCategory = viewModel::deleteCategory,
                     onUpdateWallpaper = viewModel::updateWallpaper,
                     onReplaceImage = viewModel::replaceWallpaperImage,
