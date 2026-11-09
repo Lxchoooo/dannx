@@ -14,7 +14,10 @@ import androidx.lifecycle.viewmodel.viewModelFactory
 import com.dannx.walls.R
 import com.dannx.walls.data.update.AppVersion
 import com.dannx.walls.data.update.GitHubUpdateRepository
+import com.dannx.walls.data.update.NoUpdateCheckStore
 import com.dannx.walls.data.update.ReleaseInfo
+import com.dannx.walls.data.update.UpdateCheckPrefs
+import com.dannx.walls.data.update.UpdateCheckStore
 import com.dannx.walls.data.update.UpdateError
 import com.dannx.walls.data.update.UpdateRepository
 import com.dannx.walls.util.StringResolver
@@ -30,6 +33,8 @@ import kotlinx.coroutines.launch
 class UpdateViewModel(
     private val repository: UpdateRepository,
     private val strings: StringResolver,
+    private val checkStore: UpdateCheckStore = NoUpdateCheckStore,
+    private val now: () -> Long = System::currentTimeMillis,
 ) : ViewModel() {
     private val _state = MutableStateFlow<UpdateState>(UpdateState.Idle)
     val state: StateFlow<UpdateState> = _state.asStateFlow()
@@ -38,16 +43,22 @@ class UpdateViewModel(
     private var downloadJob: Job? = null
     private var downloadingRelease: ReleaseInfo? = null
 
-    fun check(currentVersion: String) {
+    /**
+     * Consulta manual. La persona ve el estado de carga y el resultado.
+     * Con [force] se ignora la caché diaria; sin él se reutiliza la última
+     * consulta guardada.
+     */
+    fun check(currentVersion: String, force: Boolean = false) {
         checkJob?.cancel()
         checkJob = viewModelScope.launch {
             _state.value = UpdateState.Checking
             try {
-                val release = repository.latestRelease()
+                val release = resolveRelease(force)
                 val latest = AppVersion.parse(release.version)
                     ?: throw UpdateError.Format
                 val current = AppVersion.parse(currentVersion)
-                if (current != null && !latest.isNewerThan(current)) {
+                    ?: throw UpdateError.Format
+                if (!latest.isNewerThan(current)) {
                     _state.value = UpdateState.UpToDate(currentVersion)
                 } else {
                     _state.value = UpdateState.Available(release)
@@ -58,6 +69,39 @@ class UpdateViewModel(
                 _state.value = UpdateState.Error(error.messageForUser())
             }
         }
+    }
+
+    /**
+     * Consulta silenciosa al abrir Ajustes. Respeta la caché diaria y solo
+     * muestra el diálogo si hay una versión más nueva; los errores de red no
+     * interrumpen a la persona.
+     */
+    fun checkInBackground(currentVersion: String) {
+        if (checkJob?.isActive == true) return
+        checkJob = viewModelScope.launch {
+            try {
+                val release = resolveRelease(force = false)
+                val latest = AppVersion.parse(release.version) ?: return@launch
+                val current = AppVersion.parse(currentVersion) ?: return@launch
+                if (latest.isNewerThan(current)) {
+                    _state.value = UpdateState.Available(release)
+                }
+            } catch (error: CancellationException) {
+                throw error
+            } catch (_: Exception) {
+                // La consulta silenciosa no muestra errores.
+            }
+        }
+    }
+
+    private suspend fun resolveRelease(force: Boolean): ReleaseInfo {
+        val cached = if (force) null else checkStore.read()
+        if (cached != null && now() - cached.checkedAt < DAY_MS) {
+            return cached.release
+        }
+        val release = repository.latestRelease()
+        checkStore.write(release, now())
+        return release
     }
 
     fun download() {
@@ -162,12 +206,14 @@ class UpdateViewModel(
 
     companion object {
         private const val APK_MIME = "application/vnd.android.package-archive"
+        private const val DAY_MS = 24L * 60L * 60L * 1000L
 
         fun factory(application: Application): ViewModelProvider.Factory = viewModelFactory {
             initializer {
                 UpdateViewModel(
                     repository = GitHubUpdateRepository(application),
                     strings = application.stringResolver(),
+                    checkStore = UpdateCheckPrefs(application),
                 )
             }
         }

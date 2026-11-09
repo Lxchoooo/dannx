@@ -1,6 +1,8 @@
 package com.dannx.walls.ui.update
 
+import com.dannx.walls.data.update.CachedUpdate
 import com.dannx.walls.data.update.ReleaseInfo
+import com.dannx.walls.data.update.UpdateCheckStore
 import com.dannx.walls.data.update.UpdateRepository
 import com.dannx.walls.util.StringResolver
 import java.io.File
@@ -81,10 +83,98 @@ class UpdateViewModelTest {
         assertEquals("mensaje", (model.state.value as UpdateState.Error).message)
     }
 
+    @Test
+    fun `background check only surfaces a newer release`() = runTest(dispatcher) {
+        model.checkInBackground("1.5.0")
+        advanceUntilIdle()
+
+        assertTrue(model.state.value is UpdateState.Available)
+    }
+
+    @Test
+    fun `background check stays silent on network errors`() = runTest(dispatcher) {
+        repository.error = IllegalStateException("boom")
+        model.checkInBackground("1.5.0")
+        advanceUntilIdle()
+
+        assertTrue(model.state.value is UpdateState.Idle)
+    }
+
+    @Test
+    fun `reuses a fresh cached check without querying GitHub`() = runTest(dispatcher) {
+        val store = FakeUpdateCheckStore()
+        var now = 1_000_000L
+        model = UpdateViewModel(
+            repository = repository,
+            strings = StringResolver { _, _ -> "mensaje" },
+            checkStore = store,
+            now = { now },
+        )
+        store.cached = CachedUpdate(repository.release, checkedAt = now)
+
+        model.check("1.5.0")
+        advanceUntilIdle()
+
+        assertEquals(0, repository.latestCalls)
+        assertTrue(model.state.value is UpdateState.Available)
+    }
+
+    @Test
+    fun `force checks GitHub even if the cache is fresh`() = runTest(dispatcher) {
+        val store = FakeUpdateCheckStore()
+        var now = 1_000_000L
+        model = UpdateViewModel(
+            repository = repository,
+            strings = StringResolver { _, _ -> "mensaje" },
+            checkStore = store,
+            now = { now },
+        )
+        store.cached = CachedUpdate(repository.release, checkedAt = now)
+
+        model.check("1.5.0", force = true)
+        advanceUntilIdle()
+
+        assertEquals(1, repository.latestCalls)
+        assertEquals(1, store.writes)
+    }
+
+    @Test
+    fun `queries GitHub again after the cache expires`() = runTest(dispatcher) {
+        val store = FakeUpdateCheckStore()
+        var now = 1_000_000L
+        model = UpdateViewModel(
+            repository = repository,
+            strings = StringResolver { _, _ -> "mensaje" },
+            checkStore = store,
+            now = { now },
+        )
+        store.cached = CachedUpdate(repository.release, checkedAt = now)
+        now += 24L * 60L * 60L * 1000L
+
+        model.check("1.5.0")
+        advanceUntilIdle()
+
+        assertEquals(1, repository.latestCalls)
+        assertEquals(1, store.writes)
+    }
+
+    private class FakeUpdateCheckStore : UpdateCheckStore {
+        var cached: CachedUpdate? = null
+        var writes = 0
+
+        override fun read(): CachedUpdate? = cached
+
+        override fun write(release: ReleaseInfo, checkedAt: Long) {
+            writes += 1
+            cached = CachedUpdate(release = release, checkedAt = checkedAt)
+        }
+    }
+
     private class FakeUpdateRepository : UpdateRepository {
         var error: Throwable? = null
         var progressCalls = 0
-        private val release = ReleaseInfo(
+        var latestCalls = 0
+        val release = ReleaseInfo(
             version = "1.6.0",
             tagName = "v1.6.0",
             notes = "Changes",
@@ -95,6 +185,7 @@ class UpdateViewModelTest {
         )
 
         override suspend fun latestRelease(): ReleaseInfo {
+            latestCalls += 1
             error?.let { throw it }
             return release
         }

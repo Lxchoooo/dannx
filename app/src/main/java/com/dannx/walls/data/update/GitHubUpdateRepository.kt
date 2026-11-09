@@ -18,8 +18,8 @@ import okhttp3.Request
 
 /**
  * Consulta la API pública de GitHub y descarga el APK de la última release.
- * No hay chequeo automático: el ViewModel llama acá solo cuando el usuario lo
- * pide desde Ajustes.
+ * La lista se ordena por la versión del tag, no por la fecha de publicación,
+ * para que la release rodante o una release vieja no oculten una versión nueva.
  */
 class GitHubUpdateRepository(
     private val context: Context,
@@ -33,12 +33,25 @@ class GitHubUpdateRepository(
     override suspend fun latestRelease(): ReleaseInfo = withContext(Dispatchers.IO) {
         try {
             val body = requestText(
-                url = "$REPO_URL/releases/latest",
+                url = "$REPO_URL/releases?per_page=30",
                 accept = "application/vnd.github+json",
             )
-            val release = json.decodeFromString<GitHubReleaseDto>(body)
-            val version = AppVersion.parse(release.tagName)
-                ?: throw UpdateError.Format
+            val releases = json.decodeFromString<List<GitHubReleaseDto>>(body)
+            val candidates = releases
+                .asSequence()
+                .filterNot { it.draft || it.prerelease }
+                .mapNotNull { release ->
+                    AppVersion.parse(release.tagName)?.let { version -> version to release }
+                }
+                .sortedByDescending { it.first }
+                .toList()
+            if (candidates.isEmpty()) throw UpdateError.NoRelease
+
+            val selected = candidates.firstOrNull { (_, release) ->
+                release.assets.any { it.name == APK_NAME } &&
+                    release.assets.any { it.name == CHECKSUM_NAME }
+            } ?: candidates.first()
+            val (version, release) = selected
             val apk = release.assets.firstOrNull { it.name == APK_NAME }
                 ?: throw UpdateError.MissingAsset(APK_NAME)
             val checksum = release.assets.firstOrNull { it.name == CHECKSUM_NAME }
@@ -163,6 +176,8 @@ class GitHubUpdateRepository(
         val body: String? = null,
         @SerialName("html_url") val htmlUrl: String? = null,
         @SerialName("published_at") val publishedAt: String? = null,
+        val draft: Boolean = false,
+        val prerelease: Boolean = false,
         val assets: List<GitHubAssetDto> = emptyList(),
     )
 

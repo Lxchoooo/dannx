@@ -2,7 +2,9 @@ package com.dannx.walls.data.update
 
 import java.io.File
 import java.io.IOException
+import kotlinx.serialization.Serializable
 
+@Serializable
 data class ReleaseInfo(
     val version: String,
     val tagName: String,
