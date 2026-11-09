@@ -66,6 +66,8 @@ reservado a administradores y no se detalla en la documentación.
   directo a la política de privacidad.
 - La caché del feed queda acotada a 400 fondos y 100 colecciones para evitar que
   crezca sin límite.
+- CI publica el `mapping.txt` de R8 como artifact de 30 días para poder leer
+  crashes ofuscados.
 - Tests nuevos de `FeedCache` (tope y archivo corrupto) y `StringResolver`
   (argumentos y cadenas sin argumentos).
 - Gradle actualizado a 9.9.0; se elimina el aviso de versión obsoleta del CI.
