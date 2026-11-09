@@ -70,6 +70,8 @@ reservado a administradores y no se detalla en la documentación.
   crezca sin límite.
 - CI publica el `mapping.txt` de R8 como artifact de 30 días para poder leer
   crashes ofuscados.
+- Las notas de release se generan desde la sección “Sin publicar” del CHANGELOG,
+  con un texto de respaldo si la sección está vacía.
 - Tests nuevos de `FeedCache` (tope y archivo corrupto) y `StringResolver`
   (argumentos y cadenas sin argumentos).
 - Gradle actualizado a 9.9.0; se elimina el aviso de versión obsoleta del CI.

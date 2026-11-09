@@ -248,6 +248,14 @@ jobs:
           name: DannX-release-${{ github.run_number }}
           path: release
 
+      - name: Generate release notes
+        run: |
+          python3 scripts/release_notes.py > RELEASE_NOTES.md || true
+          if [ ! -s RELEASE_NOTES.md ]; then
+            echo "Compilado y firmado por GitHub Actions. Ver CHANGELOG.md para el detalle." > RELEASE_NOTES.md
+          fi
+          head -20 RELEASE_NOTES.md
+
       - name: Publish APK on tag
         if: github.ref_type == 'tag'
         env:
@@ -260,7 +268,7 @@ jobs:
           cat DannX.apk.sha256
           gh release create "$GITHUB_REF_NAME" DannX.apk DannX.apk.sha256 \
             --title "DannX $GITHUB_REF_NAME" \
-            --notes "Compilado y firmado por GitHub Actions. Ver CHANGELOG.md para el detalle." \
+            --notes-file RELEASE_NOTES.md \
             --verify-tag
 
       - name: Publish rolling release
@@ -273,15 +281,14 @@ jobs:
           cp "$APK" DannX.apk
           sha256sum DannX.apk > DannX.apk.sha256
           cat DannX.apk.sha256
-          NOTES="Compilado y firmado por GitHub Actions desde main. Ver CHANGELOG.md para el detalle."
           if gh release view latest >/dev/null 2>&1; then
             gh release upload latest DannX.apk DannX.apk.sha256 --clobber
-            gh release edit latest --title "DannX · última versión" --notes "$NOTES"
+            gh release edit latest --title "DannX · última versión" --notes-file RELEASE_NOTES.md
           else
             gh release create latest DannX.apk DannX.apk.sha256 \
               --target "$GITHUB_SHA" \
               --title "DannX · última versión" \
-              --notes "$NOTES"
+              --notes-file RELEASE_NOTES.md
           fi
 
       - name: Attest APK build provenance
