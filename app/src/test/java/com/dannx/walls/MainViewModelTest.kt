@@ -955,6 +955,8 @@ class MainViewModelTest {
             model.toggleFavorite("2")
             model.refresh()
             advanceUntilIdle()
+            model.loadStudio()
+            advanceUntilIdle()
 
             model.deleteWallpaper("1")
             advanceUntilIdle()
@@ -978,6 +980,8 @@ class MainViewModelTest {
             val model = viewModel()
             advanceUntilIdle()
             model.refresh()
+            advanceUntilIdle()
+            model.loadStudio()
             advanceUntilIdle()
 
             model.deleteWallpaper("1")
