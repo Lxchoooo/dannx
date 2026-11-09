@@ -53,7 +53,9 @@ jobs:
           build-mode: manual
 
       - name: Build debug sources for CodeQL
-        run: ./gradlew assembleDebug
+        # La caché de Gradle convierte la compilación en un acierto y CodeQL
+        # deja de ver al compilador; se compila limpio y sin caché de build.
+        run: ./gradlew clean assembleDebug --no-build-cache
 
       - name: Perform CodeQL analysis
         uses: github/codeql-action/analyze@33d7b85da1a04171e211befe2c739303b9a4c066 # v4.39.3
