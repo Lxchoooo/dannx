@@ -62,6 +62,7 @@ import androidx.navigation.navArgument
 import androidx.annotation.StringRes
 import com.dannx.walls.LoadState
 import com.dannx.walls.MainViewModel
+import com.dannx.walls.MessageAction
 import com.dannx.walls.R
 import com.dannx.walls.UiState
 import com.dannx.walls.ui.components.DebugFpsOverlay
@@ -161,7 +162,15 @@ private fun MainApp(
             )
             var openFailed = false
             if (result == SnackbarResult.ActionPerformed && action != null) {
-                openFailed = !wallpaperFiles.open(action.uri)
+                when (action) {
+                    is MessageAction.OpenFile -> {
+                        openFailed = !wallpaperFiles.open(action.uri)
+                    }
+
+                    is MessageAction.RetryDownload -> {
+                        viewModel.downloadAgain(action.wallpaperId)
+                    }
+                }
             }
             if (openFailed) {
                 viewModel.notifyFileOpenFailed()

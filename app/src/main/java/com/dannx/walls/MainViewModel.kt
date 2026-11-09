@@ -59,10 +59,11 @@ enum class UiAction {
     SHARE,
 }
 
-data class MessageAction(
-    val label: String,
-    val uri: String,
-)
+sealed interface MessageAction {
+    data class OpenFile(val label: String, val uri: String) : MessageAction
+
+    data class RetryDownload(val label: String, val wallpaperId: String) : MessageAction
+}
 
 data class DownloadPrompt(
     val wallpaperId: String,
@@ -231,6 +232,7 @@ class MainViewModel(
     private val now: () -> Long = System::currentTimeMillis,
 ) : ViewModel() {
     private var actionJob: Job? = null
+    private var actionToken = 0
     private var refreshJob: Job? = null
     private var loadMoreJob: Job? = null
     private var filterJob: Job? = null
@@ -2464,6 +2466,26 @@ class MainViewModel(
         }
     }
 
+    /**
+     * Marca el inicio de una acción y descarta cualquier acción anterior. El
+     * token evita que el cierre tardío de una descarga cancelada borre el
+     * progreso de la acción que la reemplazó.
+     */
+    private fun beginAction(action: UiAction, progress: Int? = null): Int {
+        actionToken += 1
+        actionJob?.cancel()
+        actionJob = null
+        _actionState.value = ActionState(active = action, progress = progress)
+        _state.update { it.copy(message = null, messageAction = null) }
+        return actionToken
+    }
+
+    private fun finishAction(token: Int) {
+        if (token != actionToken) return
+        actionJob = null
+        _actionState.value = ActionState()
+    }
+
     fun download(wallpaper: Wallpaper) {
         val known = prefs.downloadedUri(wallpaper.id)
         if (known != null && actions.exists(known)) {
@@ -2486,9 +2508,8 @@ class MainViewModel(
     }
 
     private fun startDownload(wallpaper: Wallpaper) {
-        actionJob?.cancel()
+        val token = beginAction(UiAction.DOWNLOAD, progress = 0)
         actionJob = viewModelScope.launch {
-            _actionState.value = ActionState(active = UiAction.DOWNLOAD, progress = 0)
             try {
                 val uri = actions.saveToGallery(wallpaper) { done, total ->
                     val percent = if (total > 0) {
@@ -2496,48 +2517,65 @@ class MainViewModel(
                     } else {
                         0
                     }
-                    _actionState.update { it.copy(progress = percent) }
+                    if (token == actionToken) {
+                        _actionState.update { it.copy(progress = percent) }
+                    }
                 }
+                if (token != actionToken) return@launch
                 prefs.rememberDownload(wallpaper.id, uri)
+                finishAction(token)
                 _state.update {
                     it.copy(
                         downloadedIds = it.downloadedIds + wallpaper.id,
                         message = strings.get(R.string.msg_saved_gallery),
-                        messageAction = MessageAction(
+                        messageAction = MessageAction.OpenFile(
                             label = strings.get(R.string.action_open),
                             uri = uri,
                         ),
                     )
                 }
             } catch (error: CancellationException) {
-                _actionState.value = ActionState()
+                finishAction(token)
+                throw error
             } catch (error: Exception) {
-                _state.update {
-                    it.copy(
-                        message = error.userMessage(),
-                        messageAction = null,
-                    )
+                finishAction(token)
+                if (token == actionToken) {
+                    _state.update {
+                        it.copy(
+                            message = error.userMessage(),
+                            messageAction = MessageAction.RetryDownload(
+                                label = strings.get(R.string.action_retry),
+                                wallpaperId = wallpaper.id,
+                            ),
+                        )
+                    }
                 }
             }
         }
     }
 
     fun setWallpaper(wallpaper: Wallpaper, target: WallpaperTarget) {
-        actionJob?.cancel()
+        val token = beginAction(UiAction.APPLY)
         actionJob = viewModelScope.launch {
-            _actionState.value = ActionState(active = UiAction.APPLY)
             try {
                 val applied = actions.setAsWallpaper(wallpaper, target)
+                if (token != actionToken) return@launch
+                finishAction(token)
                 _state.update {
                     it.copy(message = appliedMessage(applied), messageAction = null)
                 }
             } catch (error: CancellationException) {
-                _actionState.value = ActionState()
+                finishAction(token)
+                throw error
             } catch (error: Exception) {
-                _state.update {
-                    it.copy(
-                        message = strings.get(R.string.msg_apply_failed),
-                    )
+                finishAction(token)
+                if (token == actionToken) {
+                    _state.update {
+                        it.copy(
+                            message = strings.get(R.string.msg_apply_failed),
+                            messageAction = null,
+                        )
+                    }
                 }
             }
         }
@@ -2573,26 +2611,38 @@ class MainViewModel(
     }
 
     fun cancelAction() {
+        val active = _actionState.value.active ?: return
+        actionToken += 1
         actionJob?.cancel()
         actionJob = null
         _actionState.value = ActionState()
+        val message = when (active) {
+            UiAction.DOWNLOAD -> strings.get(R.string.msg_download_cancelled)
+            UiAction.APPLY -> strings.get(R.string.msg_apply_cancelled)
+            UiAction.SHARE -> strings.get(R.string.msg_action_cancelled)
+        }
+        _state.update { it.copy(message = message, messageAction = null) }
     }
 
     fun share(wallpaper: Wallpaper) {
-        actionJob?.cancel()
+        val token = beginAction(UiAction.SHARE)
         actionJob = viewModelScope.launch {
-            _actionState.value = ActionState(active = UiAction.SHARE, progress = 0)
             try {
                 val image = actions.prepareShare(wallpaper)
                 actions.share(image, wallpaper.title)
-                _actionState.value = ActionState()
+                finishAction(token)
             } catch (error: CancellationException) {
-                _actionState.value = ActionState()
+                finishAction(token)
+                throw error
             } catch (error: Exception) {
-                _state.update {
-                    it.copy(
-                        message = strings.get(R.string.msg_share_failed),
-                    )
+                finishAction(token)
+                if (token == actionToken) {
+                    _state.update {
+                        it.copy(
+                            message = strings.get(R.string.msg_share_failed),
+                            messageAction = null,
+                        )
+                    }
                 }
             }
         }

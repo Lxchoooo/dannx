@@ -158,8 +158,10 @@ class WallpaperFiles(private val context: Context) : WallpaperActions {
                             downloaded += chunk
                             onProgress(downloaded, total)
                         }
+                        currentCoroutineContext().ensureActive()
                         output.flush()
                     } ?: throw IOException("No se pudo escribir el archivo.")
+                    currentCoroutineContext().ensureActive()
                     values.clear()
                     values.put(MediaStore.Images.Media.IS_PENDING, 0)
                     resolver.update(uri, values, null, null)

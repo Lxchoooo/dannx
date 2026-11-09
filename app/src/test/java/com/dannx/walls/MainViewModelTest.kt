@@ -12,6 +12,7 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.After
@@ -37,6 +38,7 @@ class MainViewModelTest {
             R.string.msg_wallpapers_updated -> "Fondos actualizados."
             R.string.msg_category_delete_blocked ->
                 "La categoría tiene fondos. Reasignalos antes de borrarla."
+            R.string.msg_download_cancelled -> "Descarga cancelada."
             else -> "string"
         }
     }
@@ -301,6 +303,103 @@ class MainViewModelTest {
         advanceUntilIdle()
 
         assertEquals(com.dannx.walls.util.WallpaperTarget.LOCK, actions.appliedTarget)
+    }
+
+    @Test
+    fun `a finished download clears progress and offers to open the file`() = runTest(dispatcher) {
+        val model = viewModel()
+
+        model.download(wallpaper("1"))
+        advanceUntilIdle()
+
+        assertEquals(ActionState(), model.actionState.value)
+        val action = model.state.value.messageAction
+        assertTrue(action is MessageAction.OpenFile)
+    }
+
+    @Test
+    fun `a failed download clears progress and offers to retry`() = runTest(dispatcher) {
+        actions.failWith = java.io.IOException("sin red")
+        val model = viewModel()
+
+        model.download(wallpaper("1"))
+        advanceUntilIdle()
+
+        assertEquals(ActionState(), model.actionState.value)
+        val action = model.state.value.messageAction
+        assertTrue(action is MessageAction.RetryDownload)
+        assertEquals("1", (action as MessageAction.RetryDownload).wallpaperId)
+    }
+
+    @Test
+    fun `cancelling a download clears progress and does not remember the file`() =
+        runTest(dispatcher) {
+            actions.beforeDownload = kotlinx.coroutines.CompletableDeferred()
+            val model = viewModel()
+
+            model.download(wallpaper("1"))
+            runCurrent()
+            assertEquals(UiAction.DOWNLOAD, model.actionState.value.active)
+
+            model.cancelAction()
+            advanceUntilIdle()
+
+            assertEquals(ActionState(), model.actionState.value)
+            assertFalse(store.downloadedIds().contains("1"))
+            assertEquals("Descarga cancelada.", model.state.value.message)
+        }
+
+    @Test
+    fun `a new download starts from zero after a previous one`() = runTest(dispatcher) {
+        repository.wallpapers = listOf(wallpaper("1"))
+        val model = viewModel()
+        advanceUntilIdle()
+        model.download(wallpaper("1"))
+        advanceUntilIdle()
+
+        actions.beforeDownload = kotlinx.coroutines.CompletableDeferred()
+        model.downloadAgain("1")
+
+        assertEquals(ActionState(active = UiAction.DOWNLOAD, progress = 0), model.actionState.value)
+
+        model.cancelAction()
+        advanceUntilIdle()
+    }
+
+    @Test
+    fun `a new action is not cleared by the cancellation of the previous one`() =
+        runTest(dispatcher) {
+            actions.beforeDownload = kotlinx.coroutines.CompletableDeferred()
+            actions.beforeApply = kotlinx.coroutines.CompletableDeferred()
+            val model = viewModel()
+
+            model.download(wallpaper("1"))
+            runCurrent()
+            model.cancelAction()
+            model.setWallpaper(wallpaper("1"), com.dannx.walls.util.WallpaperTarget.LOCK)
+            runCurrent()
+
+            assertEquals(UiAction.APPLY, model.actionState.value.active)
+
+            actions.beforeApply?.complete(Unit)
+            advanceUntilIdle()
+
+            assertEquals(ActionState(), model.actionState.value)
+            assertEquals(com.dannx.walls.util.WallpaperTarget.LOCK, actions.appliedTarget)
+        }
+
+    @Test
+    fun `a failed apply or share also clears the busy state`() = runTest(dispatcher) {
+        actions.failWith = java.io.IOException("sin red")
+        val model = viewModel()
+
+        model.setWallpaper(wallpaper("1"), com.dannx.walls.util.WallpaperTarget.SYSTEM)
+        advanceUntilIdle()
+        assertEquals(ActionState(), model.actionState.value)
+
+        model.share(wallpaper("1"))
+        advanceUntilIdle()
+        assertEquals(ActionState(), model.actionState.value)
     }
 
     @Test

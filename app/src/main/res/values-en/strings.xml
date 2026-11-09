@@ -29,6 +29,9 @@
     <string name="action_open">Open</string>
     <string name="download_in_progress">Saving… %1$d%%</string>
     <string name="download_action">Download</string>
+    <string name="msg_download_cancelled">Download cancelled.</string>
+    <string name="msg_apply_cancelled">Apply cancelled.</string>
+    <string name="msg_action_cancelled">Action cancelled.</string>
     <string name="download_duplicate_title">You already had it</string>
     <string name="download_duplicate_body">This image is already in your gallery. You can open it or save a new copy.</string>
     <string name="download_again">Download again</string>

@@ -17,6 +17,7 @@ import com.dannx.walls.data.WallpapersRepository
 import com.dannx.walls.data.filterWallpapers
 import com.dannx.walls.util.SharedImage
 import com.dannx.walls.util.WallpaperTarget
+import kotlinx.coroutines.CompletableDeferred
 
 /**
  * Fakes usados por los tests del ViewModel.
@@ -384,11 +385,14 @@ class FakeActions : WallpaperActions {
     var appliedTarget: WallpaperTarget? = null
     var shared: Boolean = false
     var failWith: Throwable? = null
+    var beforeDownload: CompletableDeferred<Unit>? = null
+    var beforeApply: CompletableDeferred<Unit>? = null
 
     override suspend fun saveToGallery(
         wallpaper: Wallpaper,
         onProgress: (downloaded: Long, total: Long) -> Unit,
     ): String {
+        beforeDownload?.await()
         failWith?.let { throw it }
         onProgress(50, 100)
         onProgress(100, 100)
@@ -399,13 +403,16 @@ class FakeActions : WallpaperActions {
         wallpaper: Wallpaper,
         target: WallpaperTarget,
     ): WallpaperTarget {
+        beforeApply?.await()
         failWith?.let { throw it }
         appliedTarget = target
         return target
     }
 
-    override suspend fun prepareShare(wallpaper: Wallpaper): SharedImage =
-        SharedImage("content://test/share", "image/jpeg")
+    override suspend fun prepareShare(wallpaper: Wallpaper): SharedImage {
+        failWith?.let { throw it }
+        return SharedImage("content://test/share", "image/jpeg")
+    }
 
     override fun share(image: SharedImage, title: String) {
         shared = true
