@@ -60,9 +60,14 @@ enum class UiAction {
 }
 
 sealed interface MessageAction {
-    data class OpenFile(val label: String, val uri: String) : MessageAction
+    val label: String
 
-    data class RetryDownload(val label: String, val wallpaperId: String) : MessageAction
+    data class OpenFile(override val label: String, val uri: String) : MessageAction
+
+    data class RetryDownload(
+        override val label: String,
+        val wallpaperId: String,
+    ) : MessageAction
 }
 
 data class DownloadPrompt(
