@@ -1,5 +1,6 @@
 package com.dannx.walls.ui.screens
 
+import android.app.Application
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
@@ -18,6 +19,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.OpenInNew
@@ -36,15 +38,22 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.dannx.walls.BuildConfig
 import com.dannx.walls.R
 import com.dannx.walls.UiState
 import com.dannx.walls.data.ThemeMode
+import com.dannx.walls.ui.components.UpdateDialog
+import com.dannx.walls.ui.update.UpdateState
+import com.dannx.walls.ui.update.UpdateViewModel
 import com.dannx.walls.util.AppLinks
 import com.dannx.walls.util.openUrl
 
@@ -65,6 +74,11 @@ fun SettingsScreen(
     onSignOut: () -> Unit,
 ) {
     val context = LocalContext.current
+    val application = context.applicationContext as Application
+    val updateViewModel: UpdateViewModel = viewModel(
+        factory = UpdateViewModel.factory(application),
+    )
+    val updateState by updateViewModel.state.collectAsStateWithLifecycle()
     Scaffold(
         topBar = {
             TopAppBar(
@@ -146,7 +160,14 @@ fun SettingsScreen(
             item {
                 Card(Modifier.fillMaxWidth()) {
                     Row(
-                        modifier = Modifier.padding(16.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .toggleable(
+                                value = state.liteMode,
+                                role = Role.Switch,
+                                onValueChange = onLiteModeChange,
+                            )
+                            .padding(16.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Column(Modifier.weight(1f)) {
@@ -160,7 +181,7 @@ fun SettingsScreen(
                         Spacer(Modifier.width(12.dp))
                         Switch(
                             checked = state.liteMode,
-                            onCheckedChange = onLiteModeChange,
+                            onCheckedChange = null,
                         )
                     }
                 }
@@ -169,7 +190,14 @@ fun SettingsScreen(
             item {
                 Card(Modifier.fillMaxWidth()) {
                     Row(
-                        modifier = Modifier.padding(16.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .toggleable(
+                                value = state.openEditorOnApply,
+                                role = Role.Switch,
+                                onValueChange = onOpenEditorOnApplyChange,
+                            )
+                            .padding(16.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Column(Modifier.weight(1f)) {
@@ -186,7 +214,7 @@ fun SettingsScreen(
                         Spacer(Modifier.width(12.dp))
                         Switch(
                             checked = state.openEditorOnApply,
-                            onCheckedChange = onOpenEditorOnApplyChange,
+                            onCheckedChange = null,
                         )
                     }
                 }
@@ -234,7 +262,9 @@ fun SettingsScreen(
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
-                        TextButton(onClick = { openUrl(context, AppLinks.Releases) }) {
+                        TextButton(
+                            onClick = { updateViewModel.check(BuildConfig.VERSION_NAME) },
+                        ) {
                             Text(stringResource(R.string.settings_check_updates))
                             Spacer(Modifier.width(6.dp))
                             Icon(
@@ -289,6 +319,19 @@ fun SettingsScreen(
                 }
             }
         }
+    }
+
+    if (updateState !is UpdateState.Idle) {
+        UpdateDialog(
+            state = updateState,
+            onDismiss = updateViewModel::dismiss,
+            onDownload = updateViewModel::download,
+            onCancelDownload = updateViewModel::cancelDownload,
+            onInstall = { updateViewModel.install(context) },
+            onOpenRelease = { release ->
+                openUrl(context, release.htmlUrl.ifBlank { AppLinks.Releases })
+            },
+        )
     }
 }
 

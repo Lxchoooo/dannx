@@ -30,6 +30,7 @@ import com.dannx.walls.data.Wallpaper
 import com.dannx.walls.data.WallpaperActions
 import com.dannx.walls.data.WallpaperCategory
 import com.dannx.walls.data.WallpaperCollection
+import com.dannx.walls.data.WallpaperFilter
 import com.dannx.walls.data.WallpapersRepository
 import com.dannx.walls.data.WallsApi
 import com.dannx.walls.data.collectTags
@@ -42,6 +43,7 @@ import com.dannx.walls.util.stringResolver
 import java.util.UUID
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -98,6 +100,9 @@ data class UiState(
     val feed: LoadState<List<Wallpaper>> = LoadState.Loading,
     val collections: LoadState<List<WallpaperCollection>> = LoadState.Loading,
     val refreshing: Boolean = false,
+    val loadingMore: Boolean = false,
+    val hasMore: Boolean = true,
+    val loadMoreError: String? = null,
     val wallpapers: List<Wallpaper> = emptyList(),
     val adminWallpapers: List<Wallpaper> = emptyList(),
     val trashWallpapers: List<Wallpaper> = emptyList(),
@@ -211,6 +216,8 @@ class MainViewModel(
 ) : ViewModel() {
     private var actionJob: Job? = null
     private var refreshJob: Job? = null
+    private var loadMoreJob: Job? = null
+    private var filterJob: Job? = null
     private var studioJob: Job? = null
     private var uploadJob: Job? = null
     private val _state = MutableStateFlow(
@@ -270,59 +277,106 @@ class MainViewModel(
                 wallpapers = cachedWallpapers,
                 collectionItems = cachedCollections,
                 offline = true,
+                loadingMore = false,
+                hasMore = false,
+                loadMoreError = null,
             )
         }
     }
 
     /**
      * Recarga el feed y las colecciones. Si ya hay una recarga en curso, la
-     * cancela para no piling estados ni requests.
+     * cancela para no apilar estados ni requests.
      */
     fun refresh() {
+        loadFeed(reloadMeta = true)
+    }
+
+    /**
+     * Recarga solo la primera página cuando cambia un filtro. No vuelve a
+     * pedir colecciones, categorías ni ajustes.
+     */
+    private fun reloadFeed() {
+        if (!isOnline()) return
+        loadFeed(reloadMeta = false)
+    }
+
+    private fun loadFeed(reloadMeta: Boolean) {
         refreshJob?.cancel()
+        loadMoreJob?.cancel()
         refreshJob = viewModelScope.launch {
-            val state = _state.value
-            val hasContent = state.wallpapers.isNotEmpty() || state.collectionItems.isNotEmpty()
+            val snapshot = _state.value
+            val filter = snapshot.feedFilter(offset = 0)
+            val hasContent = snapshot.wallpapers.isNotEmpty() ||
+                (reloadMeta && snapshot.collectionItems.isNotEmpty())
             _state.update {
                 if (hasContent) {
                     it.copy(
                         feed = if (it.wallpapers.isEmpty()) LoadState.Loading else it.feed,
-                        collections = if (it.collectionItems.isEmpty()) LoadState.Loading else it.collections,
+                        collections = if (reloadMeta && it.collectionItems.isEmpty()) {
+                            LoadState.Loading
+                        } else {
+                            it.collections
+                        },
                         refreshing = true,
+                        loadingMore = false,
+                        loadMoreError = null,
                     )
                 } else {
                     it.copy(
                         feed = LoadState.Loading,
-                        collections = LoadState.Loading,
+                        collections = if (reloadMeta) LoadState.Loading else it.collections,
                         refreshing = false,
+                        loadingMore = false,
+                        loadMoreError = null,
                     )
                 }
             }
             try {
-                val trashedIds = state.trashWallpapers.map { it.id }.toSet()
-                val items = api.loadWallpapers()
-                    .filterNot { it.isDeleted || it.id in trashedIds }
-                val collections = try {
-                    api.loadCollections()
-                } catch (error: CancellationException) {
-                    throw error
-                } catch (error: DannXError.SessionExpired) {
-                    throw error
-                } catch (error: Exception) {
-                    _state.update { state -> state.copy(message = error.userMessage()) }
+                val page = api.loadWallpapersPage(filter)
+                val trashedIds = _state.value.trashWallpapers.map { it.id }.toSet()
+                val items = page.items.filterNot { it.isDeleted || it.id in trashedIds }
+                val collections = if (reloadMeta) {
+                    try {
+                        api.loadCollections()
+                    } catch (error: CancellationException) {
+                        throw error
+                    } catch (error: DannXError.SessionExpired) {
+                        throw error
+                    } catch (error: Exception) {
+                        _state.update { state -> state.copy(message = error.userMessage()) }
+                        _state.value.collectionItems
+                    }
+                } else {
                     _state.value.collectionItems
                 }
-                val categories = loadCategoriesOrEmpty(_state.value.categories)
-                val appSettings = loadAppSettingsOrFallback(_state.value.appSettings)
-                cache.writeWallpapers(items)
-                cache.writeCollections(collections)
+                val categories = if (reloadMeta) {
+                    loadCategoriesOrEmpty(_state.value.categories)
+                } else {
+                    _state.value.categories
+                }
+                val appSettings = if (reloadMeta) {
+                    loadAppSettingsOrFallback(_state.value.appSettings)
+                } else {
+                    _state.value.appSettings
+                }
+                if (!filter.hasActiveFilters) {
+                    cacheFeed(items)
+                }
+                if (reloadMeta) {
+                    cache.writeCollections(collections)
+                }
                 _state.update {
                     it.copy(
                         feed = if (items.isEmpty()) LoadState.Empty else LoadState.Content(items),
-                        collections = if (collections.isEmpty()) {
-                            LoadState.Empty
+                        collections = if (reloadMeta) {
+                            if (collections.isEmpty()) {
+                                LoadState.Empty
+                            } else {
+                                LoadState.Content(collections)
+                            }
                         } else {
-                            LoadState.Content(collections)
+                            it.collections
                         },
                         wallpapers = items,
                         categories = categories,
@@ -331,6 +385,9 @@ class MainViewModel(
                         isDemo = !api.isConfigured,
                         offline = false,
                         refreshing = false,
+                        loadingMore = false,
+                        hasMore = page.hasMore,
+                        loadMoreError = null,
                     )
                 }
             } catch (error: CancellationException) {
@@ -340,7 +397,7 @@ class MainViewModel(
                 val expired = error is DannXError.SessionExpired
                 val current = _state.value
                 val cachedWallpapers = cache.readWallpapers()
-                val cachedCollections = cache.readCollections()
+                val cachedCollections = if (reloadMeta) cache.readCollections() else emptyList()
                 val currentCollections = if (expired) {
                     current.collectionItems.filter { it.isPublic }
                 } else {
@@ -352,7 +409,11 @@ class MainViewModel(
                     cachedCollections
                 }
                 val fallbackWallpapers = current.wallpapers.ifEmpty { cachedWallpapers }
-                val fallbackCollections = currentCollections.ifEmpty { safeCachedCollections }
+                val fallbackCollections = if (reloadMeta) {
+                    currentCollections.ifEmpty { safeCachedCollections }
+                } else {
+                    currentCollections
+                }
                 _state.update {
                     it.copy(
                         feed = if (fallbackWallpapers.isEmpty()) {
@@ -360,10 +421,14 @@ class MainViewModel(
                         } else {
                             LoadState.Content(fallbackWallpapers)
                         },
-                        collections = if (fallbackCollections.isEmpty()) {
-                            LoadState.Empty
+                        collections = if (reloadMeta) {
+                            if (fallbackCollections.isEmpty()) {
+                                LoadState.Empty
+                            } else {
+                                LoadState.Content(fallbackCollections)
+                            }
                         } else {
-                            LoadState.Content(fallbackCollections)
+                            it.collections
                         },
                         wallpapers = fallbackWallpapers,
                         collectionItems = fallbackCollections,
@@ -373,14 +438,86 @@ class MainViewModel(
                         message = if (expired) error.userMessage() else it.message,
                         offline = fallbackWallpapers.isNotEmpty() && kind == ErrorKind.OFFLINE,
                         refreshing = false,
+                        loadingMore = false,
+                        hasMore = fallbackWallpapers.isNotEmpty() && current.hasMore,
+                        loadMoreError = null,
                     )
                 }
-                if (expired) {
+                if (reloadMeta && expired) {
                     cache.writeCollections(fallbackCollections.filter { it.isPublic })
                 }
             }
         }
     }
+
+    /**
+     * Pide la página siguiente del feed actual. Si el usuario cambió de
+     * filtro mientras viajaba la respuesta, el resultado se descarta.
+     */
+    fun loadMore() {
+        val snapshot = _state.value
+        if (!snapshot.hasMore || snapshot.loadingMore || snapshot.refreshing) return
+        val filter = snapshot.feedFilter(offset = snapshot.wallpapers.size)
+        if (filter.offset <= 0) return
+        loadMoreJob?.cancel()
+        loadMoreJob = viewModelScope.launch {
+            _state.update { it.copy(loadingMore = true, loadMoreError = null) }
+            try {
+                val page = api.loadWallpapersPage(filter)
+                val current = _state.value
+                if (current.query != filter.query ||
+                    current.category != filter.category ||
+                    current.tag != filter.tag
+                ) {
+                    _state.update { it.copy(loadingMore = false) }
+                    return@launch
+                }
+                val trashedIds = current.trashWallpapers.map { it.id }.toSet()
+                val fresh = page.items.filterNot { it.isDeleted || it.id in trashedIds }
+                val merged = (current.wallpapers + fresh).distinctBy { it.id }
+                _state.update {
+                    it.copy(
+                        feed = LoadState.Content(merged),
+                        wallpapers = merged,
+                        loadingMore = false,
+                        hasMore = page.hasMore,
+                        loadMoreError = null,
+                    )
+                }
+                if (!filter.hasActiveFilters) {
+                    cacheFeed(merged)
+                }
+            } catch (error: CancellationException) {
+                throw error
+            } catch (error: Exception) {
+                _state.update {
+                    it.copy(
+                        loadingMore = false,
+                        loadMoreError = error.userMessage(),
+                    )
+                }
+            }
+        }
+    }
+
+    /**
+     * Conserva los fondos viejos que no vinieron en la página nueva para que
+     * el modo offline siga teniendo contenido, sin pasar el límite de la caché.
+     */
+    private suspend fun cacheFeed(items: List<Wallpaper>) {
+        val cached = cache.readWallpapers()
+        cache.writeWallpapers(
+            (items + cached).distinctBy { it.id }.take(FeedCache.MAX_WALLPAPERS),
+        )
+    }
+
+    private fun UiState.feedFilter(offset: Int): WallpaperFilter =
+        WallpaperFilter(
+            query = query,
+            category = category,
+            tag = tag,
+            offset = offset,
+        )
 
     /**
      * Refresca solo si hay red y no se está refrescando ya. Se usa al volver
@@ -395,6 +532,11 @@ class MainViewModel(
     fun setQuery(value: String) {
         savedState[KEY_QUERY] = value
         _state.update { it.copy(query = value) }
+        filterJob?.cancel()
+        filterJob = viewModelScope.launch {
+            delay(SEARCH_DEBOUNCE_MS)
+            if (_state.value.query == value) reloadFeed()
+        }
     }
 
     fun rememberCurrentSearch() {
@@ -412,11 +554,15 @@ class MainViewModel(
     fun setCategory(value: String?) {
         savedState[KEY_CATEGORY] = value
         _state.update { it.copy(category = value) }
+        filterJob?.cancel()
+        reloadFeed()
     }
 
     fun setTag(value: String?) {
         savedState[KEY_TAG] = value
         _state.update { it.copy(tag = value) }
+        filterJob?.cancel()
+        reloadFeed()
     }
 
     fun setSelectedUploadUri(uri: String?) {
@@ -463,6 +609,8 @@ class MainViewModel(
     fun signOut() {
         studioJob?.cancel()
         refreshJob?.cancel()
+        loadMoreJob?.cancel()
+        filterJob?.cancel()
         uploadJob?.cancel()
         prefs.clearSession()
         savedState[KEY_UPLOAD_URI] = null
@@ -2208,6 +2356,7 @@ class MainViewModel(
         private const val KEY_CATEGORY = "category"
         private const val KEY_TAG = "tag"
         private const val KEY_UPLOAD_URI = "upload_uri"
+        private const val SEARCH_DEBOUNCE_MS = 350L
 
         fun factory(application: Application): ViewModelProvider.Factory = viewModelFactory {
             initializer {

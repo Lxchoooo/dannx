@@ -1,49 +1,75 @@
 #!/usr/bin/env python3
-"""Genera las notas de release desde el CHANGELOG.
+"""Genera las notas públicas de una release.
 
-Busca la sección de la versión que CI está publicando (VERSION_NAME) y, si no
-existe, cae a "Sin publicar".
+Prioridad:
+1. `docs/releases/v<versión>.md` (o `docs/releases/<tag>.md`).
+2. La sección `## v<versión>` del CHANGELOG.
+3. La release más nueva de `docs/releases/`, útil para la release rolling de
+   `main`, donde no hay tag.
 """
 
 from pathlib import Path
 import os
+import re
 
 CHANGELOG = Path("CHANGELOG.md")
-FALLBACK = (
-    "Compilado y firmado por GitHub Actions. "
-    "Ver CHANGELOG.md para el detalle."
-)
+RELEASES = Path("docs/releases")
+FALLBACK = "See CHANGELOG.md for the full list of changes."
 
 
-def main() -> int:
+def release_file(version: str) -> Path | None:
+    normalized = version.strip().lstrip("v")
+    if normalized:
+        for name in (f"v{normalized}.md", f"{normalized}.md"):
+            path = RELEASES / name
+            if path.is_file():
+                return path
+        return None
+    if not RELEASES.is_dir():
+        return None
+    files = sorted(
+        RELEASES.glob("v*.md"),
+        key=version_key,
+    )
+    return files[-1] if files else None
+
+
+def version_key(path: Path) -> tuple[int, int, int]:
+    match = re.search(r"(\d+)\.(\d+)\.(\d+)", path.stem)
+    if not match:
+        return (0, 0, 0)
+    return tuple(int(part) for part in match.groups())
+
+
+def changelog_notes(version: str) -> str:
     if not CHANGELOG.exists():
-        print(FALLBACK)
-        return 0
-
-    version = os.environ.get("VERSION_NAME", "").strip().lstrip("v")
+        return ""
     targets = ["## sin publicar"]
     if version:
-        targets.insert(0, f"## v{version}".lower())
-
+        targets.insert(0, f"## v{version.lstrip('v')}".lower())
     lines = CHANGELOG.read_text(encoding="utf-8").splitlines()
-
     start = None
     for index, line in enumerate(lines):
         if line.strip().lower() in targets:
             start = index + 1
             break
-
     if start is None:
-        print(FALLBACK)
-        return 0
-
+        return ""
     end = len(lines)
     for index in range(start, len(lines)):
         if lines[index].startswith("## "):
             end = index
             break
+    return "\n".join(lines[start:end]).strip()
 
-    notes = "\n".join(lines[start:end]).strip()
+
+def main() -> int:
+    version = os.environ.get("VERSION_NAME", "").strip()
+    path = release_file(version)
+    if path is not None:
+        print(path.read_text(encoding="utf-8").strip())
+        return 0
+    notes = changelog_notes(version)
     print(notes or FALLBACK)
     return 0
 

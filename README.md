@@ -18,12 +18,16 @@ right after installing.
 ## 📸 Screenshots
 
 Screenshots for the current build live in
-[`docs/screenshots/`](docs/screenshots/). The 1.5.0 set is being refreshed; see
-the note there for how to take them.
+[`docs/screenshots/`](docs/screenshots/). The 1.5.0 set is being refreshed for
+1.6.0; see the note there for how to take them.
 
 ## ✨ Features
 
 - Feed with featured wallpapers, search, categories and free-form tags.
+- Loads 30 wallpapers per page with server-side search and filters; the offline
+  cache keeps up to 400.
+- In-app update check with SHA-256 verification before opening the installer.
+- **Surprise me** opens a random wallpaper from the current filter.
 - Collections you create inside the app, public or private.
 - Detail view with pinch zoom, double-tap zoom and pan.
 - Built-in editor with crop, colour adjustments, filters and real progressive
@@ -100,7 +104,6 @@ The following are **planned** and not available yet:
 - Web admin panel for managing wallpapers.
 - A base profile to improve performance on low-end devices.
 - Signed release distributed outside GitHub.
-- A full in-app updater (for now, Settings opens the releases page).
 
 See [ROADMAP.md](ROADMAP.md) for the full priority list and what is already
 done.

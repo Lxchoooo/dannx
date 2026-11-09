@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
@@ -20,10 +21,12 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.itemsIndexed
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Casino
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.Search
@@ -56,6 +59,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
@@ -91,6 +95,8 @@ import com.dannx.walls.ui.components.wallpaperThumbRequest
 import com.dannx.walls.ui.LocalWindowSizeClass
 import kotlin.math.min
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.withTimeoutOrNull
 
 /** Segundos que hay que mantener presionado el título para la puerta secreta. */
@@ -115,6 +121,7 @@ fun HomeScreen(
     onOpenSettings: () -> Unit = {},
     onSearchSubmit: () -> Unit = {},
     onClearRecentSearches: () -> Unit = {},
+    onLoadMore: () -> Unit = {},
 ) {
     if (BuildConfig.DEBUG) {
         SideEffect { DebugRecompositionCounters.home++ }
@@ -126,6 +133,8 @@ fun HomeScreen(
     }
     val availableTags = remember(state.wallpapers) { state.availableTags }
     val context = LocalContext.current
+    val gridState = rememberLazyGridState()
+    var lastRandomId by rememberSaveable { mutableStateOf<String?>(null) }
     // Solo se precargan las miniaturas una vez por carga del feed: al volver a
     // la pestaña no se relanza, para no competir con las imagenes visibles.
     var precached by rememberSaveable(state.wallpapers) { mutableStateOf(false) }
@@ -139,6 +148,16 @@ fun HomeScreen(
         }
         precached = true
     }
+    LaunchedEffect(gridState, state.query, state.category, state.tag) {
+        snapshotFlow {
+            val info = gridState.layoutInfo
+            (info.visibleItemsInfo.lastOrNull()?.index ?: -1) to info.totalItemsCount
+        }
+            .distinctUntilChanged()
+            .collect { (last, total) ->
+                if (total > 0 && last >= total - 4) onLoadMore()
+            }
+    }
 
     val tagline = state.appSettings.tagline.ifBlank {
         stringResource(R.string.home_tagline)
@@ -146,8 +165,11 @@ fun HomeScreen(
     val showHero = state.query.isBlank() && state.category == null && state.tag == null &&
         featured.isNotEmpty()
     val categories = remember(state.wallpapers, state.categories) {
-        val names = state.categoryNames.ifEmpty { DefaultCategories }
-        listOf(CategoryAll, CategoryFeatured) + names.distinct().sorted()
+        val names = state.categories.map { it.name }
+            .ifEmpty { state.categoryNames.ifEmpty { DefaultCategories } }
+        listOf(CategoryAll, CategoryFeatured) + names.filter { it.isNotBlank() }
+            .distinct()
+            .sorted()
     }
     // Se recrea cuando cambia la cantidad de destacados para que el carrusel
     // siempre conozca el total actual.
@@ -166,6 +188,7 @@ fun HomeScreen(
 
     LazyVerticalGrid(
         columns = GridCells.Fixed(columns),
+        state = gridState,
         modifier = Modifier
             .fillMaxSize()
             .statusBarsPadding(),
@@ -340,6 +363,25 @@ fun HomeScreen(
                 contentPadding = PaddingValues(end = 20.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
+                if (filtered.isNotEmpty()) {
+                    item(key = "random-wallpaper") {
+                        AssistChip(
+                            onClick = {
+                                val candidates = filtered
+                                    .filterNot { it.id == lastRandomId }
+                                    .ifEmpty { filtered }
+                                val picked = candidates.random()
+                                lastRandomId = picked.id
+                                onOpenWallpaper(picked)
+                            },
+                            label = { Text(stringResource(R.string.action_random_wallpaper)) },
+                            leadingIcon = {
+                                Icon(Icons.Rounded.Casino, contentDescription = null)
+                            },
+                            shape = CircleShape,
+                        )
+                    }
+                }
                 items(count = categories.size, key = { index -> "category-$index" }) { index ->
                     val value = categories[index]
                     val label = when (value) {
@@ -528,6 +570,63 @@ fun HomeScreen(
                             .fillMaxWidth()
                             .aspectRatio(9f / 16f),
                     )
+                }
+            }
+
+            when {
+                state.loadingMore -> {
+                    item(span = { GridItemSpan(maxLineSpan) }) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 14.dp),
+                            horizontalArrangement = Arrangement.Center,
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            CircularProgressIndicator(Modifier.size(20.dp))
+                            Spacer(Modifier.width(10.dp))
+                            Text(
+                                text = stringResource(R.string.feed_loading_more),
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                    }
+                }
+
+                state.loadMoreError != null -> {
+                    item(span = { GridItemSpan(maxLineSpan) }) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 8.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                        ) {
+                            Text(
+                                text = state.loadMoreError.orEmpty(),
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.error,
+                                textAlign = TextAlign.Center,
+                            )
+                            TextButton(onClick = onLoadMore) {
+                                Text(stringResource(R.string.action_retry))
+                            }
+                        }
+                    }
+                }
+
+                !state.hasMore -> {
+                    item(span = { GridItemSpan(maxLineSpan) }) {
+                        Text(
+                            text = stringResource(R.string.feed_no_more),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 12.dp),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            textAlign = TextAlign.Center,
+                        )
+                    }
                 }
             }
         }

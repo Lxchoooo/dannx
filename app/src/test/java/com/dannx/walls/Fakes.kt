@@ -11,7 +11,10 @@ import com.dannx.walls.data.Wallpaper
 import com.dannx.walls.data.WallpaperActions
 import com.dannx.walls.data.WallpaperCategory
 import com.dannx.walls.data.WallpaperCollection
+import com.dannx.walls.data.WallpaperFilter
+import com.dannx.walls.data.WallpaperPage
 import com.dannx.walls.data.WallpapersRepository
+import com.dannx.walls.data.filterWallpapers
 import com.dannx.walls.util.SharedImage
 import com.dannx.walls.util.WallpaperTarget
 
@@ -26,6 +29,7 @@ class FakeRepository : WallpapersRepository {
     var failWith: Throwable? = null
     var failTimes: Int = 0
     var loadCalls: Int = 0
+    val pageFilters: MutableList<WallpaperFilter> = mutableListOf()
     var session: AdminSession? = null
     var uploadWarning: String? = null
     var deletedCategory: Triple<String, String?, String?>? = null
@@ -35,14 +39,25 @@ class FakeRepository : WallpapersRepository {
 
     override val isConfigured: Boolean = true
 
-    override suspend fun loadWallpapers(): List<Wallpaper> {
+    override suspend fun loadWallpapersPage(filter: WallpaperFilter): WallpaperPage {
         loadCalls += 1
+        pageFilters += filter
         val error = failWith
         if (error != null && failTimes > 0) {
             failTimes -= 1
             throw error
         }
-        return wallpapers
+        val filtered = filterWallpapers(
+            items = wallpapers.filterNot { it.isArchived || it.isDeleted },
+            query = filter.query,
+            category = filter.category,
+            tag = filter.tag,
+        )
+        val page = filtered.drop(filter.offset).take(filter.limit)
+        return WallpaperPage(
+            items = page,
+            hasMore = filter.offset + page.size < filtered.size,
+        )
     }
 
     override suspend fun loadAdminWallpapers(): List<Wallpaper> = adminWallpapers ?: wallpapers

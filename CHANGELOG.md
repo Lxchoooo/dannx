@@ -6,6 +6,28 @@ trabajo (fases de la hoja de ruta) y al publicar cada versión.
 Sobre el Estudio: la pantalla de publicación es de uso privado. El acceso está
 reservado a administradores y no se detalla en la documentación.
 
+## v1.6.0
+
+### Actualizador y feed
+
+- Ajustes ahora consulta la última release de GitHub, descarga el APK en la
+  caché interna, verifica su SHA-256 y abre el instalador del sistema. Si el
+  usuario no habilitó apps desconocidas, se abre el ajuste correspondiente.
+- El feed pide páginas de 30 fondos con `limit`/`offset` y carga la siguiente al
+  llegar al final, sin duplicados.
+- Búsqueda, categoría y tag se resuelven en PostgREST. La búsqueda usa `ilike`
+  sobre título, categoría y autor; los tags se buscan por coincidencia exacta.
+- La caché sigue limitada a 400 fondos y ahora se fusiona después de cada
+  página. Solo se escribe cuando no hay filtros activos.
+- Un chip “Sorprendeme” abre un fondo aleatorio del resultado actual y evita
+  repetir el último.
+- Pasada de accesibilidad: roles y estados en tarjetas, descripciones del
+  favorito, objetivos táctiles y textos con escala grande.
+- Las notas de release se leen de `docs/releases/v<versión>.md` en inglés. Se
+  corrigió la variable `VERSION_NAME` del job `publish`.
+- Tests nuevos para comparación de versiones, actualizador, paginación, filtros
+  y caché.
+
 ## v1.5.0
 
 ### Estudio 1.5: papelera y operaciones atómicas
