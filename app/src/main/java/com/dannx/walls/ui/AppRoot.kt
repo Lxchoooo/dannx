@@ -434,6 +434,10 @@ private fun MainApp(
                         }
                     }
                 } else {
+                    val detailIndex = state.wallpapers.indexOfFirst { it.id == wallpaper.id }
+                    val previous = state.wallpapers.getOrNull(detailIndex - 1)
+                    val next = state.wallpapers.getOrNull(detailIndex + 1)
+                    val detailDestinationId = entry.destination.id
                     DetailScreen(
                         wallpaper = wallpaper,
                         isFavorite = wallpaper.id in state.favorites,
@@ -465,6 +469,22 @@ private fun MainApp(
                         },
                         onCreateCollection = { name, description, isPublic ->
                             viewModel.createCollection(name, description, isPublic)
+                        },
+                        onPrevious = previous?.let { target ->
+                            {
+                                navController.navigate("detail/${target.id}") {
+                                    launchSingleTop = true
+                                    popUpTo(detailDestinationId) { inclusive = true }
+                                }
+                            }
+                        },
+                        onNext = next?.let { target ->
+                            {
+                                navController.navigate("detail/${target.id}") {
+                                    launchSingleTop = true
+                                    popUpTo(detailDestinationId) { inclusive = true }
+                                }
+                            }
                         },
                     )
                 }

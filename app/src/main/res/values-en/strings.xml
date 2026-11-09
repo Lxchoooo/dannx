@@ -128,6 +128,8 @@
 
     <!-- Detail -->
     <string name="detail_by_author">by %1$s</string>
+    <string name="detail_previous">Previous wallpaper</string>
+    <string name="detail_next">Next wallpaper</string>
     <string name="detail_save_collection">Save to collection</string>
     <string name="detail_no_collections">You don\'t have any collections yet. Create one to group your wallpapers.</string>
 

@@ -31,6 +31,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.BookmarkAdd
+import androidx.compose.material.icons.rounded.ChevronLeft
+import androidx.compose.material.icons.rounded.ChevronRight
 import androidx.compose.material.icons.rounded.CollectionsBookmark
 import androidx.compose.material.icons.rounded.Download
 import androidx.compose.material.icons.rounded.Favorite
@@ -133,8 +135,12 @@ fun DetailScreen(
     onDismissDownloadPrompt: () -> Unit,
     onAddToCollection: (String) -> Unit,
     onCreateCollection: (String, String, Boolean) -> Unit,
+    onPrevious: (() -> Unit)? = null,
+    onNext: (() -> Unit)? = null,
 ) {
-    var zoom by rememberSaveable(stateSaver = ZoomStateSaver) { mutableStateOf(ZoomState()) }
+    var zoom by rememberSaveable(wallpaper.id, stateSaver = ZoomStateSaver) {
+        mutableStateOf(ZoomState())
+    }
     var showCollections by rememberSaveable { mutableStateOf(false) }
     var showCreateCollection by rememberSaveable { mutableStateOf(false) }
     var showApplySheet by rememberSaveable { mutableStateOf(false) }
@@ -363,6 +369,51 @@ fun DetailScreen(
                         } else {
                             stringResource(R.string.action_add_favorite)
                         },
+                    )
+                }
+            }
+        }
+
+        if (zoom.scale <= MinZoom + 0.01f) {
+            onPrevious?.let { previous ->
+                FilledIconButton(
+                    onClick = {
+                        haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                        previous()
+                    },
+                    modifier = Modifier
+                        .align(Alignment.CenterStart)
+                        .padding(start = 12.dp)
+                        .size(48.dp),
+                    colors = IconButtonDefaults.filledIconButtonColors(
+                        containerColor = Color.Black.copy(alpha = 0.35f),
+                        contentColor = Color.White,
+                    ),
+                ) {
+                    Icon(
+                        Icons.Rounded.ChevronLeft,
+                        contentDescription = stringResource(R.string.detail_previous),
+                    )
+                }
+            }
+            onNext?.let { next ->
+                FilledIconButton(
+                    onClick = {
+                        haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                        next()
+                    },
+                    modifier = Modifier
+                        .align(Alignment.CenterEnd)
+                        .padding(end = 12.dp)
+                        .size(48.dp),
+                    colors = IconButtonDefaults.filledIconButtonColors(
+                        containerColor = Color.Black.copy(alpha = 0.35f),
+                        contentColor = Color.White,
+                    ),
+                ) {
+                    Icon(
+                        Icons.Rounded.ChevronRight,
+                        contentDescription = stringResource(R.string.detail_next),
                     )
                 }
             }

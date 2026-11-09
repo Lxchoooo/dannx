@@ -128,6 +128,8 @@
 
     <!-- Detalle -->
     <string name="detail_by_author">por %1$s</string>
+    <string name="detail_previous">Fondo anterior</string>
+    <string name="detail_next">Fondo siguiente</string>
     <string name="detail_save_collection">Guardar en colección</string>
     <string name="detail_no_collections">Todavía no tenés colecciones. Creá una para agrupar tus fondos.</string>
 
