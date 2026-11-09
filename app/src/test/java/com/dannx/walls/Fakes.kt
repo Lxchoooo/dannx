@@ -179,6 +179,7 @@ class FakeRepository : WallpapersRepository {
 
 class FakeStore : LocalStore {
     private val favoriteIds = mutableSetOf<String>()
+    private val storedSearches = mutableListOf<String>()
     private val downloads = mutableMapOf<String, String>()
     private var collections: List<WallpaperCollection> = emptyList()
     private var storedSession: AdminSession? = null
@@ -189,6 +190,20 @@ class FakeStore : LocalStore {
     override fun toggleFavorite(id: String): Set<String> {
         if (!favoriteIds.add(id)) favoriteIds.remove(id)
         return favoriteIds.toSet()
+    }
+
+    override fun recentSearches(): List<String> = storedSearches.toList()
+
+    override fun rememberSearch(query: String) {
+        val normalized = query.trim()
+        if (normalized.isBlank()) return
+        storedSearches.removeAll { it.equals(normalized, ignoreCase = true) }
+        storedSearches.add(0, normalized)
+        while (storedSearches.size > 8) storedSearches.removeAt(storedSearches.lastIndex)
+    }
+
+    override fun clearRecentSearches() {
+        storedSearches.clear()
     }
 
     override fun session(): AdminSession? = storedSession

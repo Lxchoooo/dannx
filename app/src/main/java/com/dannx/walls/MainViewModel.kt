@@ -102,6 +102,7 @@ data class UiState(
     val categories: List<WallpaperCategory> = emptyList(),
     val collectionItems: List<WallpaperCollection> = emptyList(),
     val query: String = "",
+    val recentSearches: List<String> = emptyList(),
     val category: String? = null,
     val tag: String? = null,
     val favorites: Set<String> = emptySet(),
@@ -202,6 +203,7 @@ class MainViewModel(
             onboardingDone = prefs.onboardingDone(),
             downloadedIds = prefs.downloadedIds(),
             query = savedState.get<String>(KEY_QUERY) ?: "",
+            recentSearches = prefs.recentSearches(),
             category = savedState.get<String>(KEY_CATEGORY),
             tag = savedState.get<String>(KEY_TAG),
             selectedUploadUri = savedState.get<String>(KEY_UPLOAD_URI),
@@ -369,6 +371,18 @@ class MainViewModel(
     fun setQuery(value: String) {
         savedState[KEY_QUERY] = value
         _state.update { it.copy(query = value) }
+    }
+
+    fun rememberCurrentSearch() {
+        val query = _state.value.query
+        if (query.isBlank()) return
+        prefs.rememberSearch(query)
+        _state.update { it.copy(recentSearches = prefs.recentSearches()) }
+    }
+
+    fun clearRecentSearches() {
+        prefs.clearRecentSearches()
+        _state.update { it.copy(recentSearches = emptyList()) }
     }
 
     fun setCategory(value: String?) {

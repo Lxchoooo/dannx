@@ -34,12 +34,12 @@ HSPLcom/dannx/walls/util/WallpaperFiles;->setAsWallpaper(Lcom/dannx/walls/data/W
 
 # --- App: interfaz ---
 HSPLcom/dannx/walls/ui/AppRootKt;->AppRoot(Lcom/dannx/walls/MainViewModel;Ljava/lang/String;)V
-HSPLcom/dannx/walls/ui/screens/HomeScreenKt;->HomeScreen(Lcom/dannx/walls/UiState;Lkotlin/jvm/functions/Function1;Lkotlin/jvm/functions/Function1;Lkotlin/jvm/functions/Function1;Lkotlin/jvm/functions/Function0;Lkotlin/jvm/functions/Function1;Lkotlin/jvm/functions/Function1;Lkotlin/jvm/functions/Function0;)V
+HSPLcom/dannx/walls/ui/screens/HomeScreenKt;->HomeScreen(Lcom/dannx/walls/UiState;Lkotlin/jvm/functions/Function1;Lkotlin/jvm/functions/Function1;Lkotlin/jvm/functions/Function1;Lkotlin/jvm/functions/Function0;Lkotlin/jvm/functions/Function1;Lkotlin/jvm/functions/Function1;Lkotlin/jvm/functions/Function0;Lkotlin/jvm/functions/Function0;Lkotlin/jvm/functions/Function0;Lkotlin/jvm/functions/Function0;Lkotlin/jvm/functions/Function0;)V
 HSPLcom/dannx/walls/ui/components/WallpaperCardKt;->WallpaperCard(Lcom/dannx/walls/data/Wallpaper;ZLkotlin/jvm/functions/Function0;Lkotlin/jvm/functions/Function0;Landroidx/compose/ui/Modifier;)V
 HSPLcom/dannx/walls/ui/components/WallpaperCardKt;->WallpaperImage(Lcom/dannx/walls/data/Wallpaper;Z)V
 HSPLcom/dannx/walls/ui/components/WallpaperCardKt;->wallpaperThumbRequest(Landroid/content/Context;Lcom/dannx/walls/data/Wallpaper;)Lcoil/request/ImageRequest;
 HSPLcom/dannx/walls/ui/components/FeaturedCardKt;->FeaturedCard(Lcom/dannx/walls/data/Wallpaper;ZLkotlin/jvm/functions/Function0;Lkotlin/jvm/functions/Function0;Landroidx/compose/ui/Modifier;)V
-HSPLcom/dannx/walls/ui/screens/DetailScreenKt;->DetailScreen(Lcom/dannx/walls/data/Wallpaper;ZLjava/util/List;ZZLcom/dannx/walls/UiAction;Ljava/lang/Integer;Lcom/dannx/walls/DownloadPrompt;ZLkotlin/jvm/functions/Function0;Lkotlin/jvm/functions/Function0;Lkotlin/jvm/functions/Function0;Lkotlin/jvm/functions/Function1;Lkotlin/jvm/functions/Function0;Lkotlin/jvm/functions/Function0;Lkotlin/jvm/functions/Function1;Lkotlin/jvm/functions/Function1;Lkotlin/jvm/functions/Function0;Lkotlin/jvm/functions/Function3;Lkotlin/jvm/functions/Function0;)V
+HSPLcom/dannx/walls/ui/screens/DetailScreenKt;->DetailScreen(Lcom/dannx/walls/data/Wallpaper;ZLjava/util/List;ZZLcom/dannx/walls/ActionState;Lcom/dannx/walls/DownloadPrompt;ZZZLkotlin/jvm/functions/Function0;Lkotlin/jvm/functions/Function0;Lkotlin/jvm/functions/Function0;Lkotlin/jvm/functions/Function0;Lkotlin/jvm/functions/Function1;Lkotlin/jvm/functions/Function0;Lkotlin/jvm/functions/Function0;Lkotlin/jvm/functions/Function1;Lkotlin/jvm/functions/Function1;Lkotlin/jvm/functions/Function0;Lkotlin/jvm/functions/Function1;Lkotlin/jvm/functions/Function3;Lkotlin/jvm/functions/Function0;Lkotlin/jvm/functions/Function0;)V
 
 # --- Coil: decodificacion de imagenes ---
 HSPLcoil/ImageLoader;-><init>(Lcoil/ImageLoader$Builder;)V

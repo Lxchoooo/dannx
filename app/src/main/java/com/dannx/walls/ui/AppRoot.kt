@@ -275,6 +275,7 @@ private fun MainApp(
                         onTagChange = viewModel::setTag,
                         onRefresh = viewModel::refresh,
                         onOpenWallpaper = { wallpaper ->
+                            viewModel.rememberCurrentSearch()
                             navController.navigate("detail/${wallpaper.id}") {
                                 launchSingleTop = true
                             }
@@ -282,6 +283,8 @@ private fun MainApp(
                         onToggleFavorite = viewModel::toggleFavorite,
                         onOpenStudio = { navController.navigateTopLevel("studio") },
                         onOpenSettings = { navController.navigate("settings") },
+                        onSearchSubmit = viewModel::rememberCurrentSearch,
+                        onClearRecentSearches = viewModel::clearRecentSearches,
                     )
                 }
             }

@@ -222,6 +222,27 @@ class MainViewModelTest {
     }
 
     @Test
+    fun `recent searches keep the latest query first and ignore case duplicates`() =
+        runTest(dispatcher) {
+            val model = viewModel()
+
+            model.setQuery("  minimal  ")
+            model.rememberCurrentSearch()
+            model.setQuery("dark")
+            model.rememberCurrentSearch()
+            model.setQuery("MINIMAL")
+            model.rememberCurrentSearch()
+
+            assertEquals(
+                listOf("MINIMAL", "dark"),
+                model.state.value.recentSearches,
+            )
+
+            model.clearRecentSearches()
+            assertTrue(model.state.value.recentSearches.isEmpty())
+        }
+
+    @Test
     fun `a failed refresh keeps the current feed when the cache is empty`() =
         runTest(dispatcher) {
             repository.wallpapers = listOf(wallpaper("1"))

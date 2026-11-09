@@ -21,12 +21,15 @@ import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material.icons.rounded.Wallpaper
+import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
@@ -40,6 +43,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.carousel.HorizontalMultiBrowseCarousel
 import androidx.compose.material3.carousel.rememberCarouselState
 import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
@@ -62,6 +66,7 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import coil.imageLoader
@@ -108,6 +113,8 @@ fun HomeScreen(
     },
     onOpenStudio: () -> Unit = {},
     onOpenSettings: () -> Unit = {},
+    onSearchSubmit: () -> Unit = {},
+    onClearRecentSearches: () -> Unit = {},
 ) {
     if (BuildConfig.DEBUG) {
         SideEffect { DebugRecompositionCounters.home++ }
@@ -254,6 +261,8 @@ fun HomeScreen(
                         }
                     },
                     singleLine = true,
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                    keyboardActions = KeyboardActions(onSearch = { onSearchSubmit() }),
                     shape = CircleShape,
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
@@ -262,6 +271,38 @@ fun HomeScreen(
                         unfocusedBorderColor = MaterialTheme.colorScheme.surfaceContainerHigh,
                     ),
                 )
+                if (state.query.isBlank() && state.recentSearches.isNotEmpty()) {
+                    Spacer(Modifier.height(10.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(
+                            text = stringResource(R.string.home_recent_searches),
+                            style = MaterialTheme.typography.labelLarge,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.weight(1f),
+                        )
+                        TextButton(onClick = onClearRecentSearches) {
+                            Text(stringResource(R.string.home_clear_recent_searches))
+                        }
+                    }
+                    LazyRow(
+                        contentPadding = PaddingValues(end = 20.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        items(state.recentSearches, key = { "recent-$it" }) { query ->
+                            AssistChip(
+                                onClick = {
+                                    onQueryChange(query)
+                                    onSearchSubmit()
+                                },
+                                label = { Text(query) },
+                                shape = CircleShape,
+                            )
+                        }
+                    }
+                }
                 Spacer(Modifier.height(14.dp))
             }
         }

@@ -82,6 +82,9 @@ interface WallpapersRepository {
 interface LocalStore {
     fun favorites(): Set<String>
     fun toggleFavorite(id: String): Set<String>
+    fun recentSearches(): List<String>
+    fun rememberSearch(query: String)
+    fun clearRecentSearches()
     fun session(): AdminSession?
     fun saveSession(email: String, access: String?, refresh: String?, id: String?)
     fun clearSession()
