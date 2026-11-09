@@ -22,6 +22,7 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.Settings
@@ -33,6 +34,7 @@ import androidx.compose.material3.LinearWavyProgressIndicator
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
@@ -240,6 +242,16 @@ fun HomeScreen(
                     placeholder = { Text(stringResource(R.string.home_search_hint)) },
                     leadingIcon = {
                         Icon(Icons.Rounded.Search, contentDescription = null)
+                    },
+                    trailingIcon = {
+                        if (state.query.isNotEmpty()) {
+                            IconButton(onClick = { onQueryChange("") }) {
+                                Icon(
+                                    Icons.Rounded.Close,
+                                    contentDescription = stringResource(R.string.home_clear_search),
+                                )
+                            }
+                        }
                     },
                     singleLine = true,
                     shape = CircleShape,

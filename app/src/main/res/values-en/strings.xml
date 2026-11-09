@@ -81,6 +81,7 @@
     <string name="home_tagline">Wallpapers that feel like yours.</string>
     <string name="action_refresh_feed">Refresh feed</string>
     <string name="home_search_hint">Search wallpapers or tags</string>
+    <string name="home_clear_search">Clear search</string>
     <string name="filter_all">All</string>
     <string name="filter_featured">Featured</string>
     <string name="filter_all_tags">All</string>
