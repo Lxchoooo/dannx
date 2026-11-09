@@ -141,6 +141,7 @@ fun DecoyScreen(
 private fun DecoyIllustration() {
     val frameColor = MaterialTheme.colorScheme.outline
     val spotColor = MaterialTheme.colorScheme.primary
+    val description = stringResource(R.string.decoy_illustration)
     Box(
         modifier = Modifier.size(168.dp),
     ) {
@@ -148,7 +149,7 @@ private fun DecoyIllustration() {
             modifier = Modifier
                 .fillMaxSize()
                 .semantics {
-                    contentDescription = stringResource(R.string.decoy_illustration)
+                    contentDescription = description
                 },
         ) {
             drawRoundRect(
