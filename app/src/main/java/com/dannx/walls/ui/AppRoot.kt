@@ -62,6 +62,7 @@ import com.dannx.walls.R
 import com.dannx.walls.UiState
 import com.dannx.walls.ui.components.DebugFpsOverlay
 import com.dannx.walls.ui.editor.WallpaperEditorScreen
+import com.dannx.walls.ui.screens.AboutScreen
 import com.dannx.walls.ui.screens.CollectionDetailScreen
 import com.dannx.walls.ui.screens.CollectionsScreen
 import com.dannx.walls.ui.screens.DetailScreen
@@ -373,12 +374,16 @@ private fun MainApp(
                     onLiteModeChange = viewModel::setLiteMode,
                     onOpenEditorOnApplyChange = viewModel::setOpenEditorOnApply,
                     onClearCache = viewModel::clearCache,
+                    onOpenAbout = { navController.navigate("about") },
                     onResetAppearance = viewModel::resetAppearance,
                     onSignOut = {
                         viewModel.signOut()
                         navController.popBackStack()
                     },
                 )
+            }
+            composable("about") {
+                AboutScreen(onBack = { navController.popBackStack() })
             }
             composable("studio") {
                 StudioScreen(

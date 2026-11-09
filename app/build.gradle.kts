@@ -47,7 +47,7 @@ android {
         minSdk = 29
         targetSdk = 36
         versionCode = configValue("VERSION_CODE").toIntOrNull() ?: 2
-        versionName = configValue("VERSION_NAME").ifBlank { "1.3.0" }
+        versionName = configValue("VERSION_NAME").ifBlank { "1.4.0" }
 
         buildConfigField("String", "SUPABASE_URL", quoted(configValue("SUPABASE_URL")))
         buildConfigField(

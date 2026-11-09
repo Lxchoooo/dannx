@@ -1,7 +1,5 @@
 package com.dannx.walls.ui.screens
 
-import android.content.Context
-import android.content.Intent
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -37,14 +35,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import androidx.core.net.toUri
 import com.dannx.walls.BuildConfig
 import com.dannx.walls.R
 import com.dannx.walls.UiState
 import com.dannx.walls.data.ThemeMode
-
-private const val REPO_URL = "https://github.com/Lxchoooo/dannx"
-private const val RELEASES_URL = "https://github.com/Lxchoooo/dannx/releases/latest"
+import com.dannx.walls.util.AppLinks
+import com.dannx.walls.util.openUrl
 
 /**
  * Ajustes de la app: apariencia, caché y datos generales.
@@ -58,6 +54,7 @@ fun SettingsScreen(
     onLiteModeChange: (Boolean) -> Unit,
     onOpenEditorOnApplyChange: (Boolean) -> Unit,
     onClearCache: () -> Unit,
+    onOpenAbout: () -> Unit,
     onResetAppearance: () -> Unit,
     onSignOut: () -> Unit,
 ) {
@@ -205,7 +202,7 @@ fun SettingsScreen(
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
-                        TextButton(onClick = { openUrl(context, RELEASES_URL) }) {
+                        TextButton(onClick = { openUrl(context, AppLinks.Releases) }) {
                             Text(stringResource(R.string.settings_check_updates))
                             Spacer(Modifier.width(6.dp))
                             Icon(
@@ -214,8 +211,20 @@ fun SettingsScreen(
                                 modifier = Modifier.size(16.dp),
                             )
                         }
-                        TextButton(onClick = { openUrl(context, REPO_URL) }) {
+                        TextButton(onClick = { openUrl(context, AppLinks.Repo) }) {
                             Text("GitHub")
+                            Spacer(Modifier.width(6.dp))
+                            Icon(
+                                Icons.Rounded.OpenInNew,
+                                contentDescription = null,
+                                modifier = Modifier.size(16.dp),
+                            )
+                        }
+                        TextButton(onClick = onOpenAbout) {
+                            Text(stringResource(R.string.settings_about))
+                        }
+                        TextButton(onClick = { openUrl(context, AppLinks.privacy) }) {
+                            Text(stringResource(R.string.settings_privacy))
                             Spacer(Modifier.width(6.dp))
                             Icon(
                                 Icons.Rounded.OpenInNew,
@@ -265,10 +274,4 @@ private fun ThemeMode.labelRes(): Int = when (this) {
     ThemeMode.SYSTEM -> R.string.theme_system
     ThemeMode.LIGHT -> R.string.theme_light
     ThemeMode.DARK -> R.string.theme_dark
-}
-
-private fun openUrl(context: Context, url: String) {
-    runCatching {
-        context.startActivity(Intent(Intent.ACTION_VIEW, url.toUri()))
-    }
 }
