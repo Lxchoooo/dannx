@@ -30,12 +30,16 @@ data class Wallpaper(
     val createdBy: String = "",
     val updatedAt: String = "",
     val archivedAt: String = "",
+    val deletedAt: String = "",
 ) {
     val thumbnailUrl: String
         get() = thumbUrl.ifBlank { imageUrl }
 
     val isArchived: Boolean
         get() = archivedAt.isNotBlank()
+
+    val isDeleted: Boolean
+        get() = deletedAt.isNotBlank()
 }
 
 @Immutable

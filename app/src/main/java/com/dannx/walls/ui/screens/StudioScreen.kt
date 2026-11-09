@@ -114,6 +114,7 @@ private enum class StudioSection(
 ) {
     PUBLISH(R.string.studio_section_publish, Icons.Rounded.AddPhotoAlternate),
     WALLS(R.string.studio_my_walls, Icons.Rounded.Image),
+    TRASH(R.string.studio_trash, Icons.Rounded.Delete),
     CATEGORIES(R.string.studio_categories, Icons.Rounded.Category),
     TAGS(R.string.studio_section_tags, Icons.Rounded.LocalOffer),
     COLLECTIONS(R.string.studio_collections, Icons.Rounded.Folder),
@@ -146,6 +147,9 @@ fun StudioScreen(
     onReplaceImage: (String, Uri) -> Unit = { _, _ -> },
     onArchiveWallpaper: (String, Boolean) -> Unit = { _, _ -> },
     onDeleteWallpaper: (String) -> Unit = {},
+    onRestoreWallpapers: (Set<String>) -> Unit = {},
+    onPurgeWallpaper: (String) -> Unit = {},
+    onEmptyTrash: () -> Unit = {},
     onBulkSetFeatured: (Set<String>, Boolean) -> Unit = { _, _ -> },
     onBulkSetArchived: (Set<String>, Boolean) -> Unit = { _, _ -> },
     onBulkDeleteWallpapers: (Set<String>) -> Unit = {},
@@ -187,6 +191,8 @@ fun StudioScreen(
     var selectedIds by remember { mutableStateOf<Set<String>>(emptySet()) }
     var bulkCategoryDialog by remember { mutableStateOf(false) }
     var bulkDeleteConfirm by remember { mutableStateOf(false) }
+    var emptyTrashConfirm by remember { mutableStateOf(false) }
+    var wallpaperToPurge by remember { mutableStateOf<Wallpaper?>(null) }
     var replacingWallpaperId by remember { mutableStateOf<String?>(null) }
     val replacePicker = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.PickVisualMedia(),
@@ -296,6 +302,9 @@ fun StudioScreen(
                             },
                             onOpenFeaturedOrder = {
                                 sectionName = StudioSection.FEATURED.name
+                            },
+                            onOpenTrash = {
+                                sectionName = StudioSection.TRASH.name
                             },
                         )
                         Spacer(Modifier.height(14.dp))
@@ -412,6 +421,13 @@ fun StudioScreen(
                         },
                         onArchive = onArchiveWallpaper,
                         onDelete = { deleteWallpaper = it },
+                    )
+
+                    StudioSection.TRASH -> trashPanel(
+                        state = state,
+                        onRestore = { id -> onRestoreWallpapers(setOf(id)) },
+                        onPurge = { wallpaper -> wallpaperToPurge = wallpaper },
+                        onEmptyTrash = { emptyTrashConfirm = true },
                     )
 
                     StudioSection.CATEGORIES -> item(key = "studio-categories") {
@@ -604,6 +620,30 @@ fun StudioScreen(
             },
         )
     }
+    wallpaperToPurge?.let { wallpaper ->
+        ConfirmDialog(
+            title = stringResource(R.string.studio_trash_purge_title),
+            text = stringResource(R.string.studio_trash_purge_body, wallpaper.title),
+            confirm = stringResource(R.string.studio_trash_purge_confirm),
+            onDismiss = { wallpaperToPurge = null },
+            onConfirm = {
+                onPurgeWallpaper(wallpaper.id)
+                wallpaperToPurge = null
+            },
+        )
+    }
+    if (emptyTrashConfirm) {
+        ConfirmDialog(
+            title = stringResource(R.string.studio_trash_empty_title),
+            text = stringResource(R.string.studio_trash_empty_body),
+            confirm = stringResource(R.string.studio_trash_empty_confirm),
+            onDismiss = { emptyTrashConfirm = false },
+            onConfirm = {
+                onEmptyTrash()
+                emptyTrashConfirm = false
+            },
+        )
+    }
     tagRename?.let { tag ->
         TagRenameDialog(
             tag = tag,
@@ -645,6 +685,7 @@ private fun StudioOverview(
     onOpenArchived: () -> Unit,
     onOpenFeatured: () -> Unit,
     onOpenFeaturedOrder: () -> Unit,
+    onOpenTrash: () -> Unit,
 ) {
     val archived = state.studioWallpapers.count { it.isArchived }
     val published = state.studioWallpapers.size - archived
@@ -712,6 +753,16 @@ private fun StudioOverview(
                 item(key = "overview-featured-order") {
                     TextButton(onClick = onOpenFeaturedOrder) {
                         Text(stringResource(R.string.studio_order_featured))
+                    }
+                }
+                item(key = "overview-trash") {
+                    TextButton(onClick = onOpenTrash) {
+                        Text(
+                            stringResource(
+                                R.string.studio_trash_count,
+                                state.trashWallpapers.size,
+                            ),
+                        )
                     }
                 }
             }
@@ -805,6 +856,13 @@ private fun ContentPanel(
             onCheckedChange = { bannerEnabled = it },
         )
     }
+    Spacer(Modifier.height(18.dp))
+    ContentPreview(
+        state = state,
+        tagline = tagline,
+        bannerText = bannerText,
+        bannerEnabled = bannerEnabled,
+    )
     Spacer(Modifier.height(14.dp))
     Button(
         onClick = { onSave(tagline, bannerText, bannerEnabled) },
@@ -812,6 +870,74 @@ private fun ContentPanel(
         shape = CircleShape,
     ) {
         Text(stringResource(R.string.studio_save_content))
+    }
+}
+
+@Composable
+private fun ContentPreview(
+    state: UiState,
+    tagline: String,
+    bannerText: String,
+    bannerEnabled: Boolean,
+) {
+    val previewTagline = tagline.ifBlank { stringResource(R.string.home_tagline) }
+    val featured = state.featured.take(3)
+
+    Text(
+        text = stringResource(R.string.studio_content_preview),
+        style = MaterialTheme.typography.titleMedium,
+    )
+    Spacer(Modifier.height(4.dp))
+    Text(
+        text = stringResource(R.string.studio_content_preview_help),
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+    )
+    Spacer(Modifier.height(8.dp))
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = MaterialTheme.shapes.extraLarge,
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.primaryContainer,
+        ),
+    ) {
+        Column(Modifier.padding(16.dp)) {
+            Text(
+                text = previewTagline,
+                style = MaterialTheme.typography.headlineSmall,
+                color = MaterialTheme.colorScheme.onPrimaryContainer,
+            )
+            if (bannerEnabled && bannerText.isNotBlank()) {
+                Spacer(Modifier.height(10.dp))
+                Card(
+                    shape = MaterialTheme.shapes.large,
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surface,
+                    ),
+                ) {
+                    Text(
+                        text = bannerText,
+                        style = MaterialTheme.typography.bodySmall,
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                    )
+                }
+            }
+            if (featured.isNotEmpty()) {
+                Spacer(Modifier.height(12.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    featured.forEach { wallpaper ->
+                        AsyncImage(
+                            model = wallpaper.thumbnailUrl,
+                            contentDescription = wallpaper.title,
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(110.dp),
+                        )
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -1652,6 +1778,121 @@ private fun LazyListScope.wallsPanel(
                 onArchive = { onArchive(wallpaper.id, !wallpaper.isArchived) },
                 onDelete = { onDelete(wallpaper) },
             )
+        }
+    }
+}
+
+private fun LazyListScope.trashPanel(
+    state: UiState,
+    onRestore: (String) -> Unit,
+    onPurge: (Wallpaper) -> Unit,
+    onEmptyTrash: () -> Unit,
+) {
+    val trash = state.trashWallpapers
+    item(key = "trash-header") {
+        Column {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = stringResource(R.string.studio_trash),
+                    style = MaterialTheme.typography.headlineMedium,
+                    modifier = Modifier.weight(1f),
+                )
+                if (trash.isNotEmpty()) {
+                    TextButton(
+                        onClick = onEmptyTrash,
+                        enabled = !state.studioBusy,
+                    ) {
+                        Text(
+                            text = stringResource(R.string.studio_trash_empty_action),
+                            color = MaterialTheme.colorScheme.error,
+                        )
+                    }
+                }
+            }
+            Spacer(Modifier.height(4.dp))
+            Text(
+                text = stringResource(R.string.studio_trash_help),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Spacer(Modifier.height(6.dp))
+            Text(
+                text = stringResource(R.string.studio_trash_count, trash.size),
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Spacer(Modifier.height(12.dp))
+        }
+    }
+
+    if (trash.isEmpty()) {
+        item(key = "trash-empty") {
+            Text(
+                text = stringResource(R.string.studio_trash_empty),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        return
+    }
+
+    items(items = trash, key = { "trash-${it.id}" }) { wallpaper ->
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 8.dp),
+            shape = MaterialTheme.shapes.large,
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+            ),
+        ) {
+            Row(
+                modifier = Modifier.padding(10.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                AsyncImage(
+                    model = wallpaper.thumbnailUrl,
+                    contentDescription = wallpaper.title,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier.size(width = 52.dp, height = 72.dp),
+                )
+                Spacer(Modifier.width(12.dp))
+                Column(Modifier.weight(1f)) {
+                    Text(
+                        text = wallpaper.title,
+                        style = MaterialTheme.typography.titleMedium,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                    Text(
+                        text = state.categoryNameFor(wallpaper),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                IconButton(
+                    onClick = { onRestore(wallpaper.id) },
+                    enabled = !state.studioBusy,
+                ) {
+                    Icon(
+                        imageVector = Icons.Rounded.Unarchive,
+                        contentDescription = stringResource(R.string.studio_restore),
+                    )
+                }
+                IconButton(
+                    onClick = { onPurge(wallpaper) },
+                    enabled = !state.studioBusy,
+                ) {
+                    Icon(
+                        imageVector = Icons.Rounded.Delete,
+                        contentDescription = stringResource(R.string.studio_trash_purge_confirm),
+                        tint = MaterialTheme.colorScheme.error,
+                    )
+                }
+            }
         }
     }
 }

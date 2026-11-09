@@ -18,7 +18,7 @@ así que funciona apenas la instalás.
 ## 📸 Capturas
 
 Las capturas del build actual viven en
-[`docs/screenshots/`](docs/screenshots/). El set de 1.4.0 se está renovando; mirá
+[`docs/screenshots/`](docs/screenshots/). El set de 1.5.0 se está renovando; mirá
 la nota de ahí para saber cómo tomarlas.
 
 ## ✨ Características

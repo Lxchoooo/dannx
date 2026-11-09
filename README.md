@@ -18,7 +18,7 @@ right after installing.
 ## 📸 Screenshots
 
 Screenshots for the current build live in
-[`docs/screenshots/`](docs/screenshots/). The 1.4.0 set is being refreshed; see
+[`docs/screenshots/`](docs/screenshots/). The 1.5.0 set is being refreshed; see
 the note there for how to take them.
 
 ## ✨ Features

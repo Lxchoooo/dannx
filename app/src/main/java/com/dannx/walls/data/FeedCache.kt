@@ -112,6 +112,7 @@ private data class CachedWallpaper(
     val createdBy: String = "",
     val updatedAt: String = "",
     val archivedAt: String = "",
+    val deletedAt: String = "",
 ) {
     fun toWallpaper(): Wallpaper = Wallpaper(
         id = id,
@@ -131,6 +132,7 @@ private data class CachedWallpaper(
         createdBy = createdBy,
         updatedAt = updatedAt,
         archivedAt = archivedAt,
+        deletedAt = deletedAt,
     )
 
     companion object {
@@ -152,6 +154,7 @@ private data class CachedWallpaper(
             createdBy = wallpaper.createdBy,
             updatedAt = wallpaper.updatedAt,
             archivedAt = wallpaper.archivedAt,
+            deletedAt = wallpaper.deletedAt,
         )
     }
 }

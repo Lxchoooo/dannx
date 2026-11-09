@@ -438,6 +438,76 @@ class MainViewModelTest {
     }
 
     @Test
+    fun `deleting a wallpaper moves it to the trash and restore brings it back`() =
+        runTest(dispatcher) {
+            store.saveSession("admin@test", "token", null, "u1")
+            repository.session = AdminSession("admin@test", "token", "u1")
+            repository.wallpapers = listOf(wallpaper("1"))
+            val model = viewModel()
+            advanceUntilIdle()
+            model.loadStudio()
+            advanceUntilIdle()
+
+            model.deleteWallpaper("1")
+            advanceUntilIdle()
+
+            assertTrue(model.state.value.wallpapers.isEmpty())
+            assertEquals(listOf("1"), model.state.value.trashWallpapers.map { it.id })
+            assertTrue(repository.wallpapers.single { it.id == "1" }.isDeleted)
+
+            model.restoreWallpapers(setOf("1"))
+            advanceUntilIdle()
+
+            assertTrue(model.state.value.trashWallpapers.isEmpty())
+            assertEquals(listOf("1"), model.state.value.wallpapers.map { it.id })
+            assertTrue(!repository.wallpapers.single { it.id == "1" }.isDeleted)
+        }
+
+    @Test
+    fun `emptying the trash purges only deleted wallpapers`() = runTest(dispatcher) {
+        store.saveSession("admin@test", "token", null, "u1")
+        repository.session = AdminSession("admin@test", "token", "u1")
+        repository.wallpapers = listOf(wallpaper("1"), wallpaper("2"))
+        val model = viewModel()
+        advanceUntilIdle()
+        model.loadStudio()
+        advanceUntilIdle()
+
+        model.deleteWallpaper("1")
+        advanceUntilIdle()
+        model.emptyTrash()
+        advanceUntilIdle()
+
+        assertTrue(model.state.value.trashWallpapers.isEmpty())
+        assertEquals(listOf("2"), model.state.value.wallpapers.map { it.id })
+        assertEquals(listOf("2"), repository.wallpapers.map { it.id })
+    }
+
+    @Test
+    fun `bulk archive and category keep the local state in sync`() = runTest(dispatcher) {
+        store.saveSession("admin@test", "token", null, "u1")
+        repository.session = AdminSession("admin@test", "token", "u1")
+        repository.wallpapers = listOf(wallpaper("1"), wallpaper("2"))
+        repository.categories = listOf(
+            com.dannx.walls.data.WallpaperCategory(id = "cat", name = "Cat", position = 0),
+        )
+        val model = viewModel()
+        advanceUntilIdle()
+        model.loadStudio()
+        advanceUntilIdle()
+
+        model.bulkSetArchived(setOf("1"), true)
+        advanceUntilIdle()
+        model.bulkSetCategory(setOf("2"), "cat")
+        advanceUntilIdle()
+
+        val byId = model.state.value.adminWallpapers.associateBy { it.id }
+        assertTrue(byId.getValue("1").isArchived)
+        assertEquals("cat", byId.getValue("2").categoryId)
+        assertEquals("Cat", byId.getValue("2").category)
+    }
+
+    @Test
     fun `featured order is saved from the studio`() = runTest(dispatcher) {
         store.saveSession("admin@test", "token", null, "u1")
         repository.session = AdminSession("admin@test", "token", "u1")

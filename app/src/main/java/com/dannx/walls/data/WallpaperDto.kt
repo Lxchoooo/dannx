@@ -20,6 +20,7 @@ data class WallpaperDto(
     @SerialName("created_by") val createdBy: String? = null,
     @SerialName("updated_at") val updatedAt: String = "",
     @SerialName("archived_at") val archivedAt: String? = null,
+    @SerialName("deleted_at") val deletedAt: String? = null,
     val categories: CategoryRefDto? = null,
 )
 
@@ -162,6 +163,56 @@ data class DeleteCategoryPayload(
 )
 
 @Serializable
+data class BulkFeaturedPayload(
+    @SerialName("p_ids") val ids: List<String>,
+    @SerialName("p_featured") val featured: Boolean,
+)
+
+@Serializable
+data class BulkArchivedPayload(
+    @SerialName("p_ids") val ids: List<String>,
+    @SerialName("p_archived") val archived: Boolean,
+)
+
+@Serializable
+data class BulkCategoryPayload(
+    @SerialName("p_ids") val ids: List<String>,
+    @SerialName("p_category_id") val categoryId: String,
+)
+
+@Serializable
+data class BulkIdsPayload(
+    @SerialName("p_ids") val ids: List<String>,
+)
+
+@Serializable
+data class ReorderFeaturedPayload(
+    @SerialName("p_ids") val ids: List<String>,
+)
+
+@Serializable
+data class FeaturedPatch(
+    val featured: Boolean,
+    @SerialName("featured_position") val featuredPosition: Int,
+)
+
+@Serializable
+data class ArchivedPatch(
+    @SerialName("archived_at") val archivedAt: String?,
+)
+
+@Serializable
+data class DeletedPatch(
+    @SerialName("deleted_at") val deletedAt: String?,
+    @SerialName("deleted_by") val deletedBy: String?,
+)
+
+@Serializable
+data class CategoryPatch(
+    @SerialName("category_id") val categoryId: String,
+)
+
+@Serializable
 data class CollectionDto(
     val id: String,
     val name: String = "",
@@ -242,6 +293,7 @@ fun WallpaperDto.toWallpaper(baseUrl: String): Wallpaper = Wallpaper(
     createdBy = createdBy.orEmpty(),
     updatedAt = updatedAt,
     archivedAt = archivedAt.orEmpty(),
+    deletedAt = deletedAt.orEmpty(),
 )
 
 fun List<AppSettingDto>.toAppSettings(): AppSettings {

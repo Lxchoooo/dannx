@@ -1,0 +1,28 @@
+name: Cleanup storage
+
+# Procesa la cola que llena purge_expired_wallpapers(). Requiere el secret
+# SUPABASE_SERVICE_ROLE_KEY; si falta, el job avisa y termina sin fallar.
+
+on:
+  schedule:
+    - cron: "45 4 * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: cleanup-storage
+  cancel-in-progress: false
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      - name: Process storage queue
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL || vars.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: bash scripts/cleanup_storage.sh

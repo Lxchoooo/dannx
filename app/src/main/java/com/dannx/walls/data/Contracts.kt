@@ -49,6 +49,11 @@ interface WallpapersRepository {
     ): Wallpaper
 
     suspend fun reorderFeatured(ids: List<String>)
+    suspend fun bulkSetFeatured(ids: List<String>, featured: Boolean)
+    suspend fun bulkSetArchived(ids: List<String>, archived: Boolean)
+    suspend fun bulkSetCategory(ids: List<String>, categoryId: String)
+    suspend fun softDeleteWallpapers(ids: List<String>)
+    suspend fun restoreWallpapers(ids: List<String>)
     suspend fun replaceWallpaperImage(wallpaper: Wallpaper, uri: Uri): Wallpaper
     suspend fun archiveWallpaper(wallpaperId: String, archived: Boolean)
     suspend fun deleteWallpaper(wallpaper: Wallpaper)

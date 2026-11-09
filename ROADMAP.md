@@ -13,16 +13,19 @@ maintain them.
 - **Planned**: accepted, but not started.
 - **Exploring**: needs a design decision first.
 
-## 1.4.0 (in progress)
+## 1.5.0 (in progress)
 
 - [x] Full English translation and progressive blur in the editor.
 - [x] About screen, privacy link in Settings and public project links.
 - [x] Feed cache capped at 400 wallpapers and 100 collections.
 - [x] CodeQL, dependency review, wrapper validation, checksums and build
       provenance attestations.
+- [x] Atomic bulk actions with Supabase RPCs.
+- [x] Trash with restore, permanent delete and automatic 30-day purge.
+- [x] Home preview in the Studio content editor.
 - [ ] Green CI run for the release branch.
 - [ ] Screenshots for the README.
-- [ ] Tag and publish `v1.4.0`.
+- [ ] Tag and publish `v1.5.0`.
 
 ## Next
 
@@ -55,7 +58,7 @@ maintain them.
 ## Backend and security
 
 - [ ] RLS tests that prove anonymous users cannot write.
-- [ ] Storage policies and cleanup of orphaned images.
+- [x] Storage policies and cleanup of orphaned images from the trash.
 - [ ] Rate limiting for writes.
 - [ ] Updated Supabase setup guide in `docs/`.
 - [ ] Secret scanning, push protection and private vulnerability reporting

@@ -50,7 +50,7 @@ class WallsApi(
                 getList<WallpaperDto>("wallpapers?select=*&order=created_at.desc")
                     .filter { it.storagePath.isNotBlank() }
                     .map { it.toWallpaper(baseUrl) }
-                    .filterNot { it.isArchived }
+                    .filterNot { it.isArchived || it.isDeleted }
             } catch (error: Throwable) {
                 throw error.toDannXError()
             }
@@ -320,22 +320,166 @@ class WallsApi(
 
     override suspend fun reorderFeatured(ids: List<String>) = withContext(Dispatchers.IO) {
         ensureConfigured()
-        ids.distinct().forEachIndexed { index, wallpaperId ->
-            executeAuthorized(
-                build = { token ->
-                    Request.Builder()
-                        .url("$baseUrl/rest/v1/wallpapers?id=eq.$wallpaperId")
-                        .header("apikey", anonKey)
-                        .header("Authorization", "Bearer $token")
-                        .header("Prefer", "return=minimal")
-                        .patch(
-                            json.encodeToString(FeaturedPositionUpdate(index))
-                                .toRequestBody(JSON_MEDIA),
-                        )
-                        .build()
-                },
+        val clean = ids.distinct()
+        if (clean.isEmpty()) return@withContext
+        try {
+            callRpc(
+                "reorder_featured",
+                json.encodeToString(ReorderFeaturedPayload(clean)),
+            )
+        } catch (error: DannXError) {
+            if (!error.isMissingRpc()) throw error
+            reorderFeaturedSequential(clean)
+        }
+    }
+
+    override suspend fun bulkSetFeatured(
+        ids: List<String>,
+        featured: Boolean,
+    ) = withContext(Dispatchers.IO) {
+        ensureConfigured()
+        val clean = ids.distinct()
+        if (clean.isEmpty()) return@withContext
+        try {
+            callRpc(
+                "bulk_set_featured",
+                json.encodeToString(BulkFeaturedPayload(clean, featured)),
+            )
+        } catch (error: DannXError) {
+            if (!error.isMissingRpc()) throw error
+            bulkSetFeaturedSequential(clean, featured)
+        }
+    }
+
+    override suspend fun bulkSetArchived(
+        ids: List<String>,
+        archived: Boolean,
+    ) = withContext(Dispatchers.IO) {
+        ensureConfigured()
+        val clean = ids.distinct()
+        if (clean.isEmpty()) return@withContext
+        try {
+            callRpc(
+                "bulk_set_archived",
+                json.encodeToString(BulkArchivedPayload(clean, archived)),
+            )
+        } catch (error: DannXError) {
+            if (!error.isMissingRpc()) throw error
+            val payload = if (archived) {
+                json.encodeToString(ArchivedPatch(Instant.now().toString()))
+            } else {
+                // explicitNulls = false omite null: el JSON se arma a mano.
+                """{"archived_at":null}"""
+            }
+            patchWallpapers(clean, payload)
+        }
+    }
+
+    override suspend fun bulkSetCategory(
+        ids: List<String>,
+        categoryId: String,
+    ) = withContext(Dispatchers.IO) {
+        ensureConfigured()
+        val clean = ids.distinct()
+        if (clean.isEmpty() || categoryId.isBlank()) return@withContext
+        try {
+            callRpc(
+                "bulk_set_category",
+                json.encodeToString(BulkCategoryPayload(clean, categoryId)),
+            )
+        } catch (error: DannXError) {
+            if (!error.isMissingRpc()) throw error
+            patchWallpapers(clean, json.encodeToString(CategoryPatch(categoryId)))
+        }
+    }
+
+    override suspend fun softDeleteWallpapers(ids: List<String>) =
+        withContext(Dispatchers.IO) {
+            ensureConfigured()
+            val clean = ids.distinct()
+            if (clean.isEmpty()) return@withContext
+            try {
+                callRpc(
+                    "soft_delete_wallpapers",
+                    json.encodeToString(BulkIdsPayload(clean)),
+                )
+            } catch (error: DannXError) {
+                if (!error.isMissingRpc()) throw error
+                patchWallpapers(
+                    clean,
+                    json.encodeToString(
+                        DeletedPatch(
+                            deletedAt = Instant.now().toString(),
+                            deletedBy = prefs.session()?.userId?.takeIf { it.isNotBlank() },
+                        ),
+                    ),
+                )
+            }
+        }
+
+    override suspend fun restoreWallpapers(ids: List<String>) =
+        withContext(Dispatchers.IO) {
+            ensureConfigured()
+            val clean = ids.distinct()
+            if (clean.isEmpty()) return@withContext
+            try {
+                callRpc(
+                    "restore_wallpapers",
+                    json.encodeToString(BulkIdsPayload(clean)),
+                )
+            } catch (error: DannXError) {
+                if (!error.isMissingRpc()) throw error
+                // explicitNulls = false omite null: el JSON se arma a mano.
+                patchWallpapers(clean, """{"deleted_at":null,"deleted_by":null}""")
+            }
+        }
+
+    private suspend fun reorderFeaturedSequential(ids: List<String>) {
+        ids.forEachIndexed { index, wallpaperId ->
+            patchWallpapers(
+                listOf(wallpaperId),
+                json.encodeToString(FeaturedPositionUpdate(index)),
             )
         }
+    }
+
+    private suspend fun bulkSetFeaturedSequential(
+        ids: List<String>,
+        featured: Boolean,
+    ) {
+        val selected = ids.toSet()
+        val current = adminWallpaperDtos().filter { it.id in selected }
+        var nextPosition = (current.filter { it.featured && it.deletedAt == null }
+            .maxOfOrNull { it.featuredPosition } ?: -1) + 1
+        current.forEach { dto ->
+            val position = if (featured && !dto.featured) {
+                nextPosition++
+            } else {
+                dto.featuredPosition
+            }
+            patchWallpapers(
+                listOf(dto.id),
+                json.encodeToString(FeaturedPatch(featured, position)),
+            )
+        }
+    }
+
+    private suspend fun patchWallpapers(ids: List<String>, payload: String) {
+        val clean = ids.distinct()
+        if (clean.isEmpty()) return
+        executeAuthorized(
+            build = { token ->
+                Request.Builder()
+                    .url(
+                        "$baseUrl/rest/v1/wallpapers?id=in.(${clean.joinToString(",")})",
+                    )
+                    .header("apikey", anonKey)
+                    .header("Authorization", "Bearer $token")
+                    .header("Prefer", "return=minimal")
+                    .patch(payload.toRequestBody(JSON_MEDIA))
+                    .build()
+            },
+        )
     }
 
     override suspend fun replaceWallpaperImage(

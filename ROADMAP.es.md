@@ -13,7 +13,7 @@ están probados y cuando hay tiempo para mantenerlos.
 - **Planeado**: aceptado, pero sin empezar.
 - **Explorando**: necesita una decisión de diseño primero.
 
-## 1.4.0 (en preparación)
+## 1.5.0 (en preparación)
 
 - [x] Traducción completa al inglés y desenfoque progresivo en el editor.
 - [x] Pantalla Acerca de, acceso a privacidad en Ajustes y enlaces públicos del
@@ -21,9 +21,13 @@ están probados y cuando hay tiempo para mantenerlos.
 - [x] Caché del feed acotada a 400 fondos y 100 colecciones.
 - [x] CodeQL, dependency review, validación del wrapper, checksums y atestaciones
       de procedencia.
+- [x] Acciones en lote atómicas con RPC de Supabase.
+- [x] Papelera con restauración, borrado definitivo y purga automática a los 30
+      días.
+- [x] Vista previa de portada en el editor de Contenido.
 - [ ] CI en verde para la rama de release.
 - [ ] Capturas para el README.
-- [ ] Tag y publicación de `v1.4.0`.
+- [ ] Tag y publicación de `v1.5.0`.
 
 ## Siguiente
 
@@ -55,7 +59,7 @@ están probados y cuando hay tiempo para mantenerlos.
 ## Backend y seguridad
 
 - [ ] Tests de RLS que demuestren que un usuario anónimo no puede escribir.
-- [ ] Políticas de Storage y limpieza de imágenes huérfanas.
+- [x] Políticas de Storage y limpieza de imágenes huérfanas de la papelera.
 - [ ] Rate limiting para escrituras.
 - [ ] Guía actualizada de Supabase en `docs/`.
 - [ ] Secret scanning, push protection y reporte privado de vulnerabilidades
