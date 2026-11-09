@@ -131,6 +131,7 @@
     <string name="detail_by_author">por %1$s</string>
     <string name="detail_copy_link">Copiar enlace</string>
     <string name="detail_link_copied">Enlace copiado</string>
+    <string name="detail_open_original">Abrir original</string>
     <string name="detail_save_collection">Guardar en colección</string>
     <string name="detail_no_collections">Todavía no tenés colecciones. Creá una para agrupar tus fondos.</string>
 
