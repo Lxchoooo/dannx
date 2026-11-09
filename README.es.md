@@ -42,18 +42,18 @@ Las capturas del build actual viven en
 - Funciona sin conexión: el feed que ya cargaste sigue disponible.
 - Temas claro y oscuro, con color dinámico en Android 12+.
 - Pantalla de ajustes: tema (sistema, claro, oscuro), modo lite, borrar caché,
-  una sección Acerca de con la política de privacidad y acceso a la última
-  release.
+  una sección Acerca de con la política de privacidad y acceso a las versiones
+  numeradas.
 - Los botones del detalle toman el color del fondo que estás mirando.
 - Pantallas de bienvenida que se muestran una sola vez al inicio.
 
 ## ⬇️ Descarga e instalación
 
 1. Descargá el APK desde la página
-   [Releases](https://github.com/Lxchoooo/dannx/releases): la versión
-   **DannX · última versión** siempre tiene el build firmado más nuevo, y se
-   regenera sola en cada merge a `main`. Si necesitás un run puntual, el
-   artifact `DannX-release-<número>` también está en
+   [Releases](https://github.com/Lxchoooo/dannx/releases). Abrí la versión
+   numerada más nueva (por ejemplo, `v1.6.0`) y bajá `DannX.apk`. Las versiones
+   numeradas anteriores siguen disponibles. Si necesitás un run puntual de CI,
+   el artifact `DannX-release-<número>` también está en
    [Actions](https://github.com/Lxchoooo/dannx/actions).
 2. Abrí el APK en el teléfono y aceptá instalar desde **orígenes desconocidos**
    cuando Android te lo pida.

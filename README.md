@@ -42,17 +42,17 @@ Screenshots for the current build live in
 - Works offline: the feed you already loaded stays available.
 - Dark and light themes, with dynamic colour on Android 12+.
 - Settings screen: theme (system, light, dark), lite mode, cache reset, an
-  About section with the privacy policy and a shortcut to the latest release.
+  About section with the privacy policy and a shortcut to the versioned releases.
 - Detail buttons take the colour of the wallpaper you are looking at.
 - Welcome screens shown once on first launch.
 
 ## ⬇️ Download and install
 
 1. Get the APK from the
-   [Releases](https://github.com/Lxchoooo/dannx/releases) page: the
-   **DannX · última versión** release always has the newest signed build, and
-   it is rebuilt automatically on every merge to `main`. If you need a specific
-   run, the `DannX-release-<number>` artifact is also available in
+   [Releases](https://github.com/Lxchoooo/dannx/releases) page. Open the newest
+   numbered release (for example, `v1.6.0`) and download `DannX.apk`. Older
+   numbered versions stay available. If you need a specific CI run, the
+   `DannX-release-<number>` artifact is also available in
    [Actions](https://github.com/Lxchoooo/dannx/actions).
 2. Open the APK on your phone and allow installation from **unknown sources**
    when Android asks for it.
@@ -142,5 +142,5 @@ their own authorship and licensing terms. They are not part of the code license.
 
 ## 🎨 Credits
 
-Wallpapers included in the demo feed are original works and are covered by
-their own authorship and licensing terms. They are not part of the code license.
+DannX is made by Lxchoooo. Thanks to everyone who reports issues, suggests
+ideas and helps test new builds.

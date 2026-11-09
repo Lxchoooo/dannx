@@ -11,7 +11,7 @@ import java.util.Locale
  */
 object AppLinks {
     const val Repo = "https://github.com/Lxchoooo/dannx"
-    const val Releases = "https://github.com/Lxchoooo/dannx/releases/latest"
+    const val Releases = "https://github.com/Lxchoooo/dannx/releases"
     const val License = "https://github.com/Lxchoooo/dannx/blob/main/LICENSE"
 
     val privacy: String
