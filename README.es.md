@@ -110,7 +110,7 @@ Todo lo siguiente está **planeado** y todavía no existe:
 requests son bienvenidos.
 
 Leé [CONTRIBUTING.es.md](CONTRIBUTING.es.md) antes de mandar cambios. Al
-participar aceptás el [Código de Conducta](CODE_OF_CONDUCT.md).
+participar aceptás el [Código de Conducta](CODE_OF_CONDUCT.es.md).
 
 ## 🔒 Privacidad
 

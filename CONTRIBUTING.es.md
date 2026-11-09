@@ -4,7 +4,7 @@ Gracias por tomarte el tiempo de contribuir. DannX es una app Android chica y de
 código abierto, así que los reportes claros y las pull requests enfocadas ayudan
 mucho.
 
-Al participar, aceptás seguir nuestro [Código de Conducta](CODE_OF_CONDUCT.md).
+Al participar, aceptás seguir nuestro [Código de Conducta](CODE_OF_CONDUCT.es.md).
 
 ## Antes de empezar
 
