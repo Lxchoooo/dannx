@@ -16,32 +16,29 @@ así que funciona apenas la instalás.
 
 ## 📸 Capturas
 
-| Explorar | Detalle |
-| --- | --- |
-| ![Explorar](docs/screenshots/explore.png) | ![Detalle](docs/screenshots/detail.png) |
-
-| Colecciones | Favoritos |
-| --- | --- |
-| ![Colecciones](docs/screenshots/collections.png) | ![Favoritos](docs/screenshots/favorites.png) |
-
-> Las capturas viven en [`docs/screenshots/`](docs/screenshots/). Fijate en la
-> nota de ahí si todavía no están disponibles.
+Las capturas del build actual viven en
+[`docs/screenshots/`](docs/screenshots/). El set de 1.4.0 se está renovando; mirá
+la nota de ahí para saber cómo tomarlas.
 
 ## ✨ Características
 
 - Feed con destacados, búsqueda, categorías y tags libres.
 - Colecciones que creás dentro de la app, públicas o privadas.
 - Vista de detalle con zoom con dos dedos, doble toque y desplazamiento.
+- Editor integrado con encuadre, ajustes de color, filtros y desenfoque
+  progresivo real.
 - Descarga a la galería (`Pictures/DannX`) usando el MediaStore del sistema.
 - Aplicar en pantalla de inicio, pantalla de bloqueo o ambas, recortado solo.
 - Compartir cualquier fondo con otras apps.
 - Favoritos guardados en el teléfono.
+- Interfaz en español e inglés.
 - Ícono adaptativo monocromo que sigue el tema del sistema (Android 13+),
   splash screen y accesos directos en el launcher.
 - Funciona sin conexión: el feed que ya cargaste sigue disponible.
 - Temas claro y oscuro, con color dinámico en Android 12+.
-- Pantalla de ajustes: tema (sistema, claro, oscuro), modo lite, borrar caché y
-  acceso a la última release.
+- Pantalla de ajustes: tema (sistema, claro, oscuro), modo lite, borrar caché,
+  una sección Acerca de con la política de privacidad y acceso a la última
+  release.
 - Los botones del detalle toman el color del fondo que estás mirando.
 - Pantallas de bienvenida que se muestran una sola vez al inicio.
 
@@ -93,6 +90,9 @@ app/src/main/java/com/dannx/walls/
 docs/          # capturas y assets de documentación
 ```
 
+Mirá [CONTRIBUTING.es.md](CONTRIBUTING.es.md) para el setup completo, el estilo
+de código y la checklist de pull requests.
+
 ## 🗺 Hoja de ruta
 
 Todo lo siguiente está **planeado** y todavía no existe:
@@ -108,6 +108,20 @@ Todo lo siguiente está **planeado** y todavía no existe:
 ¿Encontraste un bug o tenés una idea? Abrí un
 [issue](https://github.com/Lxchoooo/dannx/issues) con los detalles. Los pull
 requests son bienvenidos.
+
+Leé [CONTRIBUTING.es.md](CONTRIBUTING.es.md) antes de mandar cambios. Al
+participar aceptás el [Código de Conducta](CODE_OF_CONDUCT.md).
+
+## 🔒 Privacidad
+
+DannX no incluye analítica, publicidad ni SDKs de seguimiento. Los favoritos, las
+colecciones, los ajustes y la caché offline quedan en tu dispositivo. Mirá
+[PRIVACY.es.md](PRIVACY.es.md) para el detalle.
+
+## 🛡 Seguridad
+
+No abras un issue público para vulnerabilidades. Seguí
+[SECURITY.md](SECURITY.md) para reportarlas de forma privada.
 
 ## 📄 Licencia
 

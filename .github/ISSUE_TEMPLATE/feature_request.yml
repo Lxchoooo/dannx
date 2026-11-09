@@ -26,8 +26,10 @@ body:
       options:
         - Explorar / feed
         - Detalle del fondo
+        - Editor
         - Colecciones
         - Favoritos
         - Estudio (publicar)
         - Instalación o actualización
+        - Privacidad
         - Otro
