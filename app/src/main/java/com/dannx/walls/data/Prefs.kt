@@ -132,11 +132,10 @@ class Prefs(context: Context) : LocalStore {
     }
 
     override fun localCollections(): List<WallpaperCollection> {
-        val raw = prefs.getString(KEY_LOCAL_COLLECTIONS, null)
-            ?: return DemoWallpapers.collections
+        val raw = prefs.getString(KEY_LOCAL_COLLECTIONS, null) ?: return emptyList()
         return runCatching {
             json.decodeFromString<List<WallpaperCollection>>(raw)
-        }.getOrElse { DemoWallpapers.collections }
+        }.getOrDefault(emptyList())
     }
 
     override fun saveLocalCollections(items: List<WallpaperCollection>) {

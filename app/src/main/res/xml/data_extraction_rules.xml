@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Los tokens de sesión no viajan en backup en la nube ni en transferencia. -->
+<!-- Solo la sesión queda fuera: las colecciones locales viajan con el respaldo. -->
 <data-extraction-rules>
     <cloud-backup>
         <exclude domain="sharedpref" path="dannx_session.xml" />

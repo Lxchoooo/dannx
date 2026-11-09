@@ -5,6 +5,7 @@ import com.dannx.walls.data.AdminSession
 import com.dannx.walls.data.DannXError
 import com.dannx.walls.data.Wallpaper
 import com.dannx.walls.data.WallpaperCollection
+import com.dannx.walls.data.isLocal
 import com.dannx.walls.util.StringResolver
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -40,7 +41,10 @@ class MainViewModelTest {
         }
     }
 
-    private fun viewModel(online: Boolean = true): MainViewModel = MainViewModel(
+    private fun viewModel(
+        online: Boolean = true,
+        now: () -> Long = System::currentTimeMillis,
+    ): MainViewModel = MainViewModel(
         savedState = SavedStateHandle(),
         prefs = store,
         api = repository,
@@ -48,6 +52,7 @@ class MainViewModelTest {
         actions = actions,
         isOnline = { online },
         strings = strings,
+        now = now,
     )
 
     @Before
@@ -231,16 +236,39 @@ class MainViewModelTest {
     }
 
     @Test
-    fun `refreshIfOnline refreshes once when the network is back`() = runTest(dispatcher) {
+    fun `refreshIfOnline waits five minutes before asking again`() = runTest(dispatcher) {
         repository.wallpapers = listOf(wallpaper("1"))
-        val model = viewModel(online = true)
+        var clock = 1_000_000L
+        val model = viewModel(now = { clock })
         advanceUntilIdle()
         val before = repository.loadCalls
 
+        clock += 60_000L
+        model.refreshIfOnline()
+        advanceUntilIdle()
+        assertEquals(before, repository.loadCalls)
+
+        clock += 5 * 60 * 1000L
+        model.refreshIfOnline()
+        advanceUntilIdle()
+        assertEquals(before + 1, repository.loadCalls)
+    }
+
+    @Test
+    fun `refreshIfOnline keeps the pages already loaded`() = runTest(dispatcher) {
+        repository.wallpapers = (1..40).map { wallpaper("$it") }
+        var clock = 1_000_000L
+        val model = viewModel(now = { clock })
+        advanceUntilIdle()
+        model.loadMore()
+        advanceUntilIdle()
+        assertEquals(40, model.state.value.wallpapers.size)
+
+        clock += 6 * 60 * 1000L
         model.refreshIfOnline()
         advanceUntilIdle()
 
-        assertEquals(before + 1, repository.loadCalls)
+        assertEquals(40, model.state.value.wallpapers.size)
     }
 
     @Test
@@ -457,6 +485,62 @@ class MainViewModelTest {
     }
 
     @Test
+    fun `without a session a collection is created only on the device`() = runTest(dispatcher) {
+        val model = viewModel()
+        advanceUntilIdle()
+
+        model.createCollection("Local", "Solo acá", isPublic = true)
+        advanceUntilIdle()
+
+        val collection = model.state.value.collectionItems.single()
+        assertTrue(collection.isLocal)
+        assertFalse(collection.isPublic)
+        assertEquals(listOf(collection.id), store.localCollections().map { it.id })
+    }
+
+    @Test
+    fun `refresh merges local collections before the server ones`() = runTest(dispatcher) {
+        val local = WallpaperCollection(
+            id = "local-1",
+            name = "Local",
+            ownerId = "local",
+            wallpaperIds = listOf("1"),
+        )
+        store.saveLocalCollections(listOf(local))
+        repository.wallpapers = listOf(wallpaper("1"))
+        repository.collections = listOf(
+            WallpaperCollection(id = "remote-1", name = "Remota", isPublic = true),
+        )
+        val model = viewModel()
+        advanceUntilIdle()
+
+        assertEquals(
+            listOf("local-1", "remote-1"),
+            model.state.value.collectionItems.map { it.id },
+        )
+    }
+
+    @Test
+    fun `a missing wallpaper is removed from a local collection without an error`() =
+        runTest(dispatcher) {
+            val local = WallpaperCollection(
+                id = "local-1",
+                name = "Local",
+                ownerId = "local",
+                wallpaperIds = listOf("keep", "gone"),
+            )
+            store.saveLocalCollections(listOf(local))
+            repository.wallpapers = listOf(wallpaper("keep"))
+            val model = viewModel()
+            advanceUntilIdle()
+
+            val collection = model.state.value.collectionItems.single()
+            assertEquals(listOf("keep"), collection.wallpaperIds)
+            assertNull(model.state.value.message)
+            assertEquals(listOf("keep"), store.localCollections().single().wallpaperIds)
+        }
+
+    @Test
     fun `moving a category updates its position and order`() = runTest(dispatcher) {
         store.saveSession("admin@test", "token", null, "u1")
         repository.session = AdminSession("admin@test", "token", "u1")
@@ -650,6 +734,85 @@ class MainViewModelTest {
 
             assertNull(repository.deletedCategory)
             assertTrue(model.state.value.message.orEmpty().contains("Reasignalos"))
+        }
+
+    @Test
+    fun `detail loads a wallpaper by id when it is not in the feed`() = runTest(dispatcher) {
+        repository.wallpapers = listOf(wallpaper("remote"))
+        val model = viewModel(online = false)
+        advanceUntilIdle()
+
+        model.loadWallpaperDetail("remote")
+        advanceUntilIdle()
+
+        val detail = model.state.value.detailWallpaper as LoadState.Content<Wallpaper>
+        assertEquals("remote", detail.data.id)
+    }
+
+    @Test
+    fun `detail uses the cache before asking the repository`() = runTest(dispatcher) {
+        val model = viewModel(online = false)
+        advanceUntilIdle()
+        cache.writeWallpapers(listOf(wallpaper("cached")))
+        repository.failWith = DannXError.Offline("sin red")
+        repository.failTimes = 5
+
+        model.loadWallpaperDetail("cached")
+        advanceUntilIdle()
+
+        val detail = model.state.value.detailWallpaper as LoadState.Content<Wallpaper>
+        assertEquals("cached", detail.data.id)
+    }
+
+    @Test
+    fun `detail keeps an error with retry when the wallpaper cannot be loaded`() =
+        runTest(dispatcher) {
+            repository.failWith = DannXError.Offline("sin red")
+            repository.failTimes = 5
+            val model = viewModel(online = false)
+            advanceUntilIdle()
+
+            model.loadWallpaperDetail("missing")
+            advanceUntilIdle()
+
+            val detail = model.state.value.detailWallpaper
+            assertTrue(detail is LoadState.Error)
+            assertEquals(ErrorKind.OFFLINE, (detail as LoadState.Error).kind)
+        }
+
+    @Test
+    fun `collection detail resolves the collection and its wallpapers by id`() =
+        runTest(dispatcher) {
+            repository.wallpapers = listOf(wallpaper("1"), wallpaper("2"))
+            repository.collections = listOf(
+                WallpaperCollection(
+                    id = "c1",
+                    name = "Colección",
+                    ownerId = "u1",
+                    wallpaperIds = listOf("1", "2"),
+                ),
+            )
+            val model = viewModel(online = false)
+            advanceUntilIdle()
+
+            model.loadCollectionDetail("c1")
+            advanceUntilIdle()
+
+            val detail = model.state.value.detailCollection as LoadState.Content<CollectionDetailData>
+            assertEquals("c1", detail.data.collection.id)
+            assertEquals(listOf("1", "2"), detail.data.wallpapers.map { it.id })
+        }
+
+    @Test
+    fun `collection detail shows an error instead of closing when it is missing`() =
+        runTest(dispatcher) {
+            val model = viewModel(online = false)
+            advanceUntilIdle()
+
+            model.loadCollectionDetail("missing")
+            advanceUntilIdle()
+
+            assertTrue(model.state.value.detailCollection is LoadState.Error)
         }
 
     private fun wallpaper(id: String) = Wallpaper(

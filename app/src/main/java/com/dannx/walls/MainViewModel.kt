@@ -23,6 +23,8 @@ import com.dannx.walls.data.DannXError
 import com.dannx.walls.data.FeedCache
 import com.dannx.walls.data.FeedCacheStore
 import com.dannx.walls.data.InMemoryAppearanceStore
+import com.dannx.walls.data.LOCAL_COLLECTION_OWNER
+import com.dannx.walls.data.LOCAL_COLLECTION_PREFIX
 import com.dannx.walls.data.LocalStore
 import com.dannx.walls.data.Prefs
 import com.dannx.walls.data.ThemeMode
@@ -35,6 +37,7 @@ import com.dannx.walls.data.WallpapersRepository
 import com.dannx.walls.data.WallsApi
 import com.dannx.walls.data.collectTags
 import com.dannx.walls.data.filterWallpapers
+import com.dannx.walls.data.isLocal
 import com.dannx.walls.util.WallpaperFiles
 import com.dannx.walls.util.WallpaperTarget
 import com.dannx.walls.util.StringResolver
@@ -64,6 +67,13 @@ data class MessageAction(
 data class DownloadPrompt(
     val wallpaperId: String,
     val uri: String,
+)
+
+/** Colección resuelta para su pantalla de detalle, con sus fondos completos. */
+@Immutable
+data class CollectionDetailData(
+    val collection: WallpaperCollection,
+    val wallpapers: List<Wallpaper>,
 )
 
 /**
@@ -108,6 +118,10 @@ data class UiState(
     val trashWallpapers: List<Wallpaper> = emptyList(),
     val categories: List<WallpaperCategory> = emptyList(),
     val collectionItems: List<WallpaperCollection> = emptyList(),
+    val detailWallpaperId: String? = null,
+    val detailWallpaper: LoadState<Wallpaper>? = null,
+    val detailCollectionId: String? = null,
+    val detailCollection: LoadState<CollectionDetailData>? = null,
     val query: String = "",
     val recentSearches: List<String> = emptyList(),
     val category: String? = null,
@@ -159,7 +173,7 @@ data class UiState(
             collectionItems
         } else {
             val id = session?.userId.orEmpty()
-            if (id.isBlank()) emptyList() else collectionItems.filter { it.ownerId == id }
+            collectionItems.filter { it.isLocal || (id.isNotBlank() && it.ownerId == id) }
         }
 
     val studioWallpapers: List<Wallpaper>
@@ -191,7 +205,8 @@ data class UiState(
             ?: wallpaper.category
 
     fun canEdit(collection: WallpaperCollection): Boolean =
-        isDemo || (session != null && session.userId == collection.ownerId)
+        isDemo || collection.isLocal ||
+            (session != null && session.userId == collection.ownerId)
 
     fun wallpapersIn(collection: WallpaperCollection): List<Wallpaper> {
         val byId = wallpapers.associateBy { it.id }
@@ -213,11 +228,17 @@ class MainViewModel(
     private val isOnline: () -> Boolean = { true },
     private val appearance: AppearanceStore = InMemoryAppearanceStore(),
     private val strings: StringResolver = StringResolver { _, _ -> "" },
+    private val now: () -> Long = System::currentTimeMillis,
 ) : ViewModel() {
     private var actionJob: Job? = null
     private var refreshJob: Job? = null
     private var loadMoreJob: Job? = null
     private var filterJob: Job? = null
+    private var lastFeedRefreshAt: Long? = null
+    private var detailJob: Job? = null
+    private var detailToken = 0
+    private var collectionDetailJob: Job? = null
+    private var collectionDetailToken = 0
     private var studioJob: Job? = null
     private var uploadJob: Job? = null
     private val _state = MutableStateFlow(
@@ -256,9 +277,10 @@ class MainViewModel(
      * muestran colecciones privadas cacheadas.
      */
     private suspend fun loadFromCache() {
+        val hasSession = _state.value.session != null
         val cachedWallpapers = cache.readWallpapers()
-        val cachedCollections = cache.readCollections()
-            .filter { _state.value.session != null || it.isPublic }
+        val cachedCollections = mergedWithLocal(cache.readCollections())
+            .filter { it.isLocal || hasSession || it.isPublic }
         _state.update {
             it.copy(
                 feed = if (cachedWallpapers.isEmpty()) {
@@ -269,10 +291,15 @@ class MainViewModel(
                 } else {
                     LoadState.Content(cachedWallpapers)
                 },
-                collections = if (cachedCollections.isEmpty()) {
-                    LoadState.Empty
-                } else {
-                    LoadState.Content(cachedCollections)
+                collections = when {
+                    cachedCollections.isNotEmpty() -> LoadState.Content(cachedCollections)
+                    // Sin nada guardado no mostramos una pantalla vacía: el
+                    // primer uso sin internet ofrece reintentar.
+                    api.isConfigured -> LoadState.Error(
+                        message = strings.get(R.string.error_offline),
+                        kind = ErrorKind.OFFLINE,
+                    )
+                    else -> LoadState.Empty
                 },
                 wallpapers = cachedWallpapers,
                 collectionItems = cachedCollections,
@@ -284,12 +311,30 @@ class MainViewModel(
         }
     }
 
+    /** Une las colecciones guardadas en el teléfono con las del servidor. */
+    private fun mergedWithLocal(remote: List<WallpaperCollection>): List<WallpaperCollection> {
+        val locals = prefs.localCollections()
+            .filter { !api.isConfigured || it.isLocal }
+        return (locals + remote).distinctBy { it.id }
+    }
+
+    private fun isLocalCollection(collectionId: String): Boolean =
+        collectionId.startsWith(LOCAL_COLLECTION_PREFIX) ||
+            _state.value.collectionItems.firstOrNull { it.id == collectionId }?.isLocal == true
+
+    /** En instalaciones reales solo las colecciones locales van al teléfono. */
+    private fun saveLocalCollections(items: List<WallpaperCollection>) {
+        prefs.saveLocalCollections(
+            if (api.isConfigured) items.filter { it.isLocal } else items,
+        )
+    }
+
     /**
      * Recarga el feed y las colecciones. Si ya hay una recarga en curso, la
      * cancela para no apilar estados ni requests.
      */
     fun refresh() {
-        loadFeed(reloadMeta = true)
+        loadFeed(reloadMeta = true, preserveFeed = true)
     }
 
     /**
@@ -298,10 +343,14 @@ class MainViewModel(
      */
     private fun reloadFeed() {
         if (!isOnline()) return
-        loadFeed(reloadMeta = false)
+        loadFeed(reloadMeta = false, preserveFeed = false)
     }
 
-    private fun loadFeed(reloadMeta: Boolean) {
+    private fun loadFeed(
+        reloadMeta: Boolean,
+        preserveFeed: Boolean,
+        silent: Boolean = false,
+    ) {
         refreshJob?.cancel()
         loadMoreJob?.cancel()
         refreshJob = viewModelScope.launch {
@@ -318,7 +367,7 @@ class MainViewModel(
                         } else {
                             it.collections
                         },
-                        refreshing = true,
+                        refreshing = if (silent) it.refreshing else true,
                         loadingMore = false,
                         loadMoreError = null,
                     )
@@ -334,9 +383,10 @@ class MainViewModel(
             }
             try {
                 val page = api.loadWallpapersPage(filter)
-                val trashedIds = _state.value.trashWallpapers.map { it.id }.toSet()
-                val items = page.items.filterNot { it.isDeleted || it.id in trashedIds }
-                val collections = if (reloadMeta) {
+                val current = _state.value
+                val trashedIds = current.trashWallpapers.map { it.id }.toSet()
+                val fresh = page.items.filterNot { it.isDeleted || it.id in trashedIds }
+                val remoteCollections = if (reloadMeta) {
                     try {
                         api.loadCollections()
                     } catch (error: CancellationException) {
@@ -348,23 +398,34 @@ class MainViewModel(
                         _state.value.collectionItems
                     }
                 } else {
-                    _state.value.collectionItems
+                    current.collectionItems
                 }
+                val collections = mergedWithLocal(remoteCollections)
                 val categories = if (reloadMeta) {
-                    loadCategoriesOrEmpty(_state.value.categories)
+                    loadCategoriesOrEmpty(current.categories)
                 } else {
-                    _state.value.categories
+                    current.categories
                 }
                 val appSettings = if (reloadMeta) {
-                    loadAppSettingsOrFallback(_state.value.appSettings)
+                    loadAppSettingsOrFallback(current.appSettings)
                 } else {
-                    _state.value.appSettings
+                    current.appSettings
+                }
+                val items = if (preserveFeed) {
+                    mergedFirstPage(fresh, current.wallpapers)
+                } else {
+                    fresh
                 }
                 if (!filter.hasActiveFilters) {
                     cacheFeed(items)
                 }
                 if (reloadMeta) {
-                    cache.writeCollections(collections)
+                    cache.writeCollections(collections.filterNot { it.isLocal })
+                }
+                val hasMore = if (preserveFeed && current.wallpapers.size > fresh.size) {
+                    current.hasMore
+                } else {
+                    page.hasMore
                 }
                 _state.update {
                     it.copy(
@@ -386,9 +447,13 @@ class MainViewModel(
                         offline = false,
                         refreshing = false,
                         loadingMore = false,
-                        hasMore = page.hasMore,
+                        hasMore = hasMore,
                         loadMoreError = null,
                     )
+                }
+                lastFeedRefreshAt = now()
+                if (preserveFeed) {
+                    pruneLocalCollections()
                 }
             } catch (error: CancellationException) {
                 throw error
@@ -399,7 +464,7 @@ class MainViewModel(
                 val cachedWallpapers = cache.readWallpapers()
                 val cachedCollections = if (reloadMeta) cache.readCollections() else emptyList()
                 val currentCollections = if (expired) {
-                    current.collectionItems.filter { it.isPublic }
+                    current.collectionItems.filter { it.isLocal || it.isPublic }
                 } else {
                     current.collectionItems
                 }
@@ -409,11 +474,13 @@ class MainViewModel(
                     cachedCollections
                 }
                 val fallbackWallpapers = current.wallpapers.ifEmpty { cachedWallpapers }
-                val fallbackCollections = if (reloadMeta) {
-                    currentCollections.ifEmpty { safeCachedCollections }
-                } else {
-                    currentCollections
-                }
+                val fallbackCollections = mergedWithLocal(
+                    if (reloadMeta) {
+                        currentCollections.ifEmpty { safeCachedCollections }
+                    } else {
+                        currentCollections
+                    },
+                )
                 _state.update {
                     it.copy(
                         feed = if (fallbackWallpapers.isEmpty()) {
@@ -444,8 +511,83 @@ class MainViewModel(
                     )
                 }
                 if (reloadMeta && expired) {
-                    cache.writeCollections(fallbackCollections.filter { it.isPublic })
+                    cache.writeCollections(
+                        fallbackCollections.filter { it.isPublic && !it.isLocal },
+                    )
                 }
+            }
+        }
+    }
+
+    /**
+     * Une la primera página nueva con lo que ya estaba cargado. Conserva el
+     * orden de lo visible para que el scroll no salte al volver a la app.
+     */
+    private fun mergedFirstPage(
+        fresh: List<Wallpaper>,
+        current: List<Wallpaper>,
+    ): List<Wallpaper> {
+        if (current.isEmpty()) return fresh
+        val freshById = fresh.associateBy { it.id }
+        val currentIds = current.map { it.id }.toSet()
+        val updated = current.map { old -> freshById[old.id] ?: old }
+        val added = fresh.filterNot { it.id in currentIds }
+        return added + updated
+    }
+
+    /**
+     * Si un fondo local ya no existe en el servidor se quita sin avisar, para
+     * que la colección y su contador sigan siendo confiables.
+     */
+    private fun pruneLocalCollections() {
+        if (!api.isConfigured) return
+        val current = _state.value
+        val locals = current.collectionItems.filter { it.isLocal }
+        if (locals.isEmpty()) return
+        viewModelScope.launch {
+            val known = (current.wallpapers + cache.readWallpapers()).map { it.id }.toSet()
+            val missing = locals
+                .flatMap { it.wallpaperIds }
+                .filterNot { it in known }
+                .distinct()
+            if (missing.isEmpty()) return@launch
+            val loaded = try {
+                api.loadWallpapersByIds(missing)
+            } catch (error: CancellationException) {
+                throw error
+            } catch (_: Exception) {
+                // Sin red no se borra nada: el próximo refresco lo reintenta.
+                return@launch
+            }
+            if (loaded.isNotEmpty()) {
+                cacheFeed(loaded)
+            }
+            val available = known + loaded.map { it.id }
+            var changed = false
+            val pruned = _state.value.collectionItems.map { collection ->
+                if (!collection.isLocal) {
+                    collection
+                } else {
+                    val ids = collection.wallpaperIds.filter { it in available }
+                    if (ids.size == collection.wallpaperIds.size) {
+                        collection
+                    } else {
+                        changed = true
+                        collection.copy(wallpaperIds = ids)
+                    }
+                }
+            }
+            if (!changed) return@launch
+            saveLocalCollections(pruned)
+            _state.update {
+                it.copy(
+                    collectionItems = pruned,
+                    collections = if (pruned.isEmpty()) {
+                        LoadState.Empty
+                    } else {
+                        LoadState.Content(pruned)
+                    },
+                )
             }
         }
     }
@@ -457,6 +599,7 @@ class MainViewModel(
     fun loadMore() {
         val snapshot = _state.value
         if (!snapshot.hasMore || snapshot.loadingMore || snapshot.refreshing) return
+        if (refreshJob?.isActive == true) return
         val filter = snapshot.feedFilter(offset = snapshot.wallpapers.size)
         if (filter.offset <= 0) return
         loadMoreJob?.cancel()
@@ -501,6 +644,340 @@ class MainViewModel(
     }
 
     /**
+     * Resuelve un fondo por id para la pantalla de detalle. Nunca navega ni
+     * cierra la pantalla: primero busca en memoria, después en la caché y por
+     * último en el servidor.
+     */
+    fun loadWallpaperDetail(id: String, force: Boolean = false) {
+        val wallpaperId = id.trim()
+        if (wallpaperId.isBlank()) {
+            _state.update {
+                it.copy(
+                    detailWallpaperId = id,
+                    detailWallpaper = LoadState.Error(
+                        strings.get(R.string.detail_wallpaper_missing),
+                        ErrorKind.UNEXPECTED,
+                    ),
+                )
+            }
+            return
+        }
+        val current = _state.value
+        if (!force) {
+            if (current.detailWallpaperId == wallpaperId &&
+                current.detailWallpaper is LoadState.Content
+            ) {
+                return
+            }
+            if (current.detailWallpaperId == wallpaperId &&
+                current.detailWallpaper is LoadState.Loading &&
+                detailJob?.isActive == true
+            ) {
+                return
+            }
+            current.wallpaperById(wallpaperId)?.let { wallpaper ->
+                detailToken += 1
+                detailJob?.cancel()
+                _state.update {
+                    it.copy(
+                        detailWallpaperId = wallpaperId,
+                        detailWallpaper = LoadState.Content(wallpaper),
+                    )
+                }
+                return
+            }
+        }
+
+        val token = ++detailToken
+        detailJob?.cancel()
+        detailJob = viewModelScope.launch {
+            _state.update {
+                if (detailToken != token) {
+                    it
+                } else {
+                    it.copy(
+                        detailWallpaperId = wallpaperId,
+                        detailWallpaper = LoadState.Loading,
+                    )
+                }
+            }
+            try {
+                val cached = cache.readWallpapers().firstOrNull { it.id == wallpaperId }
+                if (detailToken != token) return@launch
+                if (cached != null) {
+                    _state.update {
+                        it.copy(
+                            detailWallpaperId = wallpaperId,
+                            detailWallpaper = LoadState.Content(cached),
+                        )
+                    }
+                    return@launch
+                }
+                val remote = api.loadWallpaper(wallpaperId)
+                if (detailToken != token) return@launch
+                if (remote == null) {
+                    _state.update {
+                        it.copy(
+                            detailWallpaperId = wallpaperId,
+                            detailWallpaper = LoadState.Error(
+                                strings.get(R.string.detail_wallpaper_missing),
+                                ErrorKind.UNEXPECTED,
+                            ),
+                        )
+                    }
+                    return@launch
+                }
+                cacheFeed(listOf(remote))
+                if (detailToken != token) return@launch
+                _state.update {
+                    it.copy(
+                        detailWallpaperId = wallpaperId,
+                        detailWallpaper = LoadState.Content(remote),
+                    )
+                }
+            } catch (error: CancellationException) {
+                throw error
+            } catch (error: Exception) {
+                if (detailToken == token) {
+                    _state.update {
+                        it.copy(
+                            detailWallpaperId = wallpaperId,
+                            detailWallpaper = LoadState.Error(error.userMessage(), error.kind()),
+                        )
+                    }
+                }
+            }
+        }
+    }
+
+    fun clearWallpaperDetail() {
+        detailToken += 1
+        detailJob?.cancel()
+        _state.update { it.copy(detailWallpaperId = null, detailWallpaper = null) }
+    }
+
+    /**
+     * Resuelve una colección y todos sus fondos. Si la colección o alguna de
+     * sus imágenes no está en memoria, la busca en caché y luego en el
+     * servidor, sin cerrar la pantalla si algo falla.
+     */
+    fun loadCollectionDetail(id: String, force: Boolean = false) {
+        val collectionId = id.trim()
+        if (collectionId.isBlank()) {
+            _state.update {
+                it.copy(
+                    detailCollectionId = id,
+                    detailCollection = LoadState.Error(
+                        strings.get(R.string.detail_collection_missing),
+                        ErrorKind.UNEXPECTED,
+                    ),
+                )
+            }
+            return
+        }
+        val current = _state.value
+        if (!force && current.detailCollectionId == collectionId &&
+            current.detailCollection is LoadState.Content
+        ) {
+            return
+        }
+        current.collectionItems.firstOrNull { it.id == collectionId }?.let { collection ->
+            if (!force && current.collectionDetailIsComplete(collection)) {
+                collectionDetailToken += 1
+                collectionDetailJob?.cancel()
+                _state.update {
+                    it.copy(
+                        detailCollectionId = collectionId,
+                        detailCollection = LoadState.Content(
+                            CollectionDetailData(collection, it.wallpapersFor(collection)),
+                        ),
+                    )
+                }
+                return
+            }
+        }
+        if (!force && current.detailCollectionId == collectionId &&
+            current.detailCollection is LoadState.Loading &&
+            collectionDetailJob?.isActive == true
+        ) {
+            return
+        }
+
+        val token = ++collectionDetailToken
+        collectionDetailJob?.cancel()
+        collectionDetailJob = viewModelScope.launch {
+            _state.update {
+                if (collectionDetailToken != token) {
+                    it
+                } else {
+                    it.copy(
+                        detailCollectionId = collectionId,
+                        detailCollection = LoadState.Loading,
+                    )
+                }
+            }
+            try {
+                val hasSession = _state.value.session != null
+                val collection = _state.value.collectionItems
+                    .firstOrNull { it.id == collectionId }
+                    ?: prefs.localCollections().firstOrNull { it.id == collectionId }
+                    ?: cache.readCollections().firstOrNull {
+                        it.id == collectionId && (it.isLocal || it.isPublic || hasSession)
+                    }
+                    ?: api.loadCollection(collectionId)
+                    ?: throw CollectionNotFound()
+                if (collectionDetailToken != token) return@launch
+                if (_state.value.collectionItems.none { it.id == collection.id }) {
+                    _state.update {
+                        it.copy(collectionItems = listOf(collection) + it.collectionItems)
+                    }
+                }
+                val known = _state.value.wallpapersFor(collection).associateBy { it.id }
+                val cached = if (collection.wallpaperIds.any { it !in known }) {
+                    val fromCache = cache.readWallpapers()
+                    if (collectionDetailToken != token) return@launch
+                    fromCache.associateBy { it.id }
+                } else {
+                    emptyMap()
+                }
+                val missing = collection.wallpaperIds.filter { it !in known && it !in cached }
+                val fetched = if (missing.isNotEmpty()) {
+                    val loaded = api.loadWallpapersByIds(missing)
+                    if (collectionDetailToken != token) return@launch
+                    loaded.also { items -> if (items.isNotEmpty()) cacheFeed(items) }
+                } else {
+                    emptyList()
+                }
+                if (collectionDetailToken != token) return@launch
+                val byId = known + cached + fetched.associateBy { it.id }
+                val items = collection.wallpaperIds.mapNotNull { byId[it] }
+                _state.update {
+                    it.copy(
+                        detailCollectionId = collectionId,
+                        detailCollection = LoadState.Content(
+                            CollectionDetailData(collection, items),
+                        ),
+                    )
+                }
+            } catch (error: CancellationException) {
+                throw error
+            } catch (_: CollectionNotFound) {
+                if (collectionDetailToken == token) {
+                    _state.update {
+                        it.copy(
+                            detailCollectionId = collectionId,
+                            detailCollection = LoadState.Error(
+                                strings.get(R.string.detail_collection_missing),
+                                ErrorKind.UNEXPECTED,
+                            ),
+                        )
+                    }
+                }
+            } catch (error: Exception) {
+                if (collectionDetailToken == token) {
+                    _state.update {
+                        it.copy(
+                            detailCollectionId = collectionId,
+                            detailCollection = LoadState.Error(error.userMessage(), error.kind()),
+                        )
+                    }
+                }
+            }
+        }
+    }
+
+    fun clearCollectionDetail() {
+        collectionDetailToken += 1
+        collectionDetailJob?.cancel()
+        _state.update { it.copy(detailCollectionId = null, detailCollection = null) }
+    }
+
+    private class CollectionNotFound : Exception()
+
+    private fun UiState.wallpaperById(id: String): Wallpaper? =
+        (wallpapers + adminWallpapers).firstOrNull { it.id == id }
+            ?: (detailWallpaper as? LoadState.Content<Wallpaper>)?.data?.takeIf { it.id == id }
+
+    private fun UiState.wallpapersFor(collection: WallpaperCollection): List<Wallpaper> {
+        val byId = (wallpapers + adminWallpapers).associateBy { it.id }
+        return collection.wallpaperIds.mapNotNull { byId[it] }
+    }
+
+    private fun UiState.collectionDetailIsComplete(collection: WallpaperCollection): Boolean {
+        val known = (wallpapers + adminWallpapers).map { it.id }.toSet()
+        return collection.wallpaperIds.all { it in known }
+    }
+
+    private fun UiState.collectionDetailUpdated(
+        collectionId: String,
+        name: String,
+        description: String,
+        isPublic: Boolean,
+    ): UiState {
+        val detail = detailCollection as? LoadState.Content<CollectionDetailData> ?: return this
+        if (detail.data.collection.id != collectionId) return this
+        return copy(
+            detailCollection = LoadState.Content(
+                detail.data.copy(
+                    collection = detail.data.collection.copy(
+                        name = name,
+                        description = description,
+                        isPublic = isPublic,
+                    ),
+                ),
+            ),
+        )
+    }
+
+    private fun UiState.collectionDetailWithout(
+        collectionId: String,
+        wallpaperId: String,
+    ): UiState {
+        val detail = detailCollection as? LoadState.Content<CollectionDetailData> ?: return this
+        if (detail.data.collection.id != collectionId) return this
+        val collection = detail.data.collection.copy(
+            wallpaperIds = detail.data.collection.wallpaperIds.filterNot {
+                it == wallpaperId
+            },
+        )
+        return copy(
+            detailCollection = LoadState.Content(
+                detail.data.copy(
+                    collection = collection,
+                    wallpapers = detail.data.wallpapers.filterNot { it.id == wallpaperId },
+                ),
+            ),
+        )
+    }
+
+    private fun UiState.collectionDetailWithWallpapers(
+        collectionId: String,
+        wallpaperIds: List<String>,
+    ): UiState {
+        val detail = detailCollection as? LoadState.Content<CollectionDetailData> ?: return this
+        if (detail.data.collection.id != collectionId) return this
+        val selected = wallpaperIds.distinct()
+        val byId = detail.data.wallpapers.associateBy { it.id }
+        return copy(
+            detailCollection = LoadState.Content(
+                detail.data.copy(
+                    collection = detail.data.collection.copy(wallpaperIds = selected),
+                    wallpapers = selected.mapNotNull { byId[it] },
+                ),
+            ),
+        )
+    }
+
+    private fun UiState.collectionDetailDeleted(collectionId: String): UiState {
+        val detail = detailCollection as? LoadState.Content<CollectionDetailData> ?: return this
+        if (detail.data.collection.id != collectionId) return this
+        return copy(
+            detailCollectionId = null,
+            detailCollection = null,
+        )
+    }
+
+    /**
      * Conserva los fondos viejos que no vinieron en la página nueva para que
      * el modo offline siga teniendo contenido, sin pasar el límite de la caché.
      */
@@ -520,13 +997,16 @@ class MainViewModel(
         )
 
     /**
-     * Refresca solo si hay red y no se está refrescando ya. Se usa al volver
-     * de segundo plano para no provocar parpadeos.
+     * Refresca al volver de segundo plano sin perder las páginas cargadas ni
+     * mover el scroll. Si la persona volvió hace menos de cinco minutos no se
+     * consulta de nuevo.
      */
     fun refreshIfOnline() {
         if (!isOnline()) return
         if (refreshJob?.isActive == true) return
-        refresh()
+        val last = lastFeedRefreshAt
+        if (last != null && now() - last < REFRESH_WINDOW_MS) return
+        loadFeed(reloadMeta = false, preserveFeed = true, silent = true)
     }
 
     fun setQuery(value: String) {
@@ -611,10 +1091,14 @@ class MainViewModel(
         refreshJob?.cancel()
         loadMoreJob?.cancel()
         filterJob?.cancel()
+        detailJob?.cancel()
+        collectionDetailJob?.cancel()
         uploadJob?.cancel()
         prefs.clearSession()
         savedState[KEY_UPLOAD_URI] = null
-        val fallback = _state.value.collectionItems.filter { it.isPublic }
+        val fallback = mergedWithLocal(
+            _state.value.collectionItems.filter { it.isLocal || it.isPublic },
+        )
         _state.update {
             it.copy(
                 session = null,
@@ -634,6 +1118,10 @@ class MainViewModel(
                 message = strings.get(R.string.msg_signed_out),
                 messageAction = null,
                 downloadPrompt = null,
+                detailWallpaperId = null,
+                detailWallpaper = null,
+                detailCollectionId = null,
+                detailCollection = null,
             )
         }
         viewModelScope.launch {
@@ -641,7 +1129,7 @@ class MainViewModel(
             // acaba de cerrar: se limpia antes de volver a cargar las públicas.
             cache.writeCollections(emptyList())
             val collections = loadCollectionsOrEmpty(fallback)
-            cache.writeCollections(collections.filter { it.isPublic })
+            cache.writeCollections(collections.filter { it.isPublic && !it.isLocal })
             _state.update {
                 it.copy(
                     collectionItems = collections,
@@ -1453,17 +1941,32 @@ class MainViewModel(
             _state.update { it.copy(message = strings.get(R.string.msg_collection_name_required)) }
             return
         }
-        if (_state.value.isDemo) {
+        val localOnly =
+            _state.value.collectionItems.firstOrNull { it.id == collectionId }?.isLocal == true
+        val visible = if (localOnly) false else isPublic
+        if (_state.value.isDemo || localOnly) {
             _state.update {
                 val updated = it.collectionItems.map { c ->
                     if (c.id == collectionId) {
-                        c.copy(name = clean, description = description.trim(), isPublic = isPublic)
+                        c.copy(
+                            name = clean,
+                            description = description.trim(),
+                            isPublic = if (c.isLocal) false else visible,
+                        )
                     } else {
                         c
                     }
                 }
-                prefs.saveLocalCollections(updated)
-                it.copy(collectionItems = updated, message = strings.get(R.string.msg_collection_updated))
+                saveLocalCollections(updated)
+                it.copy(
+                    collectionItems = updated,
+                    message = strings.get(R.string.msg_collection_updated),
+                ).collectionDetailUpdated(
+                    collectionId = collectionId,
+                    name = clean,
+                    description = description.trim(),
+                    isPublic = if (localOnly) false else visible,
+                )
             }
             return
         }
@@ -1474,7 +1977,7 @@ class MainViewModel(
                     id = collectionId,
                     name = clean,
                     description = description,
-                    isPublic = isPublic,
+                    isPublic = visible,
                 )
                 _state.update {
                     it.copy(
@@ -1491,6 +1994,11 @@ class MainViewModel(
                             }
                         },
                         message = strings.get(R.string.msg_collection_updated),
+                    ).collectionDetailUpdated(
+                        collectionId = collectionId,
+                        name = updated.name,
+                        description = updated.description,
+                        isPublic = updated.isPublic,
                     )
                 }
             } catch (error: Exception) {
@@ -1501,13 +2009,16 @@ class MainViewModel(
     }
 
     fun reorderCollection(collectionId: String, wallpaperIds: List<String>) {
-        if (_state.value.isDemo) {
+        if (_state.value.isDemo || isLocalCollection(collectionId)) {
             _state.update {
                 val updated = it.collectionItems.map { c ->
                     if (c.id == collectionId) c.copy(wallpaperIds = wallpaperIds) else c
                 }
-                prefs.saveLocalCollections(updated)
-                it.copy(collectionItems = updated, message = strings.get(R.string.msg_order_updated))
+                saveLocalCollections(updated)
+                it.copy(
+                    collectionItems = updated,
+                    message = strings.get(R.string.msg_order_updated),
+                ).collectionDetailWithWallpapers(collectionId, wallpaperIds)
             }
             return
         }
@@ -1522,7 +2033,7 @@ class MainViewModel(
                             if (c.id == collectionId) c.copy(wallpaperIds = wallpaperIds) else c
                         },
                         message = strings.get(R.string.msg_order_updated),
-                    )
+                    ).collectionDetailWithWallpapers(collectionId, wallpaperIds)
                 }
             } catch (error: Exception) {
                 _state.update { it.afterError(error) }
@@ -1714,34 +2225,37 @@ class MainViewModel(
         }
     }
 
-    fun createCollection(name: String, description: String, isPublic: Boolean) {
+    fun createCollection(
+        name: String,
+        description: String,
+        isPublic: Boolean,
+        onDevice: Boolean = false,
+    ) {
         val cleanName = name.trim()
         if (cleanName.isBlank()) {
             _state.update { it.copy(message = strings.get(R.string.msg_collection_name_required)) }
             return
         }
-        if (_state.value.isDemo) {
+        val session = _state.value.session
+        // Sin sesión no hay cuenta: la colección vive solo en el teléfono.
+        if (_state.value.isDemo || session == null || onDevice) {
             val created = WallpaperCollection(
-                id = "local-${UUID.randomUUID()}",
+                id = "$LOCAL_COLLECTION_PREFIX${UUID.randomUUID()}",
                 name = cleanName,
                 description = description.trim(),
-                ownerId = "local",
+                ownerId = LOCAL_COLLECTION_OWNER,
                 ownerName = strings.get(R.string.owner_you),
-                isPublic = isPublic,
+                isPublic = false,
             )
             val updated = listOf(created) + _state.value.collectionItems
-            prefs.saveLocalCollections(updated)
+            saveLocalCollections(updated)
             _state.update {
                 it.copy(
                     collectionItems = updated,
+                    collections = LoadState.Content(updated),
                     message = strings.get(R.string.msg_collection_created, cleanName),
                 )
             }
-            return
-        }
-        val session = _state.value.session
-        if (session == null) {
-            _state.update { it.copy(message = strings.get(R.string.msg_login_to_create_collections)) }
             return
         }
         viewModelScope.launch {
@@ -1767,7 +2281,7 @@ class MainViewModel(
             _state.update { it.copy(message = strings.get(R.string.msg_already_in_collection, target.name)) }
             return
         }
-        if (_state.value.isDemo) {
+        if (_state.value.isDemo || target.isLocal) {
             val updated = _state.value.collectionItems.map { collection ->
                 if (collection.id == collectionId) {
                     collection.copy(wallpaperIds = collection.wallpaperIds + wallpaper.id)
@@ -1775,7 +2289,7 @@ class MainViewModel(
                     collection
                 }
             }
-            prefs.saveLocalCollections(updated)
+            saveLocalCollections(updated)
             _state.update {
                 it.copy(
                     collectionItems = updated,
@@ -1814,7 +2328,7 @@ class MainViewModel(
     }
 
     fun removeFromCollection(collectionId: String, wallpaperId: String) {
-        if (_state.value.isDemo) {
+        if (_state.value.isDemo || isLocalCollection(collectionId)) {
             val updated = _state.value.collectionItems.map { collection ->
                 if (collection.id == collectionId) {
                     collection.copy(wallpaperIds = collection.wallpaperIds - wallpaperId)
@@ -1822,9 +2336,12 @@ class MainViewModel(
                     collection
                 }
             }
-            prefs.saveLocalCollections(updated)
+            saveLocalCollections(updated)
             _state.update {
-                it.copy(collectionItems = updated, message = strings.get(R.string.msg_removed_from_collection))
+                it.copy(
+                    collectionItems = updated,
+                    message = strings.get(R.string.msg_removed_from_collection),
+                ).collectionDetailWithout(collectionId, wallpaperId)
             }
             return
         }
@@ -1848,7 +2365,7 @@ class MainViewModel(
                         collectionBusy = false,
                         collectionItems = updated,
                         message = strings.get(R.string.msg_removed_from_collection),
-                    )
+                    ).collectionDetailWithout(collectionId, wallpaperId)
                 }
             } catch (error: Exception) {
                 _state.update { it.afterError(error) }
@@ -1864,7 +2381,7 @@ class MainViewModel(
     fun setCollectionWallpapers(collectionId: String, wallpaperIds: List<String>) {
         val target = _state.value.collectionItems.firstOrNull { it.id == collectionId } ?: return
         val selected = wallpaperIds.distinct()
-        if (_state.value.isDemo) {
+        if (_state.value.isDemo || target.isLocal) {
             val updated = _state.value.collectionItems.map { collection ->
                 if (collection.id == collectionId) {
                     collection.copy(wallpaperIds = selected)
@@ -1872,12 +2389,12 @@ class MainViewModel(
                     collection
                 }
             }
-            prefs.saveLocalCollections(updated)
+            saveLocalCollections(updated)
             _state.update {
                 it.copy(
                     collectionItems = updated,
                     message = strings.get(R.string.msg_collection_renamed, target.name),
-                )
+                ).collectionDetailWithWallpapers(collectionId, selected)
             }
             return
         }
@@ -1900,7 +2417,7 @@ class MainViewModel(
                             }
                         },
                         message = strings.get(R.string.msg_collection_renamed, target.name),
-                    )
+                    ).collectionDetailWithWallpapers(collectionId, selected)
                 }
             } catch (error: CancellationException) {
                 _state.update { it.copy(collectionBusy = false) }
@@ -1914,14 +2431,14 @@ class MainViewModel(
 
     fun deleteCollection(collectionId: String) {
         val target = _state.value.collectionItems.firstOrNull { it.id == collectionId } ?: return
-        if (_state.value.isDemo) {
+        if (_state.value.isDemo || target.isLocal) {
             val updated = _state.value.collectionItems.filterNot { it.id == collectionId }
-            prefs.saveLocalCollections(updated)
+            saveLocalCollections(updated)
             _state.update {
                 it.copy(
                     collectionItems = updated,
                     message = strings.get(R.string.msg_collection_deleted, target.name),
-                )
+                ).collectionDetailDeleted(collectionId)
             }
             return
         }
@@ -1938,7 +2455,7 @@ class MainViewModel(
                         collectionBusy = false,
                         collectionItems = it.collectionItems.filterNot { c -> c.id == collectionId },
                         message = strings.get(R.string.msg_collection_deleted, target.name),
-                    )
+                    ).collectionDetailDeleted(collectionId)
                 }
             } catch (error: Exception) {
                 _state.update { it.afterError(error) }
@@ -1961,7 +2478,7 @@ class MainViewModel(
     }
 
     fun downloadAgain(wallpaperId: String) {
-        val wallpaper = _state.value.wallpapers.firstOrNull { it.id == wallpaperId }
+        val wallpaper = _state.value.wallpaperById(wallpaperId)
         _state.update { it.copy(downloadPrompt = null) }
         if (wallpaper != null) {
             startDownload(wallpaper)
@@ -2085,6 +2602,15 @@ class MainViewModel(
         _state.update { it.copy(message = null, messageAction = null) }
     }
 
+    fun notifyFileOpenFailed() {
+        _state.update {
+            it.copy(
+                message = strings.get(R.string.msg_open_file_failed),
+                messageAction = null,
+            )
+        }
+    }
+
     /** Cambia entre tema del sistema, claro u oscuro. */
     fun setThemeMode(mode: ThemeMode) {
         appearance.saveThemeMode(mode)
@@ -2146,7 +2672,9 @@ class MainViewModel(
                 // vieja en pantalla ni colecciones privadas cacheadas.
                 if (prefs.session() == null) {
                     _state.update {
-                        val publicCollections = it.collectionItems.filter { c -> c.isPublic }
+                        val publicCollections = it.collectionItems.filter {
+                            c -> c.isLocal || c.isPublic
+                        }
                         it.copy(
                             session = null,
                             adminWallpapers = emptyList(),
@@ -2184,7 +2712,7 @@ class MainViewModel(
     private suspend fun reloadCollectionsQuietly() {
         if (_state.value.session == null) return
         try {
-            val collections = api.loadCollections()
+            val collections = mergedWithLocal(api.loadCollections())
             _state.update {
                 it.copy(
                     collectionItems = collections,
@@ -2206,15 +2734,17 @@ class MainViewModel(
     private suspend fun loadCollectionsOrEmpty(
         fallback: List<WallpaperCollection>,
     ): List<WallpaperCollection> =
-        try {
-            api.loadCollections()
-        } catch (error: CancellationException) {
-            throw error
-        } catch (error: DannXError.SessionExpired) {
-            throw error
-        } catch (error: Exception) {
-            fallback
-        }
+        mergedWithLocal(
+            try {
+                api.loadCollections()
+            } catch (error: CancellationException) {
+                throw error
+            } catch (error: DannXError.SessionExpired) {
+                throw error
+            } catch (error: Exception) {
+                fallback
+            },
+        )
 
     private suspend fun loadCategoriesOrEmpty(
         fallback: List<WallpaperCategory>,
@@ -2324,7 +2854,7 @@ class MainViewModel(
     ): UiState {
         val expired = error is DannXError.SessionExpired
         val publicCollections = if (expired) {
-            collectionItems.filter { it.isPublic }
+            collectionItems.filter { it.isLocal || it.isPublic }
         } else {
             collectionItems
         }
@@ -2357,6 +2887,7 @@ class MainViewModel(
         private const val KEY_TAG = "tag"
         private const val KEY_UPLOAD_URI = "upload_uri"
         private const val SEARCH_DEBOUNCE_MS = 350L
+        private const val REFRESH_WINDOW_MS = 5 * 60 * 1000L
 
         fun factory(application: Application): ViewModelProvider.Factory = viewModelFactory {
             initializer {

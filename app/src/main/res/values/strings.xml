@@ -35,6 +35,9 @@
 
     <string name="state_error_title">No pudimos cargar</string>
     <string name="state_retry">Reintentar</string>
+    <string name="detail_wallpaper_missing">No encontramos este fondo. Puede que ya no esté disponible.</string>
+    <string name="detail_collection_missing">No encontramos esta colección. Puede que ya no esté disponible.</string>
+    <string name="msg_open_file_failed">No hay una app para abrir este archivo.</string>
     <string name="state_offline">Sin conexión: mostramos lo que ya tenías guardado.</string>
     <string name="state_offline_detail">Sin conexión: descargar, aplicar y compartir necesitan internet.</string>
     <string name="state_empty_feed_title">Todavía no hay fondos</string>
@@ -114,7 +117,6 @@
     <string name="collections_title">Colecciones</string>
     <string name="collections_subtitle">Agrupa fondos por edición, serie o lo que imagines.</string>
     <string name="collections_create">Crear colección</string>
-    <string name="collections_login_required">Iniciá sesión en Estudio para crear tus propias colecciones.</string>
     <string name="collection_private_badge">Privada</string>
     <string name="collection_yours_badge">Tuya</string>
     <string name="collection_private_label">Colección privada</string>
@@ -123,6 +125,11 @@
     <string name="collection_public">Pública</string>
     <string name="collection_public_hint">Visible para todos en la app.</string>
     <string name="collection_private_hint">Solo vos podés verla.</string>
+    <string name="collection_destination">Guardar en</string>
+    <string name="collection_destination_device">En este dispositivo</string>
+    <string name="collection_destination_device_hint">Queda guardada solo en este teléfono y no se sincroniza.</string>
+    <string name="collection_destination_account">En mi cuenta</string>
+    <string name="collection_destination_account_hint">Se sincroniza con tu cuenta y se puede ver en otros dispositivos.</string>
     <string name="collection_create_new">Crear nueva colección</string>
     <string name="collection_delete">Eliminar colección</string>
     <string name="collection_delete_body">Se eliminará “%1$s” de tu perfil. Los fondos seguirán disponibles en el feed.</string>
@@ -201,7 +208,7 @@
     <string name="about_description">DannX es una app de fondos de pantalla hecha con Kotlin y Jetpack Compose. Explorá el feed, armá colecciones y aplicá o descargá cualquier imagen en dos toques.</string>
     <string name="about_project">Proyecto</string>
     <string name="about_repository">Código en GitHub</string>
-    <string name="about_releases">Última versión</string>
+    <string name="about_releases">Versiones</string>
     <string name="about_privacy">Política de privacidad</string>
     <string name="about_share">Compartir DannX</string>
     <string name="about_share_text">DannX: fondos de pantalla sin anuncios ni rastreo. %1$s</string>
@@ -429,7 +436,6 @@
     <string name="msg_tag_renamed">Tag “%1$s” renombrado a “%2$s”.</string>
     <string name="msg_tag_deleted">Tag “%1$s” eliminado.</string>
     <string name="msg_collection_created">Colección “%1$s” creada.</string>
-    <string name="msg_login_to_create_collections">Iniciá sesión en Estudio para crear colecciones.</string>
     <string name="msg_already_in_collection">Ya está en %1$s.</string>
     <string name="msg_saved_in_collection">Guardado en %1$s.</string>
     <string name="msg_login_to_save">Iniciá sesión en Estudio para guardar en colecciones.</string>

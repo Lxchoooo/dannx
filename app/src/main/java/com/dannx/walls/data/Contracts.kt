@@ -43,6 +43,18 @@ interface WallpapersRepository {
     suspend fun loadAdminWallpapers(): List<Wallpaper>
     suspend fun loadCategories(): List<WallpaperCategory>
     suspend fun loadCollections(): List<WallpaperCollection>
+
+    /**
+     * Carga fondos por id aunque no estén en la página actual del feed. Se usa
+     * al abrir un detalle restaurado o cuando la colección apunta a imágenes
+     * que todavía no están en memoria.
+     */
+    suspend fun loadWallpapersByIds(ids: List<String>): List<Wallpaper>
+
+    suspend fun loadWallpaper(id: String): Wallpaper? =
+        loadWallpapersByIds(listOf(id)).firstOrNull()
+
+    suspend fun loadCollection(id: String): WallpaperCollection?
     suspend fun loadAppSettings(): AppSettings
     suspend fun saveAppSettings(settings: AppSettings): AppSettings
     suspend fun signIn(email: String, password: String): AdminSession

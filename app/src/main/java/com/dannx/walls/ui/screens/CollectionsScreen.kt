@@ -30,6 +30,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
@@ -67,11 +68,10 @@ import com.dannx.walls.ui.components.screenImageSize
 fun CollectionsScreen(
     state: UiState,
     onOpenCollection: (WallpaperCollection) -> Unit,
-    onCreateCollection: (String, String, Boolean) -> Unit,
+    onCreateCollection: (String, String, Boolean, Boolean) -> Unit,
     onRefresh: () -> Unit = {},
 ) {
     var showCreate by rememberSaveable { mutableStateOf(false) }
-    val canCreate = state.isDemo || state.session != null
 
     LazyColumn(
         modifier = Modifier
@@ -91,24 +91,15 @@ fun CollectionsScreen(
                     style = MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
-                if (canCreate) {
-                    Spacer(Modifier.height(16.dp))
-                    Button(
-                        onClick = { showCreate = true },
-                        shape = CircleShape,
-                        enabled = !state.collectionBusy,
-                    ) {
-                        Icon(Icons.Rounded.Add, contentDescription = null)
-                        Spacer(Modifier.width(8.dp))
-                        Text(stringResource(R.string.collections_create))
-                    }
-                } else {
-                    Spacer(Modifier.height(12.dp))
-                    Text(
-                        text = stringResource(R.string.collections_login_required),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
+                Spacer(Modifier.height(16.dp))
+                Button(
+                    onClick = { showCreate = true },
+                    shape = CircleShape,
+                    enabled = !state.collectionBusy,
+                ) {
+                    Icon(Icons.Rounded.Add, contentDescription = null)
+                    Spacer(Modifier.width(8.dp))
+                    Text(stringResource(R.string.collections_create))
                 }
                 Spacer(Modifier.height(8.dp))
             }
@@ -155,9 +146,10 @@ fun CollectionsScreen(
     if (showCreate) {
         CreateCollectionDialog(
             busy = state.collectionBusy,
+            canChooseDestination = state.session != null,
             onDismiss = { showCreate = false },
-            onCreate = { name, description, isPublic ->
-                onCreateCollection(name, description, isPublic)
+            onCreate = { name, description, isPublic, onDevice ->
+                onCreateCollection(name, description, isPublic, onDevice)
                 showCreate = false
             },
         )
@@ -317,12 +309,16 @@ private fun Badge(icon: androidx.compose.ui.graphics.vector.ImageVector?, label:
 @Composable
 private fun CreateCollectionDialog(
     busy: Boolean,
+    canChooseDestination: Boolean,
     onDismiss: () -> Unit,
-    onCreate: (String, String, Boolean) -> Unit,
+    onCreate: (String, String, Boolean, Boolean) -> Unit,
 ) {
     var name by rememberSaveable { mutableStateOf("") }
     var description by rememberSaveable { mutableStateOf("") }
     var isPublic by rememberSaveable { mutableStateOf(false) }
+    var onDevice by rememberSaveable { mutableStateOf(!canChooseDestination) }
+    // Una colección local no puede ser pública: no existe en el servidor.
+    val accountDestination = canChooseDestination && !onDevice
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -346,37 +342,91 @@ private fun CreateCollectionDialog(
                     placeholder = { Text(stringResource(R.string.field_optional)) },
                     minLines = 2,
                 )
-                Spacer(Modifier.height(12.dp))
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Column(Modifier.weight(1f)) {
-                        Text(
-                            if (isPublic) {
-                                stringResource(R.string.collection_public)
-                            } else {
-                                stringResource(R.string.collection_private_badge)
-                            },
-                            style = MaterialTheme.typography.titleMedium,
-                        )
-                        Text(
-                            text = if (isPublic) {
-                                stringResource(R.string.collection_public_hint)
-                            } else {
-                                stringResource(R.string.collection_private_hint)
-                            },
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
+                if (canChooseDestination) {
+                    Spacer(Modifier.height(12.dp))
+                    Text(
+                        text = stringResource(R.string.collection_destination),
+                        style = MaterialTheme.typography.titleSmall,
+                    )
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { onDevice = true },
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        RadioButton(selected = onDevice, onClick = { onDevice = true })
+                        Column(Modifier.weight(1f)) {
+                            Text(
+                                text = stringResource(R.string.collection_destination_device),
+                                style = MaterialTheme.typography.bodyLarge,
+                            )
+                            Text(
+                                text = stringResource(R.string.collection_destination_device_hint),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
                     }
-                    Switch(checked = isPublic, onCheckedChange = { isPublic = it })
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { onDevice = false },
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        RadioButton(selected = !onDevice, onClick = { onDevice = false })
+                        Column(Modifier.weight(1f)) {
+                            Text(
+                                text = stringResource(R.string.collection_destination_account),
+                                style = MaterialTheme.typography.bodyLarge,
+                            )
+                            Text(
+                                text = stringResource(R.string.collection_destination_account_hint),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                    }
+                } else {
+                    Spacer(Modifier.height(12.dp))
+                    Text(
+                        text = stringResource(R.string.collection_destination_device_hint),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                if (accountDestination) {
+                    Spacer(Modifier.height(12.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Column(Modifier.weight(1f)) {
+                            Text(
+                                if (isPublic) {
+                                    stringResource(R.string.collection_public)
+                                } else {
+                                    stringResource(R.string.collection_private_badge)
+                                },
+                                style = MaterialTheme.typography.titleMedium,
+                            )
+                            Text(
+                                text = if (isPublic) {
+                                    stringResource(R.string.collection_public_hint)
+                                } else {
+                                    stringResource(R.string.collection_private_hint)
+                                },
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                        Switch(checked = isPublic, onCheckedChange = { isPublic = it })
+                    }
                 }
             }
         },
         confirmButton = {
             Button(
-                onClick = { onCreate(name, description, isPublic) },
+                onClick = { onCreate(name, description, accountDestination && isPublic, onDevice) },
                 enabled = name.isNotBlank() && !busy,
             ) {
                 if (busy) {

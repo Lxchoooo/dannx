@@ -32,7 +32,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -54,16 +53,13 @@ import com.dannx.walls.ui.components.WallpaperCard
 fun CollectionDetailScreen(
     state: UiState,
     collection: WallpaperCollection,
+    items: List<Wallpaper>,
     onBack: () -> Unit,
     onOpenWallpaper: (Wallpaper) -> Unit,
     onToggleFavorite: (String) -> Unit,
     onRemove: (String) -> Unit,
     onDelete: () -> Unit,
 ) {
-    val items = remember(state.wallpapers, collection.wallpaperIds) {
-        val byId = state.wallpapers.associateBy { it.id }
-        collection.wallpaperIds.mapNotNull { byId[it] }
-    }
     val total = collection.wallpaperIds.size
     val canEdit = state.canEdit(collection)
     var confirmDelete by rememberSaveable { mutableStateOf(false) }

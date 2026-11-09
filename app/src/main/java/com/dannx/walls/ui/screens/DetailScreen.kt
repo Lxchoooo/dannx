@@ -51,6 +51,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -134,7 +135,7 @@ fun DetailScreen(
     onDownloadAgain: (String) -> Unit,
     onDismissDownloadPrompt: () -> Unit,
     onAddToCollection: (String) -> Unit,
-    onCreateCollection: (String, String, Boolean) -> Unit,
+    onCreateCollection: (String, String, Boolean, Boolean) -> Unit,
     onPrevious: (() -> Unit)? = null,
     onNext: (() -> Unit)? = null,
 ) {
@@ -640,9 +641,10 @@ fun DetailScreen(
     if (showCreateCollection) {
         NewCollectionDialog(
             busy = collectionBusy,
+            canChooseDestination = state.session != null,
             onDismiss = { showCreateCollection = false },
-            onCreate = { name, description, isPublic ->
-                onCreateCollection(name, description, isPublic)
+            onCreate = { name, description, isPublic, onDevice ->
+                onCreateCollection(name, description, isPublic, onDevice)
                 showCreateCollection = false
             },
         )
@@ -724,12 +726,15 @@ private fun CollectionPickerDialog(
 @Composable
 private fun NewCollectionDialog(
     busy: Boolean,
+    canChooseDestination: Boolean,
     onDismiss: () -> Unit,
-    onCreate: (String, String, Boolean) -> Unit,
+    onCreate: (String, String, Boolean, Boolean) -> Unit,
 ) {
     var name by rememberSaveable { mutableStateOf("") }
     var description by rememberSaveable { mutableStateOf("") }
     var isPublic by rememberSaveable { mutableStateOf(false) }
+    var onDevice by rememberSaveable { mutableStateOf(!canChooseDestination) }
+    val accountDestination = canChooseDestination && !onDevice
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -753,37 +758,91 @@ private fun NewCollectionDialog(
                     placeholder = { Text(stringResource(R.string.field_optional)) },
                     minLines = 2,
                 )
-                Spacer(Modifier.height(12.dp))
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Column(Modifier.weight(1f)) {
-                        Text(
-                            text = if (isPublic) {
-                                stringResource(R.string.collection_public)
-                            } else {
-                                stringResource(R.string.collection_private_badge)
-                            },
-                            style = MaterialTheme.typography.titleMedium,
-                        )
-                        Text(
-                            text = if (isPublic) {
-                                stringResource(R.string.collection_public_hint)
-                            } else {
-                                stringResource(R.string.collection_private_hint)
-                            },
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
+                if (canChooseDestination) {
+                    Spacer(Modifier.height(12.dp))
+                    Text(
+                        text = stringResource(R.string.collection_destination),
+                        style = MaterialTheme.typography.titleSmall,
+                    )
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { onDevice = true },
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        RadioButton(selected = onDevice, onClick = { onDevice = true })
+                        Column(Modifier.weight(1f)) {
+                            Text(
+                                text = stringResource(R.string.collection_destination_device),
+                                style = MaterialTheme.typography.bodyLarge,
+                            )
+                            Text(
+                                text = stringResource(R.string.collection_destination_device_hint),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
                     }
-                    Switch(checked = isPublic, onCheckedChange = { isPublic = it })
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { onDevice = false },
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        RadioButton(selected = !onDevice, onClick = { onDevice = false })
+                        Column(Modifier.weight(1f)) {
+                            Text(
+                                text = stringResource(R.string.collection_destination_account),
+                                style = MaterialTheme.typography.bodyLarge,
+                            )
+                            Text(
+                                text = stringResource(R.string.collection_destination_account_hint),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                    }
+                } else {
+                    Spacer(Modifier.height(12.dp))
+                    Text(
+                        text = stringResource(R.string.collection_destination_device_hint),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                if (accountDestination) {
+                    Spacer(Modifier.height(12.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Column(Modifier.weight(1f)) {
+                            Text(
+                                text = if (isPublic) {
+                                    stringResource(R.string.collection_public)
+                                } else {
+                                    stringResource(R.string.collection_private_badge)
+                                },
+                                style = MaterialTheme.typography.titleMedium,
+                            )
+                            Text(
+                                text = if (isPublic) {
+                                    stringResource(R.string.collection_public_hint)
+                                } else {
+                                    stringResource(R.string.collection_private_hint)
+                                },
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                        Switch(checked = isPublic, onCheckedChange = { isPublic = it })
+                    }
                 }
             }
         },
         confirmButton = {
             Button(
-                onClick = { onCreate(name, description, isPublic) },
+                onClick = { onCreate(name, description, accountDestination && isPublic, onDevice) },
                 enabled = name.isNotBlank() && !busy,
             ) {
                 if (busy) {

@@ -89,6 +89,14 @@ data class WallpaperCollection(
     val wallpaperIds: List<String> = emptyList(),
 )
 
+/** Dueño reservado para las colecciones que solo viven en el teléfono. */
+const val LOCAL_COLLECTION_OWNER = "local"
+const val LOCAL_COLLECTION_PREFIX = "local-"
+
+/** Una colección local no depende de la cuenta ni del servidor. */
+val WallpaperCollection.isLocal: Boolean
+    get() = ownerId == LOCAL_COLLECTION_OWNER || id.startsWith(LOCAL_COLLECTION_PREFIX)
+
 val DefaultCategories = listOf(
     "Naturaleza",
     "Abstracto",

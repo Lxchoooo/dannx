@@ -35,6 +35,9 @@
 
     <string name="state_error_title">We couldn\'t load it</string>
     <string name="state_retry">Try again</string>
+    <string name="detail_wallpaper_missing">We couldn\'t find this wallpaper. It may no longer be available.</string>
+    <string name="detail_collection_missing">We couldn\'t find this collection. It may no longer be available.</string>
+    <string name="msg_open_file_failed">There is no app that can open this file.</string>
     <string name="state_offline">No connection: showing what you already had saved.</string>
     <string name="state_offline_detail">No connection: downloading, applying and sharing need internet.</string>
     <string name="state_empty_feed_title">No wallpapers yet</string>
@@ -114,7 +117,6 @@
     <string name="collections_title">Collections</string>
     <string name="collections_subtitle">Group wallpapers by edition, series, or whatever you imagine.</string>
     <string name="collections_create">Create collection</string>
-    <string name="collections_login_required">Sign in to Studio to create your own collections.</string>
     <string name="collection_private_badge">Private</string>
     <string name="collection_yours_badge">Yours</string>
     <string name="collection_private_label">Private collection</string>
@@ -123,6 +125,11 @@
     <string name="collection_public">Public</string>
     <string name="collection_public_hint">Visible to everyone in the app.</string>
     <string name="collection_private_hint">Only you can see it.</string>
+    <string name="collection_destination">Save to</string>
+    <string name="collection_destination_device">On this device</string>
+    <string name="collection_destination_device_hint">Saved only on this phone and not synced.</string>
+    <string name="collection_destination_account">In my account</string>
+    <string name="collection_destination_account_hint">Syncs with your account and appears on other devices.</string>
     <string name="collection_create_new">Create new collection</string>
     <string name="collection_delete">Delete collection</string>
     <string name="collection_delete_body">“%1$s” will be removed from your profile. The wallpapers will still be available in the feed.</string>
@@ -201,7 +208,7 @@
     <string name="about_description">DannX is a wallpaper app built with Kotlin and Jetpack Compose. Explore the feed, build collections, and apply or download any image in a couple of taps.</string>
     <string name="about_project">Project</string>
     <string name="about_repository">Source on GitHub</string>
-    <string name="about_releases">Latest release</string>
+    <string name="about_releases">Releases</string>
     <string name="about_privacy">Privacy policy</string>
     <string name="about_share">Share DannX</string>
     <string name="about_share_text">DannX: wallpapers without ads or tracking. %1$s</string>
@@ -429,7 +436,6 @@
     <string name="msg_tag_renamed">Tag “%1$s” renamed to “%2$s”.</string>
     <string name="msg_tag_deleted">Tag “%1$s” deleted.</string>
     <string name="msg_collection_created">Collection “%1$s” created.</string>
-    <string name="msg_login_to_create_collections">Sign in to Studio to create collections.</string>
     <string name="msg_already_in_collection">It\'s already in %1$s.</string>
     <string name="msg_saved_in_collection">Saved to %1$s.</string>
     <string name="msg_login_to_save">Sign in to Studio to save to collections.</string>

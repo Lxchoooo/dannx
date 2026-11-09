@@ -73,6 +73,25 @@ class FakeRepository : WallpapersRepository {
         return collections
     }
 
+    override suspend fun loadWallpapersByIds(ids: List<String>): List<Wallpaper> {
+        val error = failWith
+        if (error != null && failTimes > 0) {
+            failTimes -= 1
+            throw error
+        }
+        val selected = ids.toSet()
+        return wallpapers.filter { it.id in selected }
+    }
+
+    override suspend fun loadCollection(id: String): WallpaperCollection? {
+        val error = failWith
+        if (error != null && failTimes > 0) {
+            failTimes -= 1
+            throw error
+        }
+        return collections.firstOrNull { it.id == id }
+    }
+
     override suspend fun loadAppSettings(): AppSettings = appSettings
 
     override suspend fun saveAppSettings(settings: AppSettings): AppSettings {

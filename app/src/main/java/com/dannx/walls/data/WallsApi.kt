@@ -134,7 +134,9 @@ class WallsApi(
 
     override suspend fun loadCollections(): List<WallpaperCollection> = withContext(Dispatchers.IO) {
         if (!isConfigured) {
-            return@withContext prefs.localCollections()
+            // En la demo las colecciones de ejemplo se suman a las locales.
+            return@withContext (prefs.localCollections() + DemoWallpapers.collections)
+                .distinctBy { it.id }
         }
         // Con sesión se leen también las colecciones privadas del usuario. Sin
         // sesión se mantiene la lectura pública anónima.
@@ -161,6 +163,72 @@ class WallsApi(
             collection.toCollection(byCollection[collection.id].orEmpty())
         }
     }
+
+    override suspend fun loadWallpapersByIds(ids: List<String>): List<Wallpaper> =
+        withContext(Dispatchers.IO) {
+            val clean = ids
+                .map { it.trim() }
+                .filter { it.isNotBlank() }
+                .distinct()
+                .take(MAX_DETAIL_IDS)
+            if (clean.isEmpty()) return@withContext emptyList()
+            if (!isConfigured) {
+                val selected = clean.toSet()
+                return@withContext DemoWallpapers.items.filter {
+                    it.id in selected && !it.isArchived && !it.isDeleted
+                }
+            }
+            retryPolicy.run {
+                try {
+                    val idFilter = clean.joinToString(",") { encodeQueryValue(it) }
+                    getList<WallpaperDto>(
+                        "wallpapers?select=*&id=in.($idFilter)&limit=${clean.size}",
+                    )
+                        .filter { it.storagePath.isNotBlank() }
+                        .map { it.toWallpaper(baseUrl) }
+                        .filterNot { it.isArchived || it.isDeleted }
+                        .distinctBy { it.id }
+                } catch (error: CancellationException) {
+                    throw error
+                } catch (error: Throwable) {
+                    throw error.toDannXError()
+                }
+            }
+        }
+
+    override suspend fun loadCollection(id: String): WallpaperCollection? =
+        withContext(Dispatchers.IO) {
+            val collectionId = id.trim()
+            if (collectionId.isBlank()) return@withContext null
+            if (!isConfigured) {
+                return@withContext (prefs.localCollections() + DemoWallpapers.collections)
+                    .firstOrNull { it.id == collectionId }
+            }
+            val authenticated = prefs.accessToken != null
+            val encodedId = encodeQueryValue(collectionId)
+            val collections = if (authenticated) {
+                getListAuthorized<CollectionDto>(
+                    "collections?select=*&id=eq.$encodedId&limit=1",
+                )
+            } else {
+                getList<CollectionDto>(
+                    "collections?select=*&id=eq.$encodedId&limit=1",
+                )
+            }
+            val collection = collections.firstOrNull() ?: return@withContext null
+            val items = if (authenticated) {
+                getListAuthorized<CollectionItemDto>(
+                    "collection_items?select=*&collection_id=eq.$encodedId" +
+                        "&order=position.asc,created_at.asc",
+                )
+            } else {
+                getList<CollectionItemDto>(
+                    "collection_items?select=*&collection_id=eq.$encodedId" +
+                        "&order=position.asc,created_at.asc",
+                )
+            }
+            collection.toCollection(items)
+        }
 
     override suspend fun loadAppSettings(): AppSettings = withContext(Dispatchers.IO) {
         if (!isConfigured) {
@@ -1420,6 +1488,7 @@ class WallsApi(
 
     companion object {
         const val MAX_BYTES = 25L * 1024 * 1024
+        private const val MAX_DETAIL_IDS = 100
         val JSON_MEDIA: MediaType = "application/json".toMediaType()
 
         fun defaultClient(): OkHttpClient = OkHttpClient.Builder()

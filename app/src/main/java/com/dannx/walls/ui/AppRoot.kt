@@ -12,11 +12,14 @@ import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.CollectionsBookmark
 import androidx.compose.material.icons.rounded.Explore
@@ -31,6 +34,7 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -61,6 +65,7 @@ import com.dannx.walls.MainViewModel
 import com.dannx.walls.R
 import com.dannx.walls.UiState
 import com.dannx.walls.ui.components.DebugFpsOverlay
+import com.dannx.walls.ui.components.ErrorState
 import com.dannx.walls.ui.editor.WallpaperEditorScreen
 import com.dannx.walls.ui.screens.AboutScreen
 import com.dannx.walls.ui.screens.CollectionDetailScreen
@@ -154,10 +159,15 @@ private fun MainApp(
                 actionLabel = action?.label,
                 withDismissAction = action == null,
             )
+            var openFailed = false
             if (result == SnackbarResult.ActionPerformed && action != null) {
-                runCatching { wallpaperFiles.open(action.uri) }
+                openFailed = !wallpaperFiles.open(action.uri)
             }
-            viewModel.clearMessage()
+            if (openFailed) {
+                viewModel.notifyFileOpenFailed()
+            } else {
+                viewModel.clearMessage()
+            }
         }
     }
 
@@ -332,7 +342,9 @@ private fun MainApp(
                                 launchSingleTop = true
                             }
                         },
-                        onCreateCollection = viewModel::createCollection,
+                        onCreateCollection = { name, description, isPublic, onDevice ->
+                            viewModel.createCollection(name, description, isPublic, onDevice)
+                        },
                     )
                 }
             }
@@ -342,32 +354,43 @@ private fun MainApp(
                     navArgument("id") { type = NavType.StringType },
                 ),
             ) { entry ->
-                val id = entry.arguments?.getString("id")
-                val collection = state.collectionItems.firstOrNull { it.id == id }
-                if (collection == null) {
-                    if (state.collections is LoadState.Loading) {
-                        RouteLoading()
-                    } else {
-                        LaunchedEffect(id) {
-                            navController.popBackStack()
-                        }
+                val id = entry.arguments?.getString("id").orEmpty()
+                LaunchedEffect(id) {
+                    viewModel.loadCollectionDetail(id)
+                }
+                val detail = state.detailCollection
+                    ?.takeIf { state.detailCollectionId == id }
+                when (detail) {
+                    is LoadState.Content -> {
+                        val data = detail.data
+                        CollectionDetailScreen(
+                            state = state,
+                            collection = data.collection,
+                            items = data.wallpapers,
+                            onBack = {
+                                viewModel.clearCollectionDetail()
+                                navController.popBackStack()
+                            },
+                            onOpenWallpaper = { wallpaper ->
+                                navController.navigate("detail/${wallpaper.id}") {
+                                    launchSingleTop = true
+                                }
+                            },
+                            onToggleFavorite = viewModel::toggleFavorite,
+                            onRemove = { wallpaperId ->
+                                viewModel.removeFromCollection(data.collection.id, wallpaperId)
+                            },
+                            onDelete = { viewModel.deleteCollection(data.collection.id) },
+                        )
                     }
-                } else {
-                    CollectionDetailScreen(
-                        state = state,
-                        collection = collection,
+
+                    is LoadState.Error -> RouteError(
+                        message = detail.message,
+                        onRetry = { viewModel.loadCollectionDetail(id, force = true) },
                         onBack = { navController.popBackStack() },
-                        onOpenWallpaper = { wallpaper ->
-                            navController.navigate("detail/${wallpaper.id}") {
-                                launchSingleTop = true
-                            }
-                        },
-                        onToggleFavorite = viewModel::toggleFavorite,
-                        onRemove = { wallpaperId ->
-                            viewModel.removeFromCollection(collection.id, wallpaperId)
-                        },
-                        onDelete = { viewModel.deleteCollection(collection.id) },
                     )
+
+                    else -> RouteLoading()
                 }
             }
             composable("settings") {
@@ -416,7 +439,9 @@ private fun MainApp(
                     onBulkSetCategory = viewModel::bulkSetCategory,
                     onSaveAppSettings = viewModel::saveAppSettings,
                     onMoveFeatured = viewModel::moveFeatured,
-                    onCreateCollection = viewModel::createCollection,
+                    onCreateCollection = { name, description, isPublic ->
+                        viewModel.createCollection(name, description, isPublic, onDevice = false)
+                    },
                     onUpdateCollection = viewModel::updateCollection,
                     onDeleteCollection = viewModel::deleteCollection,
                     onSetCollectionWallpapers = viewModel::setCollectionWallpapers,
@@ -437,70 +462,89 @@ private fun MainApp(
                     navArgument("id") { type = NavType.StringType },
                 ),
             ) { entry ->
-                val id = entry.arguments?.getString("id")
-                val wallpaper = state.wallpapers.firstOrNull { it.id == id }
-                if (wallpaper == null) {
-                    if (state.feed is LoadState.Loading) {
-                        RouteLoading()
-                    } else {
-                        LaunchedEffect(id) {
-                            navController.popBackStack()
-                        }
+                val id = entry.arguments?.getString("id").orEmpty()
+                LaunchedEffect(id) {
+                    viewModel.loadWallpaperDetail(id)
+                }
+                val detail = state.detailWallpaper
+                    ?.takeIf { state.detailWallpaperId == id }
+                when (detail) {
+                    is LoadState.Content -> {
+                        val wallpaper = detail.data
+                        val detailIndex = state.wallpapers.indexOfFirst { it.id == wallpaper.id }
+                        val previous = state.wallpapers.getOrNull(detailIndex - 1)
+                        val next = state.wallpapers.getOrNull(detailIndex + 1)
+                        val detailDestinationId = entry.destination.id
+                        DetailScreen(
+                            wallpaper = wallpaper,
+                            isFavorite = wallpaper.id in state.favorites,
+                            collections = state.myCollections,
+                            canManageCollections = true,
+                            collectionBusy = state.collectionBusy,
+                            actionState = actionState,
+                            downloadPrompt = state.downloadPrompt
+                                ?.takeIf { it.wallpaperId == wallpaper.id },
+                            alreadyDownloaded = wallpaper.id in state.downloadedIds,
+                            offline = state.offline,
+                            openEditorOnApply = state.openEditorOnApply,
+                            onBack = {
+                                viewModel.clearWallpaperDetail()
+                                navController.popBackStack()
+                            },
+                            onToggleFavorite = { viewModel.toggleFavorite(wallpaper.id) },
+                            onDownload = { viewModel.download(wallpaper) },
+                            onOpenEditor = {
+                                navController.navigate("editor/${wallpaper.id}") {
+                                    launchSingleTop = true
+                                }
+                            },
+                            onSetWallpaper = { target -> viewModel.setWallpaper(wallpaper, target) },
+                            onShare = { viewModel.share(wallpaper) },
+                            onCancelAction = { viewModel.cancelAction() },
+                            onOpenFile = { uri ->
+                                if (!wallpaperFiles.open(uri)) {
+                                    viewModel.notifyFileOpenFailed()
+                                }
+                            },
+                            onDownloadAgain = { id -> viewModel.downloadAgain(id) },
+                            onDismissDownloadPrompt = { viewModel.dismissDownloadPrompt() },
+                            onAddToCollection = { collectionId ->
+                                viewModel.addToCollection(collectionId, wallpaper)
+                            },
+                            onCreateCollection = { name, description, isPublic, onDevice ->
+                                viewModel.createCollection(
+                                    name,
+                                    description,
+                                    isPublic,
+                                    onDevice,
+                                )
+                            },
+                            onPrevious = previous?.let { target ->
+                                {
+                                    navController.navigate("detail/${target.id}") {
+                                        launchSingleTop = true
+                                        popUpTo(detailDestinationId) { inclusive = true }
+                                    }
+                                }
+                            },
+                            onNext = next?.let { target ->
+                                {
+                                    navController.navigate("detail/${target.id}") {
+                                        launchSingleTop = true
+                                        popUpTo(detailDestinationId) { inclusive = true }
+                                    }
+                                }
+                            },
+                        )
                     }
-                } else {
-                    val detailIndex = state.wallpapers.indexOfFirst { it.id == wallpaper.id }
-                    val previous = state.wallpapers.getOrNull(detailIndex - 1)
-                    val next = state.wallpapers.getOrNull(detailIndex + 1)
-                    val detailDestinationId = entry.destination.id
-                    DetailScreen(
-                        wallpaper = wallpaper,
-                        isFavorite = wallpaper.id in state.favorites,
-                        collections = state.myCollections,
-                        canManageCollections = state.isDemo || state.session != null,
-                        collectionBusy = state.collectionBusy,
-                        actionState = actionState,
-                        downloadPrompt = state.downloadPrompt
-                            ?.takeIf { it.wallpaperId == wallpaper.id },
-                        alreadyDownloaded = wallpaper.id in state.downloadedIds,
-                        offline = state.offline,
-                        openEditorOnApply = state.openEditorOnApply,
+
+                    is LoadState.Error -> RouteError(
+                        message = detail.message,
+                        onRetry = { viewModel.loadWallpaperDetail(id, force = true) },
                         onBack = { navController.popBackStack() },
-                        onToggleFavorite = { viewModel.toggleFavorite(wallpaper.id) },
-                        onDownload = { viewModel.download(wallpaper) },
-                        onOpenEditor = {
-                            navController.navigate("editor/${wallpaper.id}") {
-                                launchSingleTop = true
-                            }
-                        },
-                        onSetWallpaper = { target -> viewModel.setWallpaper(wallpaper, target) },
-                        onShare = { viewModel.share(wallpaper) },
-                        onCancelAction = { viewModel.cancelAction() },
-                        onOpenFile = { uri -> runCatching { wallpaperFiles.open(uri) } },
-                        onDownloadAgain = { id -> viewModel.downloadAgain(id) },
-                        onDismissDownloadPrompt = { viewModel.dismissDownloadPrompt() },
-                        onAddToCollection = { collectionId ->
-                            viewModel.addToCollection(collectionId, wallpaper)
-                        },
-                        onCreateCollection = { name, description, isPublic ->
-                            viewModel.createCollection(name, description, isPublic)
-                        },
-                        onPrevious = previous?.let { target ->
-                            {
-                                navController.navigate("detail/${target.id}") {
-                                    launchSingleTop = true
-                                    popUpTo(detailDestinationId) { inclusive = true }
-                                }
-                            }
-                        },
-                        onNext = next?.let { target ->
-                            {
-                                navController.navigate("detail/${target.id}") {
-                                    launchSingleTop = true
-                                    popUpTo(detailDestinationId) { inclusive = true }
-                                }
-                            }
-                        },
                     )
+
+                    else -> RouteLoading()
                 }
             }
             composable(
@@ -509,25 +553,31 @@ private fun MainApp(
                     navArgument("id") { type = NavType.StringType },
                 ),
             ) { entry ->
-                val id = entry.arguments?.getString("id")
-                val wallpaper = state.wallpapers.firstOrNull { it.id == id }
-                if (wallpaper == null) {
-                    if (state.feed is LoadState.Loading) {
-                        RouteLoading()
-                    } else {
-                        LaunchedEffect(id) {
-                            navController.popBackStack()
-                        }
+                val id = entry.arguments?.getString("id").orEmpty()
+                LaunchedEffect(id) {
+                    viewModel.loadWallpaperDetail(id)
+                }
+                val detail = state.detailWallpaper
+                    ?.takeIf { state.detailWallpaperId == id }
+                when (detail) {
+                    is LoadState.Content -> {
+                        WallpaperEditorScreen(
+                            wallpaper = detail.data,
+                            onBack = { navController.popBackStack() },
+                            onApplied = { target ->
+                                viewModel.onWallpaperApplied(target)
+                                navController.popBackStack()
+                            },
+                        )
                     }
-                } else {
-                    WallpaperEditorScreen(
-                        wallpaper = wallpaper,
+
+                    is LoadState.Error -> RouteError(
+                        message = detail.message,
+                        onRetry = { viewModel.loadWallpaperDetail(id, force = true) },
                         onBack = { navController.popBackStack() },
-                        onApplied = { target ->
-                            viewModel.onWallpaperApplied(target)
-                            navController.popBackStack()
-                        },
                     )
+
+                    else -> RouteLoading()
                 }
             }
         }
@@ -540,6 +590,27 @@ private fun MainApp(
 private fun RouteLoading() {
     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         CircularProgressIndicator()
+    }
+}
+
+@Composable
+private fun RouteError(
+    message: String,
+    onRetry: () -> Unit,
+    onBack: () -> Unit,
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .statusBarsPadding()
+            .padding(horizontal = 20.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
+    ) {
+        ErrorState(message = message, onRetry = onRetry)
+        TextButton(onClick = onBack) {
+            Text(stringResource(R.string.action_back))
+        }
     }
 }
 

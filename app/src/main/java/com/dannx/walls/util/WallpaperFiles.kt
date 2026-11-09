@@ -175,7 +175,7 @@ class WallpaperFiles(private val context: Context) : WallpaperActions {
     /**
      * Abre un archivo guardado en la galería con la app de imágenes del sistema.
      */
-    fun open(uri: String) {
+    fun open(uri: String): Boolean = runCatching {
         val parsed = uri.toUri()
         val intent = Intent(Intent.ACTION_VIEW).apply {
             setDataAndType(parsed, context.contentResolver.getType(parsed) ?: "image/*")
@@ -185,7 +185,8 @@ class WallpaperFiles(private val context: Context) : WallpaperActions {
             intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         }
         context.startActivity(intent)
-    }
+        true
+    }.getOrDefault(false)
 
     /**
      * Indica si el archivo guardado sigue existiendo en el dispositivo.
