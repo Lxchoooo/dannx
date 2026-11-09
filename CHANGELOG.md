@@ -81,6 +81,17 @@ reservado a administradores y no se detalla en la documentación.
   Estudio se puede actualizar desde el encabezado.
 - Las categorías se pueden reordenar con flechas y el nuevo orden se guarda en
   el catálogo.
+- El Estudio suma “Contenido” para editar la frase de portada y el aviso global
+  de la app. Los textos se guardan en `app_settings` y se leen sin sesión.
+- “Mis fondos” permite seleccionar varios fondos y destacarlos, quitarlos de
+  destacados, archivarlos, restaurarlos, moverlos a una categoría o eliminarlos
+  en lote.
+- La edición de un fondo permite cambiar el autor además del título, la
+  categoría, las etiquetas y el destacado.
+- El Estudio suma “Destacados” para ordenar el carrusel con flechas. El orden se
+  guarda en `wallpapers.featured_position` y lo respeta la portada.
+- Nueva migración `docs/migraciones/20261109_app_editing.sql` con
+  `app_settings`, RLS, la columna `featured_position` y su índice.
 - La ficha del fondo suma botones laterales para pasar al fondo anterior o
   siguiente sin volver al feed.
 - La caché del feed queda acotada a 400 fondos y 100 colecciones para evitar que

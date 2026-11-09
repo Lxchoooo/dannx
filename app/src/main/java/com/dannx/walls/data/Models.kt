@@ -22,6 +22,7 @@ data class Wallpaper(
     val width: Int = 0,
     val height: Int = 0,
     val featured: Boolean = false,
+    val featuredPosition: Int = 0,
     val createdAt: String = "",
     val tags: List<String> = emptyList(),
     val categoryId: String? = null,
@@ -43,6 +44,26 @@ data class WallpaperCategory(
     val name: String,
     val position: Int = 0,
 )
+
+/**
+ * Contenido editable de la portada. Si un texto queda vacío, la app usa el
+ * valor localizado de siempre.
+ */
+@Immutable
+data class AppSettings(
+    val tagline: String = "",
+    val bannerText: String = "",
+    val bannerEnabled: Boolean = false,
+) {
+    fun normalized(): AppSettings {
+        val cleanBanner = bannerText.trim().take(240)
+        return copy(
+            tagline = tagline.trim().take(120),
+            bannerText = cleanBanner,
+            bannerEnabled = bannerEnabled && cleanBanner.isNotBlank(),
+        )
+    }
+}
 
 @Immutable
 data class AdminSession(

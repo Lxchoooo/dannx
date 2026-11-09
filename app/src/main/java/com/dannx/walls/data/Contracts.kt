@@ -24,6 +24,8 @@ interface WallpapersRepository {
     suspend fun loadAdminWallpapers(): List<Wallpaper>
     suspend fun loadCategories(): List<WallpaperCategory>
     suspend fun loadCollections(): List<WallpaperCollection>
+    suspend fun loadAppSettings(): AppSettings
+    suspend fun saveAppSettings(settings: AppSettings): AppSettings
     suspend fun signIn(email: String, password: String): AdminSession
     suspend fun refreshSession(): AdminSession?
     suspend fun uploadWallpaper(
@@ -40,10 +42,13 @@ interface WallpapersRepository {
         title: String,
         category: String,
         categoryId: String?,
+        author: String,
         tags: List<String>,
         featured: Boolean,
+        featuredPosition: Int,
     ): Wallpaper
 
+    suspend fun reorderFeatured(ids: List<String>)
     suspend fun replaceWallpaperImage(wallpaper: Wallpaper, uri: Uri): Wallpaper
     suspend fun archiveWallpaper(wallpaperId: String, archived: Boolean)
     suspend fun deleteWallpaper(wallpaper: Wallpaper)
@@ -85,6 +90,8 @@ interface LocalStore {
     fun recentSearches(): List<String>
     fun rememberSearch(query: String)
     fun clearRecentSearches()
+    fun appSettings(): AppSettings
+    fun saveAppSettings(settings: AppSettings)
     fun session(): AdminSession?
     fun saveSession(email: String, access: String?, refresh: String?, id: String?)
     fun clearSession()

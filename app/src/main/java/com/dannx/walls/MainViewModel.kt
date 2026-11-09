@@ -13,6 +13,7 @@ import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.dannx.walls.data.AdminSession
+import com.dannx.walls.data.AppSettings
 import com.dannx.walls.data.AppearancePrefs
 import com.dannx.walls.data.AppearanceStore
 import com.dannx.walls.data.CategoryAll
@@ -123,12 +124,19 @@ data class UiState(
     val themeMode: ThemeMode = ThemeMode.SYSTEM,
     val liteMode: Boolean = false,
     val openEditorOnApply: Boolean = true,
+    val appSettings: AppSettings = AppSettings(),
 ) {
     val filtered: List<Wallpaper>
-        get() = filterWallpapers(wallpapers, query, category, tag)
+        get() = filterWallpapers(wallpapers, query, category, tag).let { items ->
+            if (category == CategoryFeatured) {
+                items.sortedBy { it.featuredPosition }
+            } else {
+                items
+            }
+        }
 
     val featured: List<Wallpaper>
-        get() = wallpapers.filter { it.featured }
+        get() = wallpapers.filter { it.featured }.sortedBy { it.featuredPosition }
 
     val favoriteWallpapers: List<Wallpaper>
         get() = wallpapers.filter { it.id in favorites }
@@ -210,6 +218,7 @@ class MainViewModel(
             themeMode = appearance.themeMode(),
             liteMode = appearance.liteMode(),
             openEditorOnApply = appearance.openEditorOnApply(),
+            appSettings = prefs.appSettings(),
         ),
     )
     val state: StateFlow<UiState> = _state.asStateFlow()
@@ -292,6 +301,7 @@ class MainViewModel(
                     _state.value.collectionItems
                 }
                 val categories = loadCategoriesOrEmpty(_state.value.categories)
+                val appSettings = loadAppSettingsOrFallback(_state.value.appSettings)
                 cache.writeWallpapers(items)
                 cache.writeCollections(collections)
                 _state.update {
@@ -305,6 +315,7 @@ class MainViewModel(
                         wallpapers = items,
                         categories = categories,
                         collectionItems = collections,
+                        appSettings = appSettings,
                         isDemo = !api.isConfigured,
                         offline = false,
                         refreshing = false,
@@ -569,6 +580,40 @@ class MainViewModel(
         }
     }
 
+    fun saveAppSettings(tagline: String, bannerText: String, bannerEnabled: Boolean) {
+        val clean = AppSettings(
+            tagline = tagline,
+            bannerText = bannerText,
+            bannerEnabled = bannerEnabled,
+        ).normalized()
+        if (_state.value.isDemo) {
+            prefs.saveAppSettings(clean)
+            _state.update {
+                it.copy(
+                    appSettings = clean,
+                    message = strings.get(R.string.msg_app_settings_saved),
+                )
+            }
+            return
+        }
+        viewModelScope.launch {
+            _state.update { it.copy(studioBusy = true) }
+            try {
+                val saved = api.saveAppSettings(clean)
+                prefs.saveAppSettings(saved)
+                _state.update {
+                    it.copy(
+                        studioBusy = false,
+                        appSettings = saved,
+                        message = strings.get(R.string.msg_app_settings_saved),
+                    )
+                }
+            } catch (error: Exception) {
+                _state.update { it.afterError(error) }
+            }
+        }
+    }
+
     fun createCategory(name: String) {
         val clean = name.trim().take(40)
         if (clean.isBlank()) {
@@ -790,24 +835,34 @@ class MainViewModel(
         title: String,
         category: String,
         categoryId: String?,
+        author: String,
         tags: List<String>,
         featured: Boolean,
     ) {
         val cleanTags = tags.map { it.trim() }
             .filter { it.isNotBlank() }
             .distinctBy { it.lowercase() }
+        val cleanAuthor = author.trim().ifBlank { "DannX" }.take(60)
+        val current = _state.value.studioWallpapers.firstOrNull { it.id == wallpaperId }
+        val nextFeaturedPosition = when {
+            current == null -> 0
+            featured && !current.featured ->
+                (_state.value.studioWallpapers.filter { it.featured }
+                    .maxOfOrNull { it.featuredPosition } ?: -1) + 1
+            else -> current.featuredPosition
+        }
         if (_state.value.isDemo) {
             // En demo los archivados solo están en studioWallpapers. Antes se
             // buscaban en wallpapers y editarlos no hacía nada.
-            val updated = _state.value.studioWallpapers.firstOrNull { it.id == wallpaperId }
-                ?.copy(
-                    title = title,
-                    category = category,
-                    categoryId = categoryId,
-                    tags = cleanTags,
-                    featured = featured,
-                )
-                ?: return
+            val updated = current?.copy(
+                title = title,
+                category = category,
+                categoryId = categoryId,
+                author = cleanAuthor,
+                tags = cleanTags,
+                featured = featured,
+                featuredPosition = nextFeaturedPosition,
+            ) ?: return
             _state.update {
                 it.copy(
                     wallpapers = it.wallpapers.map { w -> if (w.id == wallpaperId) updated else w },
@@ -827,8 +882,10 @@ class MainViewModel(
                     title = title,
                     category = category,
                     categoryId = categoryId,
+                    author = cleanAuthor,
                     tags = cleanTags,
                     featured = featured,
+                    featuredPosition = nextFeaturedPosition,
                 )
                 _state.update {
                     it.copy(
@@ -992,6 +1049,224 @@ class MainViewModel(
                 }
             }
         }
+    }
+
+    fun bulkSetFeatured(ids: Set<String>, featured: Boolean) {
+        val targets = _state.value.studioWallpapers.filter { it.id in ids }
+        if (targets.isEmpty()) return
+        if (_state.value.isDemo) {
+            var next = (_state.value.studioWallpapers.filter { it.featured }
+                .maxOfOrNull { it.featuredPosition } ?: -1) + 1
+            val updated = targets.associate { wallpaper ->
+                wallpaper.id to wallpaper.copy(
+                    featured = featured,
+                    featuredPosition = if (featured && !wallpaper.featured) {
+                        next++
+                    } else {
+                        wallpaper.featuredPosition
+                    },
+                )
+            }
+            _state.update {
+                it.copy(
+                    wallpapers = it.wallpapers.map { w -> updated[w.id] ?: w },
+                    adminWallpapers = it.adminWallpapers.map { w -> updated[w.id] ?: w },
+                    message = strings.get(R.string.msg_wallpapers_updated),
+                )
+            }
+            return
+        }
+        viewModelScope.launch {
+            _state.update { it.copy(studioBusy = true) }
+            try {
+                var next = (_state.value.studioWallpapers.filter { it.featured }
+                    .maxOfOrNull { it.featuredPosition } ?: -1) + 1
+                val updated = targets.map { wallpaper ->
+                    api.updateWallpaper(
+                        wallpaperId = wallpaper.id,
+                        title = wallpaper.title,
+                        category = wallpaper.category,
+                        categoryId = wallpaper.categoryId,
+                        author = wallpaper.author,
+                        tags = wallpaper.tags,
+                        featured = featured,
+                        featuredPosition = if (featured && !wallpaper.featured) {
+                            next++
+                        } else {
+                            wallpaper.featuredPosition
+                        },
+                    )
+                }.associateBy { it.id }
+                _state.update {
+                    it.copy(
+                        studioBusy = false,
+                        wallpapers = it.wallpapers.map { w -> updated[w.id] ?: w },
+                        adminWallpapers = it.adminWallpapers.map { w -> updated[w.id] ?: w },
+                        message = strings.get(R.string.msg_wallpapers_updated),
+                    )
+                }
+            } catch (error: Exception) {
+                handleBulkFailure(error)
+            }
+        }
+    }
+
+    fun bulkSetArchived(ids: Set<String>, archived: Boolean) {
+        val targets = _state.value.studioWallpapers.filter { it.id in ids }
+        if (targets.isEmpty()) return
+        if (_state.value.isDemo) {
+            _state.update {
+                it.withBulkArchived(targets, archived).copy(
+                    message = if (archived) {
+                        strings.get(R.string.msg_wallpapers_archived)
+                    } else {
+                        strings.get(R.string.msg_wallpapers_restored)
+                    },
+                )
+            }
+            return
+        }
+        viewModelScope.launch {
+            _state.update { it.copy(studioBusy = true) }
+            try {
+                targets.forEach { api.archiveWallpaper(it.id, archived) }
+                _state.update {
+                    it.withBulkArchived(targets, archived).copy(
+                        studioBusy = false,
+                        message = if (archived) {
+                            strings.get(R.string.msg_wallpapers_archived)
+                        } else {
+                            strings.get(R.string.msg_wallpapers_restored)
+                        },
+                    )
+                }
+            } catch (error: Exception) {
+                handleBulkFailure(error)
+            }
+        }
+    }
+
+    fun bulkDeleteWallpapers(ids: Set<String>) {
+        val targets = _state.value.studioWallpapers.filter { it.id in ids }
+        if (targets.isEmpty()) return
+        if (_state.value.isDemo) {
+            _state.update {
+                it.withoutWallpapers(ids).copy(
+                    message = strings.get(R.string.msg_wallpapers_deleted),
+                )
+            }
+            return
+        }
+        viewModelScope.launch {
+            _state.update { it.copy(studioBusy = true) }
+            try {
+                targets.forEach { api.deleteWallpaper(it) }
+                _state.update {
+                    it.withoutWallpapers(ids).copy(
+                        studioBusy = false,
+                        message = strings.get(R.string.msg_wallpapers_deleted),
+                    )
+                }
+            } catch (error: Exception) {
+                handleBulkFailure(error)
+            }
+        }
+    }
+
+    fun bulkSetCategory(ids: Set<String>, categoryId: String) {
+        val category = _state.value.categories.firstOrNull { it.id == categoryId } ?: return
+        val targets = _state.value.studioWallpapers.filter { it.id in ids }
+        if (targets.isEmpty()) return
+        if (_state.value.isDemo) {
+            val updated = targets.associate { wallpaper ->
+                wallpaper.id to wallpaper.copy(
+                    category = category.name,
+                    categoryId = category.id,
+                )
+            }
+            _state.update {
+                it.copy(
+                    wallpapers = it.wallpapers.map { w -> updated[w.id] ?: w },
+                    adminWallpapers = it.adminWallpapers.map { w -> updated[w.id] ?: w },
+                    message = strings.get(
+                        R.string.msg_wallpapers_category_updated,
+                        category.name,
+                    ),
+                )
+            }
+            return
+        }
+        viewModelScope.launch {
+            _state.update { it.copy(studioBusy = true) }
+            try {
+                val updated = targets.map { wallpaper ->
+                    api.updateWallpaper(
+                        wallpaperId = wallpaper.id,
+                        title = wallpaper.title,
+                        category = category.name,
+                        categoryId = category.id,
+                        author = wallpaper.author,
+                        tags = wallpaper.tags,
+                        featured = wallpaper.featured,
+                        featuredPosition = wallpaper.featuredPosition,
+                    )
+                }.associateBy { it.id }
+                _state.update {
+                    it.copy(
+                        studioBusy = false,
+                        wallpapers = it.wallpapers.map { w -> updated[w.id] ?: w },
+                        adminWallpapers = it.adminWallpapers.map { w -> updated[w.id] ?: w },
+                        message = strings.get(
+                            R.string.msg_wallpapers_category_updated,
+                            category.name,
+                        ),
+                    )
+                }
+            } catch (error: Exception) {
+                handleBulkFailure(error)
+            }
+        }
+    }
+
+    fun reorderFeatured(orderedIds: List<String>) {
+        val ids = orderedIds.distinct()
+        if (ids.isEmpty()) return
+        if (_state.value.isDemo) {
+            _state.update {
+                it.withFeaturedOrder(ids).copy(message = strings.get(R.string.msg_order_updated))
+            }
+            return
+        }
+        viewModelScope.launch {
+            _state.update { it.copy(studioBusy = true) }
+            try {
+                api.reorderFeatured(ids)
+                _state.update {
+                    it.withFeaturedOrder(ids).copy(
+                        studioBusy = false,
+                        message = strings.get(R.string.msg_order_updated),
+                    )
+                }
+            } catch (error: Exception) {
+                handleBulkFailure(error)
+            }
+        }
+    }
+
+    fun moveFeatured(wallpaperId: String, direction: Int) {
+        if (direction == 0) return
+        val ordered = _state.value.studioWallpapers
+            .filter { it.featured && !it.isArchived }
+            .sortedBy { it.featuredPosition }
+        val index = ordered.indexOfFirst { it.id == wallpaperId }
+        if (index < 0) return
+        val targetIndex = index + direction
+        if (targetIndex !in ordered.indices) return
+        val ids = ordered.toMutableList().apply {
+            val item = removeAt(index)
+            add(targetIndex, item)
+        }.map { it.id }
+        reorderFeatured(ids)
     }
 
     fun updateCollection(
@@ -1781,6 +2056,17 @@ class MainViewModel(
             fallback
         }
 
+    private suspend fun loadAppSettingsOrFallback(fallback: AppSettings): AppSettings =
+        try {
+            val settings = api.loadAppSettings().normalized()
+            prefs.saveAppSettings(settings)
+            settings
+        } catch (error: CancellationException) {
+            throw error
+        } catch (error: Exception) {
+            fallback
+        }
+
     private fun isReservedCategoryName(name: String): Boolean =
         name.equals("Todos", ignoreCase = true) ||
             name.equals("Destacados", ignoreCase = true) ||
@@ -1788,6 +2074,48 @@ class MainViewModel(
             name.equals("Featured", ignoreCase = true) ||
             name == CategoryAll ||
             name == CategoryFeatured
+
+    private fun UiState.withBulkArchived(
+        targets: List<Wallpaper>,
+        archived: Boolean,
+    ): UiState {
+        val updated = targets.associate { wallpaper ->
+            wallpaper.id to wallpaper.copy(
+                archivedAt = if (archived) "archivado" else "",
+            )
+        }
+        val admin = adminWallpapers.map { updated[it.id] ?: it }
+        val feed = if (archived) {
+            wallpapers.filterNot { it.id in updated.keys }
+        } else {
+            (wallpapers.filterNot { it.id in updated.keys } +
+                updated.values.filter { !it.isArchived }).distinctBy { it.id }
+        }
+        return copy(adminWallpapers = admin, wallpapers = feed)
+    }
+
+    private fun UiState.withoutWallpapers(ids: Set<String>): UiState = copy(
+        wallpapers = wallpapers.filterNot { it.id in ids },
+        adminWallpapers = adminWallpapers.filterNot { it.id in ids },
+        collectionItems = collectionItems.map { collection ->
+            collection.copy(
+                wallpaperIds = collection.wallpaperIds.filterNot { it in ids },
+            )
+        },
+    )
+
+    private fun UiState.withFeaturedOrder(ids: List<String>): UiState {
+        val positions = ids.withIndex().associate { (index, id) -> id to index }
+        val reorder: (List<Wallpaper>) -> List<Wallpaper> = { list ->
+            list.map { wallpaper ->
+                positions[wallpaper.id]?.let { wallpaper.copy(featuredPosition = it) } ?: wallpaper
+            }
+        }
+        return copy(
+            wallpapers = reorder(wallpapers),
+            adminWallpapers = reorder(adminWallpapers),
+        )
+    }
 
     /**
      * Deja la app en un estado coherente después de un error. Si la sesión

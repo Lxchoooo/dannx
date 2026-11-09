@@ -13,6 +13,7 @@ data class WallpaperDto(
     val width: Int = 0,
     val height: Int = 0,
     val featured: Boolean = false,
+    @SerialName("featured_position") val featuredPosition: Int = 0,
     @SerialName("created_at") val createdAt: String = "",
     val tags: List<String> = emptyList(),
     @SerialName("category_id") val categoryId: String? = null,
@@ -45,8 +46,27 @@ data class WallpaperUpdate(
     val title: String,
     val category: String,
     @SerialName("category_id") val categoryId: String? = null,
+    val author: String,
     val tags: List<String> = emptyList(),
     val featured: Boolean = false,
+    @SerialName("featured_position") val featuredPosition: Int = 0,
+)
+
+@Serializable
+data class FeaturedPositionUpdate(
+    @SerialName("featured_position") val featuredPosition: Int,
+)
+
+@Serializable
+data class AppSettingDto(
+    val key: String,
+    val value: String = "",
+)
+
+@Serializable
+data class AppSettingUpdate(
+    val key: String,
+    val value: String,
 )
 
 @Serializable
@@ -214,6 +234,7 @@ fun WallpaperDto.toWallpaper(baseUrl: String): Wallpaper = Wallpaper(
     width = width,
     height = height,
     featured = featured,
+    featuredPosition = featuredPosition,
     createdAt = createdAt,
     tags = tags.map { it.trim() }.filter { it.isNotEmpty() },
     categoryId = categoryId,
@@ -222,6 +243,25 @@ fun WallpaperDto.toWallpaper(baseUrl: String): Wallpaper = Wallpaper(
     updatedAt = updatedAt,
     archivedAt = archivedAt.orEmpty(),
 )
+
+fun List<AppSettingDto>.toAppSettings(): AppSettings {
+    val values = associate { it.key to it.value }
+    return AppSettings(
+        tagline = values[AppSettingsKeyTagline].orEmpty(),
+        bannerText = values[AppSettingsKeyBannerText].orEmpty(),
+        bannerEnabled = values[AppSettingsKeyBannerEnabled].toBoolean(),
+    )
+}
+
+fun AppSettings.toAppSettingRows(): List<AppSettingUpdate> = listOf(
+    AppSettingUpdate(AppSettingsKeyTagline, tagline),
+    AppSettingUpdate(AppSettingsKeyBannerText, bannerText),
+    AppSettingUpdate(AppSettingsKeyBannerEnabled, bannerEnabled.toString()),
+)
+
+const val AppSettingsKeyTagline = "home_tagline"
+const val AppSettingsKeyBannerText = "home_banner_text"
+const val AppSettingsKeyBannerEnabled = "home_banner_enabled"
 
 fun CategoryDto.toCategory(): WallpaperCategory = WallpaperCategory(
     id = id,

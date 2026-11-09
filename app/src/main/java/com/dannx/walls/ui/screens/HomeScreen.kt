@@ -140,6 +140,9 @@ fun HomeScreen(
         precached = true
     }
 
+    val tagline = state.appSettings.tagline.ifBlank {
+        stringResource(R.string.home_tagline)
+    }
     val showHero = state.query.isBlank() && state.category == null && state.tag == null &&
         featured.isNotEmpty()
     val categories = remember(state.wallpapers, state.categories) {
@@ -222,7 +225,7 @@ fun HomeScreen(
                             },
                         )
                         Text(
-                            text = stringResource(R.string.home_tagline),
+                            text = tagline,
                             style = MaterialTheme.typography.bodyLarge,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
@@ -304,6 +307,23 @@ fun HomeScreen(
                     }
                 }
                 Spacer(Modifier.height(14.dp))
+            }
+        }
+
+        if (state.appSettings.bannerEnabled && state.appSettings.bannerText.isNotBlank()) {
+            item(span = { GridItemSpan(maxLineSpan) }) {
+                Surface(
+                    shape = MaterialTheme.shapes.large,
+                    color = MaterialTheme.colorScheme.tertiaryContainer,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text(
+                        text = state.appSettings.bannerText,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onTertiaryContainer,
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
+                    )
+                }
             }
         }
 

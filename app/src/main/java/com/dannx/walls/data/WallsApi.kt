@@ -110,6 +110,39 @@ class WallsApi(
         }
     }
 
+    override suspend fun loadAppSettings(): AppSettings = withContext(Dispatchers.IO) {
+        if (!isConfigured) {
+            return@withContext AppSettings()
+        }
+        getList<AppSettingDto>("app_settings?select=key,value").toAppSettings()
+    }
+
+    override suspend fun saveAppSettings(settings: AppSettings): AppSettings =
+        withContext(Dispatchers.IO) {
+            ensureConfigured()
+            val clean = settings.normalized()
+            val body = executeAuthorized(
+                build = { token ->
+                    Request.Builder()
+                        .url("$baseUrl/rest/v1/app_settings?on_conflict=key")
+                        .header("apikey", anonKey)
+                        .header("Authorization", "Bearer $token")
+                        .header(
+                            "Prefer",
+                            "resolution=merge-duplicates,return=representation",
+                        )
+                        .post(
+                            json.encodeToString(clean.toAppSettingRows())
+                                .toRequestBody(JSON_MEDIA),
+                        )
+                        .build()
+                },
+            )
+            runCatching {
+                json.decodeFromString<List<AppSettingDto>>(body).toAppSettings()
+            }.getOrDefault(clean).normalized()
+        }
+
     override suspend fun signIn(email: String, password: String): AdminSession =
         withContext(Dispatchers.IO) {
             ensureConfigured()
@@ -251,8 +284,10 @@ class WallsApi(
         title: String,
         category: String,
         categoryId: String?,
+        author: String,
         tags: List<String>,
         featured: Boolean,
+        featuredPosition: Int,
     ): Wallpaper = withContext(Dispatchers.IO) {
         ensureConfigured()
         val body = executeAuthorized(
@@ -268,8 +303,10 @@ class WallsApi(
                                 title = title.trim().ifBlank { "Sin título" }.take(120),
                                 category = category.trim().take(40).ifBlank { "Abstracto" },
                                 categoryId = categoryId,
+                                author = author.trim().ifBlank { "DannX" }.take(60),
                                 tags = cleanTags(tags),
                                 featured = featured,
+                                featuredPosition = featuredPosition.coerceAtLeast(0),
                             ),
                         ).toRequestBody(JSON_MEDIA),
                     )
@@ -279,6 +316,26 @@ class WallsApi(
         json.decodeFromString<List<WallpaperDto>>(body).firstOrNull()
             ?.toWallpaper(baseUrl)
             ?: throw DannXError.Parse("El servidor no devolvió el fondo actualizado.")
+    }
+
+    override suspend fun reorderFeatured(ids: List<String>) = withContext(Dispatchers.IO) {
+        ensureConfigured()
+        ids.distinct().forEachIndexed { index, wallpaperId ->
+            executeAuthorized(
+                build = { token ->
+                    Request.Builder()
+                        .url("$baseUrl/rest/v1/wallpapers?id=eq.$wallpaperId")
+                        .header("apikey", anonKey)
+                        .header("Authorization", "Bearer $token")
+                        .header("Prefer", "return=minimal")
+                        .patch(
+                            json.encodeToString(FeaturedPositionUpdate(index))
+                                .toRequestBody(JSON_MEDIA),
+                        )
+                        .build()
+                },
+            )
+        }
     }
 
     override suspend fun replaceWallpaperImage(

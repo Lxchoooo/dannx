@@ -117,6 +117,8 @@ private enum class StudioSection(
     CATEGORIES(R.string.studio_categories, Icons.Rounded.Category),
     TAGS(R.string.studio_section_tags, Icons.Rounded.LocalOffer),
     COLLECTIONS(R.string.studio_collections, Icons.Rounded.Folder),
+    CONTENT(R.string.studio_content, Icons.Rounded.Edit),
+    FEATURED(R.string.studio_featured_order, Icons.Rounded.Star),
 }
 
 private enum class StudioWallSort(@StringRes val labelRes: Int) {
@@ -139,11 +141,17 @@ fun StudioScreen(
     onUpdateCategory: (String, String) -> Unit = { _, _ -> },
     onMoveCategory: (String, Int) -> Unit = { _, _ -> },
     onDeleteCategory: (String, String?) -> Unit = { _, _ -> },
-    onUpdateWallpaper: (String, String, String, String?, List<String>, Boolean) -> Unit =
-        { _, _, _, _, _, _ -> },
+    onUpdateWallpaper: (String, String, String, String?, String, List<String>, Boolean) -> Unit =
+        { _, _, _, _, _, _, _ -> },
     onReplaceImage: (String, Uri) -> Unit = { _, _ -> },
     onArchiveWallpaper: (String, Boolean) -> Unit = { _, _ -> },
     onDeleteWallpaper: (String) -> Unit = {},
+    onBulkSetFeatured: (Set<String>, Boolean) -> Unit = { _, _ -> },
+    onBulkSetArchived: (Set<String>, Boolean) -> Unit = { _, _ -> },
+    onBulkDeleteWallpapers: (Set<String>) -> Unit = {},
+    onBulkSetCategory: (Set<String>, String) -> Unit = { _, _ -> },
+    onSaveAppSettings: (String, String, Boolean) -> Unit = { _, _, _ -> },
+    onMoveFeatured: (String, Int) -> Unit = { _, _ -> },
     onCreateCollection: (String, String, Boolean) -> Unit = { _, _, _ -> },
     onUpdateCollection: (String, String, String, Boolean) -> Unit = { _, _, _, _ -> },
     onDeleteCollection: (String) -> Unit = {},
@@ -175,6 +183,10 @@ fun StudioScreen(
     var wallsSortName by rememberSaveable { mutableStateOf(StudioWallSort.RECENT.name) }
     val wallsSort = StudioWallSort.entries.firstOrNull { it.name == wallsSortName }
         ?: StudioWallSort.RECENT
+    var selectionMode by remember { mutableStateOf(false) }
+    var selectedIds by remember { mutableStateOf<Set<String>>(emptySet()) }
+    var bulkCategoryDialog by remember { mutableStateOf(false) }
+    var bulkDeleteConfirm by remember { mutableStateOf(false) }
     var replacingWallpaperId by remember { mutableStateOf<String?>(null) }
     val replacePicker = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.PickVisualMedia(),
@@ -282,6 +294,9 @@ fun StudioScreen(
                                 wallsFeaturedOnly = true
                                 sectionName = StudioSection.WALLS.name
                             },
+                            onOpenFeaturedOrder = {
+                                sectionName = StudioSection.FEATURED.name
+                            },
                         )
                         Spacer(Modifier.height(14.dp))
                     }
@@ -354,10 +369,38 @@ fun StudioScreen(
                                 wallpaper.title,
                                 wallpaper.category,
                                 wallpaper.categoryId,
+                                wallpaper.author,
                                 wallpaper.tags,
                                 !wallpaper.featured,
                             )
                         },
+                        selectionMode = selectionMode,
+                        selectedIds = selectedIds,
+                        onToggleSelectionMode = {
+                            selectionMode = !selectionMode
+                            if (!selectionMode) selectedIds = emptySet()
+                        },
+                        onToggleSelected = { id ->
+                            selectedIds = if (id in selectedIds) {
+                                selectedIds - id
+                            } else {
+                                selectedIds + id
+                            }
+                        },
+                        onSelectAll = { ids -> selectedIds = ids },
+                        onClearSelection = { selectedIds = emptySet() },
+                        onBulkFeature = { value ->
+                            onBulkSetFeatured(selectedIds, value)
+                            selectionMode = false
+                            selectedIds = emptySet()
+                        },
+                        onBulkArchive = { value ->
+                            onBulkSetArchived(selectedIds, value)
+                            selectionMode = false
+                            selectedIds = emptySet()
+                        },
+                        onBulkCategory = { bulkCategoryDialog = true },
+                        onBulkDelete = { bulkDeleteConfirm = true },
                         onEdit = { editWallpaper = it },
                         onReplace = { wallpaper ->
                             replacingWallpaperId = wallpaper.id
@@ -403,6 +446,20 @@ fun StudioScreen(
                             onOpen = onOpenCollection,
                         )
                     }
+
+                    StudioSection.CONTENT -> item(key = "studio-content") {
+                        ContentPanel(
+                            state = state,
+                            onSave = onSaveAppSettings,
+                        )
+                    }
+
+                    StudioSection.FEATURED -> item(key = "studio-featured-order") {
+                        FeaturedOrderPanel(
+                            state = state,
+                            onMove = onMoveFeatured,
+                        )
+                    }
                 }
             }
         }
@@ -416,8 +473,16 @@ fun StudioScreen(
             wallpaper = wallpaper,
             state = state,
             onDismiss = { editWallpaper = null },
-            onSave = { title, category, categoryId, tags, featured ->
-                onUpdateWallpaper(wallpaper.id, title, category, categoryId, tags, featured)
+            onSave = { title, category, categoryId, author, tags, featured ->
+                onUpdateWallpaper(
+                    wallpaper.id,
+                    title,
+                    category,
+                    categoryId,
+                    author,
+                    tags,
+                    featured,
+                )
                 editWallpaper = null
             },
         )
@@ -510,6 +575,35 @@ fun StudioScreen(
             },
         )
     }
+    if (bulkCategoryDialog) {
+        BulkCategoryDialog(
+            categories = state.categories,
+            onDismiss = { bulkCategoryDialog = false },
+            onSelect = { categoryId ->
+                onBulkSetCategory(selectedIds, categoryId)
+                bulkCategoryDialog = false
+                selectionMode = false
+                selectedIds = emptySet()
+            },
+        )
+    }
+    if (bulkDeleteConfirm) {
+        ConfirmDialog(
+            title = stringResource(R.string.studio_bulk_delete_title),
+            text = stringResource(
+                R.string.studio_bulk_delete_body,
+                selectedIds.size,
+            ),
+            confirm = stringResource(R.string.studio_delete_confirm),
+            onDismiss = { bulkDeleteConfirm = false },
+            onConfirm = {
+                onBulkDeleteWallpapers(selectedIds)
+                bulkDeleteConfirm = false
+                selectionMode = false
+                selectedIds = emptySet()
+            },
+        )
+    }
     tagRename?.let { tag ->
         TagRenameDialog(
             tag = tag,
@@ -550,6 +644,7 @@ private fun StudioOverview(
     onOpenPublish: () -> Unit,
     onOpenArchived: () -> Unit,
     onOpenFeatured: () -> Unit,
+    onOpenFeaturedOrder: () -> Unit,
 ) {
     val archived = state.studioWallpapers.count { it.isArchived }
     val published = state.studioWallpapers.size - archived
@@ -614,6 +709,11 @@ private fun StudioOverview(
                         Text(stringResource(R.string.studio_featured))
                     }
                 }
+                item(key = "overview-featured-order") {
+                    TextButton(onClick = onOpenFeaturedOrder) {
+                        Text(stringResource(R.string.studio_order_featured))
+                    }
+                }
             }
         }
     }
@@ -644,6 +744,157 @@ private fun StudioStat(
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
+        }
+    }
+}
+
+@Composable
+private fun ContentPanel(
+    state: UiState,
+    onSave: (String, String, Boolean) -> Unit,
+) {
+    var tagline by rememberSaveable(state.appSettings.tagline) {
+        mutableStateOf(state.appSettings.tagline)
+    }
+    var bannerText by rememberSaveable(state.appSettings.bannerText) {
+        mutableStateOf(state.appSettings.bannerText)
+    }
+    var bannerEnabled by rememberSaveable(state.appSettings.bannerEnabled) {
+        mutableStateOf(state.appSettings.bannerEnabled)
+    }
+
+    Text(
+        stringResource(R.string.studio_content),
+        style = MaterialTheme.typography.headlineMedium,
+    )
+    Spacer(Modifier.height(6.dp))
+    Text(
+        text = stringResource(R.string.studio_content_help),
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+    )
+    Spacer(Modifier.height(14.dp))
+    OutlinedTextField(
+        value = tagline,
+        onValueChange = { tagline = it },
+        modifier = Modifier.fillMaxWidth(),
+        label = { Text(stringResource(R.string.studio_tagline)) },
+        supportingText = { Text(stringResource(R.string.studio_tagline_hint)) },
+        singleLine = true,
+        shape = MaterialTheme.shapes.medium,
+    )
+    Spacer(Modifier.height(12.dp))
+    OutlinedTextField(
+        value = bannerText,
+        onValueChange = { bannerText = it },
+        modifier = Modifier.fillMaxWidth(),
+        label = { Text(stringResource(R.string.studio_banner_text)) },
+        supportingText = { Text(stringResource(R.string.studio_banner_hint)) },
+        minLines = 3,
+        maxLines = 5,
+        shape = MaterialTheme.shapes.medium,
+    )
+    Spacer(Modifier.height(8.dp))
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Text(
+            text = stringResource(R.string.studio_banner_enabled),
+            modifier = Modifier.weight(1f),
+        )
+        Switch(
+            checked = bannerEnabled,
+            onCheckedChange = { bannerEnabled = it },
+        )
+    }
+    Spacer(Modifier.height(14.dp))
+    Button(
+        onClick = { onSave(tagline, bannerText, bannerEnabled) },
+        enabled = !state.studioBusy,
+        shape = CircleShape,
+    ) {
+        Text(stringResource(R.string.studio_save_content))
+    }
+}
+
+@Composable
+private fun FeaturedOrderPanel(
+    state: UiState,
+    onMove: (String, Int) -> Unit,
+) {
+    val featured = state.studioWallpapers
+        .filter { it.featured && !it.isArchived }
+        .sortedBy { it.featuredPosition }
+
+    Text(
+        stringResource(R.string.studio_featured_order),
+        style = MaterialTheme.typography.headlineMedium,
+    )
+    Spacer(Modifier.height(6.dp))
+    Text(
+        text = stringResource(R.string.studio_featured_order_help),
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+    )
+    Spacer(Modifier.height(12.dp))
+    if (featured.isEmpty()) {
+        Text(
+            text = stringResource(R.string.studio_featured_order_empty),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        return
+    }
+    featured.forEachIndexed { index, wallpaper ->
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 8.dp),
+            shape = MaterialTheme.shapes.large,
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+            ),
+        ) {
+            Row(
+                modifier = Modifier.padding(10.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = "${index + 1}",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.width(24.dp),
+                )
+                Column(Modifier.weight(1f)) {
+                    Text(
+                        text = wallpaper.title,
+                        style = MaterialTheme.typography.titleMedium,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                    Text(
+                        text = state.categoryNameFor(wallpaper),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                IconButton(
+                    onClick = { onMove(wallpaper.id, -1) },
+                    enabled = index > 0 && !state.studioBusy,
+                ) {
+                    Icon(
+                        Icons.Rounded.KeyboardArrowUp,
+                        contentDescription = stringResource(R.string.studio_move_up),
+                    )
+                }
+                IconButton(
+                    onClick = { onMove(wallpaper.id, 1) },
+                    enabled = index < featured.lastIndex && !state.studioBusy,
+                ) {
+                    Icon(
+                        Icons.Rounded.KeyboardArrowDown,
+                        contentDescription = stringResource(R.string.studio_move_down),
+                    )
+                }
+            }
         }
     }
 }
@@ -1041,6 +1292,16 @@ private fun LazyListScope.wallsPanel(
     onClearFilters: () -> Unit,
     onPublish: () -> Unit,
     onToggleFeatured: (Wallpaper) -> Unit,
+    selectionMode: Boolean,
+    selectedIds: Set<String>,
+    onToggleSelectionMode: () -> Unit,
+    onToggleSelected: (String) -> Unit,
+    onSelectAll: (Set<String>) -> Unit,
+    onClearSelection: () -> Unit,
+    onBulkFeature: (Boolean) -> Unit,
+    onBulkArchive: (Boolean) -> Unit,
+    onBulkCategory: () -> Unit,
+    onBulkDelete: () -> Unit,
     onEdit: (Wallpaper) -> Unit,
     onReplace: (Wallpaper) -> Unit,
     onArchive: (String, Boolean) -> Unit,
@@ -1107,6 +1368,16 @@ private fun LazyListScope.wallsPanel(
                     },
                     shape = CircleShape,
                 )
+                IconButton(onClick = onToggleSelectionMode) {
+                    Icon(
+                        imageVector = if (selectionMode) {
+                            Icons.Rounded.Close
+                        } else {
+                            Icons.Rounded.Check
+                        },
+                        contentDescription = stringResource(R.string.studio_select),
+                    )
+                }
             }
             Spacer(Modifier.height(4.dp))
             Text(
@@ -1134,6 +1405,102 @@ private fun LazyListScope.wallsPanel(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             Spacer(Modifier.height(12.dp))
+        }
+    }
+
+    if (selectionMode) {
+        item(key = "walls-bulk") {
+            Column {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = MaterialTheme.shapes.large,
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                    ),
+                ) {
+                    Column(Modifier.padding(12.dp)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                text = stringResource(
+                                    R.string.studio_selected_count,
+                                    selectedIds.size,
+                                ),
+                                style = MaterialTheme.typography.titleSmall,
+                                modifier = Modifier.weight(1f),
+                            )
+                            TextButton(onClick = onClearSelection) {
+                                Text(stringResource(R.string.studio_clear_selection))
+                            }
+                        }
+                        LazyRow(
+                            horizontalArrangement = Arrangement.spacedBy(4.dp),
+                        ) {
+                            item(key = "bulk-select-all") {
+                                TextButton(
+                                    onClick = { onSelectAll(walls.map { it.id }.toSet()) },
+                                    enabled = walls.isNotEmpty() && !state.studioBusy,
+                                ) {
+                                    Text(stringResource(R.string.studio_select_all))
+                                }
+                            }
+                            item(key = "bulk-feature") {
+                                TextButton(
+                                    onClick = { onBulkFeature(true) },
+                                    enabled = selectedIds.isNotEmpty() && !state.studioBusy,
+                                ) {
+                                    Text(stringResource(R.string.studio_feature))
+                                }
+                            }
+                            item(key = "bulk-unfeature") {
+                                TextButton(
+                                    onClick = { onBulkFeature(false) },
+                                    enabled = selectedIds.isNotEmpty() && !state.studioBusy,
+                                ) {
+                                    Text(stringResource(R.string.studio_unfeature))
+                                }
+                            }
+                            item(key = "bulk-archive") {
+                                TextButton(
+                                    onClick = { onBulkArchive(true) },
+                                    enabled = selectedIds.isNotEmpty() && !state.studioBusy,
+                                ) {
+                                    Text(stringResource(R.string.studio_archive))
+                                }
+                            }
+                            item(key = "bulk-restore") {
+                                TextButton(
+                                    onClick = { onBulkArchive(false) },
+                                    enabled = selectedIds.isNotEmpty() && !state.studioBusy,
+                                ) {
+                                    Text(stringResource(R.string.studio_restore))
+                                }
+                            }
+                            if (state.categories.isNotEmpty()) {
+                                item(key = "bulk-category") {
+                                    TextButton(
+                                        onClick = onBulkCategory,
+                                        enabled = selectedIds.isNotEmpty() && !state.studioBusy,
+                                    ) {
+                                        Text(stringResource(R.string.studio_bulk_category))
+                                    }
+                                }
+                            }
+                            item(key = "bulk-delete") {
+                                TextButton(
+                                    onClick = onBulkDelete,
+                                    enabled = selectedIds.isNotEmpty() && !state.studioBusy,
+                                ) {
+                                    Text(
+                                        text = stringResource(R.string.action_delete),
+                                        color = MaterialTheme.colorScheme.error,
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+                Spacer(Modifier.height(12.dp))
+            }
         }
     }
 
@@ -1276,6 +1643,9 @@ private fun LazyListScope.wallsPanel(
             StudioWallpaperRow(
                 wallpaper = wallpaper,
                 categoryName = state.categoryNameFor(wallpaper),
+                selectable = selectionMode,
+                selected = wallpaper.id in selectedIds,
+                onToggleSelected = { onToggleSelected(wallpaper.id) },
                 onEdit = { onEdit(wallpaper) },
                 onReplace = { onReplace(wallpaper) },
                 onToggleFeatured = { onToggleFeatured(wallpaper) },
@@ -1290,6 +1660,9 @@ private fun LazyListScope.wallsPanel(
 private fun StudioWallpaperRow(
     wallpaper: Wallpaper,
     categoryName: String,
+    selectable: Boolean,
+    selected: Boolean,
+    onToggleSelected: () -> Unit,
     onEdit: () -> Unit,
     onReplace: () -> Unit,
     onToggleFeatured: () -> Unit,
@@ -1299,16 +1672,27 @@ private fun StudioWallpaperRow(
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(bottom = 10.dp),
+            .padding(bottom = 10.dp)
+            .clickable(enabled = selectable, onClick = onToggleSelected),
         shape = MaterialTheme.shapes.large,
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+            containerColor = if (selected) {
+                MaterialTheme.colorScheme.secondaryContainer
+            } else {
+                MaterialTheme.colorScheme.surfaceContainerLow
+            },
         ),
     ) {
         Row(
             modifier = Modifier.padding(10.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
+            if (selectable) {
+                Checkbox(
+                    checked = selected,
+                    onCheckedChange = { onToggleSelected() },
+                )
+            }
             AsyncImage(
                 model = wallpaper.thumbnailUrl,
                 contentDescription = wallpaper.title,
@@ -1350,63 +1734,65 @@ private fun StudioWallpaperRow(
                     )
                 }
             }
-            Column(horizontalAlignment = Alignment.End) {
-                Row {
-                    IconButton(onClick = onEdit) {
-                        Icon(
-                            Icons.Rounded.Edit,
-                            contentDescription = stringResource(R.string.studio_edit),
-                        )
-                    }
-                    IconButton(onClick = onReplace) {
-                        Icon(
-                            Icons.Rounded.AddPhotoAlternate,
-                            contentDescription = stringResource(R.string.studio_image),
-                        )
-                    }
-                    IconButton(onClick = onToggleFeatured) {
-                        Icon(
-                            imageVector = if (wallpaper.featured) {
-                                Icons.Rounded.Star
-                            } else {
-                                Icons.Rounded.StarBorder
-                            },
-                            contentDescription = stringResource(
-                                if (wallpaper.featured) {
-                                    R.string.studio_unfeature
+            if (!selectable) {
+                Column(horizontalAlignment = Alignment.End) {
+                    Row {
+                        IconButton(onClick = onEdit) {
+                            Icon(
+                                Icons.Rounded.Edit,
+                                contentDescription = stringResource(R.string.studio_edit),
+                            )
+                        }
+                        IconButton(onClick = onReplace) {
+                            Icon(
+                                Icons.Rounded.AddPhotoAlternate,
+                                contentDescription = stringResource(R.string.studio_image),
+                            )
+                        }
+                        IconButton(onClick = onToggleFeatured) {
+                            Icon(
+                                imageVector = if (wallpaper.featured) {
+                                    Icons.Rounded.Star
                                 } else {
-                                    R.string.studio_feature
+                                    Icons.Rounded.StarBorder
                                 },
-                            ),
-                            tint = if (wallpaper.featured) {
-                                MaterialTheme.colorScheme.primary
-                            } else {
-                                MaterialTheme.colorScheme.onSurfaceVariant
-                            },
-                        )
+                                contentDescription = stringResource(
+                                    if (wallpaper.featured) {
+                                        R.string.studio_unfeature
+                                    } else {
+                                        R.string.studio_feature
+                                    },
+                                ),
+                                tint = if (wallpaper.featured) {
+                                    MaterialTheme.colorScheme.primary
+                                } else {
+                                    MaterialTheme.colorScheme.onSurfaceVariant
+                                },
+                            )
+                        }
                     }
-                }
-                Row {
-                    IconButton(onClick = onArchive) {
-                        Icon(
-                            imageVector = if (wallpaper.isArchived) {
-                                Icons.Rounded.Unarchive
-                            } else {
-                                Icons.Rounded.Archive
-                            },
-                            contentDescription = if (wallpaper.isArchived) {
-                                stringResource(R.string.studio_restore)
-                            } else {
-                                stringResource(R.string.studio_archive)
-                            },
-                        )
-                    }
-                    IconButton(onClick = onDelete) {
-                        Icon(
-                            Icons.Rounded.Delete,
-                            contentDescription = stringResource(R.string.action_delete),
-                            tint = MaterialTheme.colorScheme.error,
-                        )
+                    Row {
+                        IconButton(onClick = onArchive) {
+                            Icon(
+                                imageVector = if (wallpaper.isArchived) {
+                                    Icons.Rounded.Unarchive
+                                } else {
+                                    Icons.Rounded.Archive
+                                },
+                                contentDescription = if (wallpaper.isArchived) {
+                                    stringResource(R.string.studio_restore)
+                                } else {
+                                    stringResource(R.string.studio_archive)
+                                },
+                            )
+                        }
+                        IconButton(onClick = onDelete) {
+                            Icon(
+                                Icons.Rounded.Delete,
+                                contentDescription = stringResource(R.string.action_delete),
+                                tint = MaterialTheme.colorScheme.error,
+                            )
+                        }
                     }
                 }
             }
@@ -1741,13 +2127,58 @@ private fun CollectionsPanel(
 }
 
 @Composable
+private fun BulkCategoryDialog(
+    categories: List<WallpaperCategory>,
+    onDismiss: () -> Unit,
+    onSelect: (String) -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.studio_bulk_category_title)) },
+        text = {
+            Column(
+                modifier = Modifier
+                    .heightIn(max = 420.dp)
+                    .verticalScroll(rememberScrollState()),
+            ) {
+                categories.forEach { category ->
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { onSelect(category.id) }
+                            .padding(vertical = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Icon(
+                            Icons.Rounded.Category,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary,
+                        )
+                        Spacer(Modifier.width(12.dp))
+                        Text(category.name, style = MaterialTheme.typography.bodyLarge)
+                    }
+                    HorizontalDivider()
+                }
+            }
+        },
+        confirmButton = {},
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.action_cancel))
+            }
+        },
+    )
+}
+
+@Composable
 private fun WallpaperEditDialog(
     wallpaper: Wallpaper,
     state: UiState,
     onDismiss: () -> Unit,
-    onSave: (String, String, String?, List<String>, Boolean) -> Unit,
+    onSave: (String, String, String?, String, List<String>, Boolean) -> Unit,
 ) {
     var title by remember(wallpaper.id) { mutableStateOf(wallpaper.title) }
+    var author by remember(wallpaper.id) { mutableStateOf(wallpaper.author) }
     var tags by remember(wallpaper.id) { mutableStateOf(wallpaper.tags.joinToString(", ")) }
     var featured by remember(wallpaper.id) { mutableStateOf(wallpaper.featured) }
     var categoryId by remember(wallpaper.id) { mutableStateOf(wallpaper.categoryId) }
@@ -1779,6 +2210,14 @@ private fun WallpaperEditDialog(
                     value = title,
                     onValueChange = { title = it },
                     label = { Text(stringResource(R.string.field_title)) },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                Spacer(Modifier.height(10.dp))
+                OutlinedTextField(
+                    value = author,
+                    onValueChange = { author = it },
+                    label = { Text(stringResource(R.string.field_author)) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                 )
@@ -1826,6 +2265,7 @@ private fun WallpaperEditDialog(
                         title,
                         selected?.name ?: wallpaper.category,
                         selected?.id,
+                        author,
                         parseTags(tags),
                         featured,
                     )

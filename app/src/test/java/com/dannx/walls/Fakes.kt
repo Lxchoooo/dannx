@@ -2,6 +2,7 @@ package com.dannx.walls
 
 import android.net.Uri
 import com.dannx.walls.data.AdminSession
+import com.dannx.walls.data.AppSettings
 import com.dannx.walls.data.DannXError
 import com.dannx.walls.data.FeedCacheStore
 import com.dannx.walls.data.LocalStore
@@ -29,6 +30,8 @@ class FakeRepository : WallpapersRepository {
     var uploadWarning: String? = null
     var deletedCategory: Triple<String, String?, String?>? = null
     var lastCollectionWallpapers: Pair<String, List<String>>? = null
+    var appSettings = AppSettings()
+    var featuredOrder: List<String>? = null
 
     override val isConfigured: Boolean = true
 
@@ -53,6 +56,13 @@ class FakeRepository : WallpapersRepository {
             throw error
         }
         return collections
+    }
+
+    override suspend fun loadAppSettings(): AppSettings = appSettings
+
+    override suspend fun saveAppSettings(settings: AppSettings): AppSettings {
+        appSettings = settings.normalized()
+        return appSettings
     }
 
     override suspend fun signIn(email: String, password: String): AdminSession =
@@ -84,25 +94,36 @@ class FakeRepository : WallpapersRepository {
         title: String,
         category: String,
         categoryId: String?,
+        author: String,
         tags: List<String>,
         featured: Boolean,
-    ): Wallpaper = wallpapers.firstOrNull { it.id == wallpaperId }
+        featuredPosition: Int,
+    ): Wallpaper = (wallpapers + adminWallpapers.orEmpty())
+        .firstOrNull { it.id == wallpaperId }
         ?.copy(
             title = title,
             category = category,
             categoryId = categoryId,
+            author = author,
             tags = tags,
             featured = featured,
+            featuredPosition = featuredPosition,
         )
         ?: Wallpaper(
             id = wallpaperId,
             title = title,
             category = category,
             categoryId = categoryId,
+            author = author,
             imageUrl = "url",
             tags = tags,
             featured = featured,
+            featuredPosition = featuredPosition,
         )
+
+    override suspend fun reorderFeatured(ids: List<String>) {
+        featuredOrder = ids
+    }
 
     override suspend fun replaceWallpaperImage(wallpaper: Wallpaper, uri: Uri): Wallpaper =
         wallpaper.copy(imageUrl = uri.toString(), thumbUrl = "")
@@ -184,6 +205,7 @@ class FakeStore : LocalStore {
     private var collections: List<WallpaperCollection> = emptyList()
     private var storedSession: AdminSession? = null
     private var onboardingDone = false
+    private var storedAppSettings = AppSettings()
 
     override fun favorites(): Set<String> = favoriteIds.toSet()
 
@@ -204,6 +226,12 @@ class FakeStore : LocalStore {
 
     override fun clearRecentSearches() {
         storedSearches.clear()
+    }
+
+    override fun appSettings(): AppSettings = storedAppSettings
+
+    override fun saveAppSettings(settings: AppSettings) {
+        storedAppSettings = settings
     }
 
     override fun session(): AdminSession? = storedSession

@@ -70,6 +70,20 @@ class Prefs(context: Context) : LocalStore {
         prefs.edit { remove(KEY_RECENT_SEARCHES) }
     }
 
+    override fun appSettings(): AppSettings = AppSettings(
+        tagline = prefs.getString(KEY_APP_TAGLINE, null).orEmpty(),
+        bannerText = prefs.getString(KEY_APP_BANNER_TEXT, null).orEmpty(),
+        bannerEnabled = prefs.getBoolean(KEY_APP_BANNER_ENABLED, false),
+    )
+
+    override fun saveAppSettings(settings: AppSettings) {
+        prefs.edit {
+            putString(KEY_APP_TAGLINE, settings.tagline)
+            putString(KEY_APP_BANNER_TEXT, settings.bannerText)
+            putBoolean(KEY_APP_BANNER_ENABLED, settings.bannerEnabled)
+        }
+    }
+
     var accessToken: String?
         get() = sessionPrefs.getString(KEY_ACCESS_TOKEN, null)
         set(value) = sessionPrefs.edit { putString(KEY_ACCESS_TOKEN, value) }
@@ -156,6 +170,9 @@ class Prefs(context: Context) : LocalStore {
     private companion object {
         const val KEY_FAVORITES = "favorites"
         const val KEY_RECENT_SEARCHES = "recent_searches"
+        const val KEY_APP_TAGLINE = "app_tagline"
+        const val KEY_APP_BANNER_TEXT = "app_banner_text"
+        const val KEY_APP_BANNER_ENABLED = "app_banner_enabled"
         const val KEY_ACCESS_TOKEN = "access_token"
         const val KEY_REFRESH_TOKEN = "refresh_token"
         const val KEY_ADMIN_EMAIL = "admin_email"
