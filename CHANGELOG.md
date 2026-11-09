@@ -39,6 +39,8 @@ reservado a administradores y no se detalla en la documentación.
 - CI valida el `gradle-wrapper.jar` con `gradle/actions/wrapper-validation`.
 - Los releases publican `DannX.apk.sha256` junto al APK para verificar la
   descarga.
+- Los releases generan una atestación de procedencia (SLSA) para verificar que
+  el APK salió de este repositorio y de este workflow.
 - Se reparó la columna de privacidad de `collections`, que tenía un nombre
   corrupto: ahora es `is_public`. Crear y editar colecciones vuelve a funcionar
   y la privacidad se respeta en el servidor.

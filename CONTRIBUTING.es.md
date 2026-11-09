@@ -99,7 +99,8 @@ Los releases los publica el maintainer:
 
 - Un tag `vX.Y.Z` crea un release firmado y versionado.
 - Cada merge a `main` actualiza el release rolling `DannX · última versión`.
-- Las notas y el checksum del APK los genera CI.
+- Las notas y el checksum del APK los genera CI, junto con una atestación de
+  procedencia del build.
 
 ## Licencia
 

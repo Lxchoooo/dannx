@@ -121,6 +121,10 @@ collections, settings and the offline cache stay on your device. See
 Please do not open a public issue for vulnerabilities. Follow
 [SECURITY.md](SECURITY.md) to report them privately.
 
+Every release ships `DannX.apk.sha256` and a build provenance attestation. After
+downloading, verify the checksum with `sha256sum -c DannX.apk.sha256` or the
+attestation with `gh attestation verify DannX.apk --repo Lxchoooo/dannx`.
+
 ## 📄 License
 
 Released under the [MIT License](LICENSE). You can use, copy, modify and
