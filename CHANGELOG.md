@@ -11,12 +11,12 @@ reservado a administradores y no se detalla en la documentación.
 ### Actualizador y feed
 
 - Ajustes ahora consulta la última release de GitHub, descarga el APK en la
-  caché interna, verifica su SHA-256 y abre el instalador del sistema. Si el
-  usuario no habilitó apps desconocidas, se abre el ajuste correspondiente.
-- El feed pide páginas de 30 fondos con `limit`/`offset` y carga la siguiente al
-  llegar al final, sin duplicados.
-- Búsqueda, categoría y tag se resuelven en PostgREST. La búsqueda usa `ilike`
-  sobre título, categoría y autor; los tags se buscan por coincidencia exacta.
+  caché interna y abre el instalador del sistema. Si el usuario no habilitó
+  apps desconocidas, se abre el ajuste correspondiente.
+- El feed pide páginas de 30 fondos y carga la siguiente al llegar al final, sin
+  duplicados.
+- Búsqueda, categoría y tag se resuelven en el servidor. La búsqueda cubre
+  título, categoría y autor; los tags se buscan por coincidencia exacta.
 - La caché sigue limitada a 400 fondos y ahora se fusiona después de cada
   página. Solo se escribe cuando no hay filtros activos.
 - Un chip “Sorprendeme” abre un fondo aleatorio del resultado actual y evita

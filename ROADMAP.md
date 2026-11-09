@@ -15,8 +15,8 @@ maintain them.
 
 ## 1.6.0 (in progress)
 
-- [x] **In-app updater** that checks the latest GitHub release, downloads the
-      APK, verifies its SHA-256 checksum and opens the Android installer.
+- [x] **In-app updater** that checks the latest release, downloads the APK and
+      opens the Android installer.
 - [x] **Feed pagination and incremental cache**: 30 wallpapers per page,
       server-side search and filters, and a 400-wallpaper offline cache.
 - [x] **Surprise me** button for a random wallpaper from the current filter.

@@ -26,8 +26,7 @@ Las capturas del build actual viven en
 - Feed con destacados, búsqueda, categorías y tags libres.
 - Carga de a 30 fondos con búsqueda y filtros en el servidor; la caché offline
   guarda hasta 400.
-- Actualizador dentro de la app con verificación SHA-256 antes de abrir el
-  instalador.
+- Actualizador dentro de la app, con descarga e instalación desde Ajustes.
 - **Sorprendeme** abre un fondo aleatorio del filtro actual.
 - Colecciones que creás dentro de la app, públicas o privadas.
 - Vista de detalle con zoom con dos dedos, doble toque y desplazamiento.

@@ -26,7 +26,7 @@ Screenshots for the current build live in
 - Feed with featured wallpapers, search, categories and free-form tags.
 - Loads 30 wallpapers per page with server-side search and filters; the offline
   cache keeps up to 400.
-- In-app update check with SHA-256 verification before opening the installer.
+- In-app update check and install from Settings.
 - **Surprise me** opens a random wallpaper from the current filter.
 - Collections you create inside the app, public or private.
 - Detail view with pinch zoom, double-tap zoom and pan.

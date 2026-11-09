@@ -15,8 +15,8 @@ están probados y cuando hay tiempo para mantenerlos.
 
 ## 1.6.0 (en preparación)
 
-- [x] **Actualizador dentro de la app** que consulta la última release de
-      GitHub, descarga el APK, verifica su SHA-256 y abre el instalador.
+- [x] **Actualizador dentro de la app** que consulta la última release,
+      descarga el APK y abre el instalador.
 - [x] **Paginación y caché incremental**: 30 fondos por página, búsqueda y
       filtros en el servidor, y caché offline de 400 fondos.
 - [x] **Sorprendeme** para abrir un fondo aleatorio del filtro actual.
