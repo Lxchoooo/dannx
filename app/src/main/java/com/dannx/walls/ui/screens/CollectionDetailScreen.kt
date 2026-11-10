@@ -41,12 +41,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.dannx.walls.R
 import com.dannx.walls.UiState
 import com.dannx.walls.data.Wallpaper
 import com.dannx.walls.data.WallpaperCollection
+import com.dannx.walls.ui.components.EmptyState
 import com.dannx.walls.ui.components.WallpaperCard
 
 @Composable
@@ -59,6 +59,7 @@ fun CollectionDetailScreen(
     onToggleFavorite: (String) -> Unit,
     onRemove: (String) -> Unit,
     onDelete: () -> Unit,
+    onExplore: () -> Unit,
 ) {
     val total = collection.wallpaperIds.size
     val canEdit = state.canEdit(collection)
@@ -139,32 +140,13 @@ fun CollectionDetailScreen(
 
         if (items.isEmpty()) {
             item(span = { GridItemSpan(2) }) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 70.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                ) {
-                    Icon(
-                        imageVector = Icons.Rounded.CollectionsBookmark,
-                        contentDescription = null,
-                        modifier = Modifier.size(46.dp),
-                        tint = MaterialTheme.colorScheme.primary,
-                    )
-                    Spacer(Modifier.height(12.dp))
-                    Text(
-                        text = stringResource(R.string.collection_empty_title),
-                        style = MaterialTheme.typography.titleLarge,
-                        textAlign = TextAlign.Center,
-                    )
-                    Spacer(Modifier.height(4.dp))
-                    Text(
-                        text = stringResource(R.string.collection_empty_body),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        textAlign = TextAlign.Center,
-                    )
-                }
+                EmptyState(
+                    title = stringResource(R.string.collection_empty_title),
+                    message = stringResource(R.string.collection_empty_body),
+                    icon = Icons.Rounded.CollectionsBookmark,
+                    actionLabel = stringResource(R.string.state_explore),
+                    onAction = onExplore,
+                )
             }
         } else {
             itemsIndexed(

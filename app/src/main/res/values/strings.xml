@@ -45,8 +45,8 @@
     <string name="state_offline_detail">Sin conexión: descargar, aplicar y compartir necesitan internet.</string>
     <string name="state_empty_feed_title">Todavía no hay fondos</string>
     <string name="state_empty_feed_body">Apenas se publiquen, los vas a ver acá.</string>
-    <string name="state_empty_filter_title">Nada por aquí todavía</string>
-    <string name="state_empty_filter_body">Probá con otra búsqueda o categoría.</string>
+    <string name="state_empty_filter_title">Sin resultados</string>
+    <string name="state_empty_filter_body">Probá con otras palabras o quitá los filtros.</string>
     <string name="state_clear_filters">Limpiar filtros</string>
     <string name="state_empty_favorites_title">Tu colección empieza aquí</string>
     <string name="state_empty_favorites_body">Toca el corazón de cualquier fondo para guardarlo.</string>
@@ -143,7 +143,7 @@
     <string name="collection_delete">Eliminar colección</string>
     <string name="collection_delete_body">Se eliminará “%1$s” de tu perfil. Los fondos seguirán disponibles en el feed.</string>
     <string name="collection_empty_title">Esta colección está vacía</string>
-    <string name="collection_empty_body">Abre un fondo y toca el ícono de colecciones para agregarlo.</string>
+    <string name="collection_empty_body">Todavía no guardaste fondos acá. Abre uno y toca el ícono de colecciones para agregarlo.</string>
     <string name="collection_remove_item">Quitar de la colección</string>
     <plurals name="collection_meta">
         <item quantity="one">%1$d fondo · %2$s</item>

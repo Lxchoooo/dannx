@@ -414,6 +414,10 @@ private fun MainApp(
                                 viewModel.removeFromCollection(data.collection.id, wallpaperId)
                             },
                             onDelete = { viewModel.deleteCollection(data.collection.id) },
+                            onExplore = {
+                                viewModel.clearCollectionDetail()
+                                navController.navigateTopLevel("home")
+                            },
                         )
                     }
 

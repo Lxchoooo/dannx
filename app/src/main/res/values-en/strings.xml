@@ -45,8 +45,8 @@
     <string name="state_offline_detail">No connection: downloading, applying and sharing need internet.</string>
     <string name="state_empty_feed_title">No wallpapers yet</string>
     <string name="state_empty_feed_body">As soon as they are published, you will see them here.</string>
-    <string name="state_empty_filter_title">Nothing here yet</string>
-    <string name="state_empty_filter_body">Try another search or category.</string>
+    <string name="state_empty_filter_title">No results</string>
+    <string name="state_empty_filter_body">Try different words or clear the filters.</string>
     <string name="state_clear_filters">Clear filters</string>
     <string name="state_empty_favorites_title">Your collection starts here</string>
     <string name="state_empty_favorites_body">Tap the heart on any wallpaper to save it.</string>
@@ -143,7 +143,7 @@
     <string name="collection_delete">Delete collection</string>
     <string name="collection_delete_body">“%1$s” will be removed from your profile. The wallpapers will still be available in the feed.</string>
     <string name="collection_empty_title">This collection is empty</string>
-    <string name="collection_empty_body">Open a wallpaper and tap the collections icon to add it.</string>
+    <string name="collection_empty_body">You have not saved wallpapers here yet. Open one and tap the collections icon to add it.</string>
     <string name="collection_remove_item">Remove from collection</string>
     <plurals name="collection_meta">
         <item quantity="one">%1$d wallpaper · %2$s</item>

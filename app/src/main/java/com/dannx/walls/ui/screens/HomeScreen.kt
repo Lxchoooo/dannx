@@ -31,6 +31,7 @@ import androidx.compose.material.icons.rounded.Casino
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.Search
+import androidx.compose.material.icons.rounded.SearchOff
 import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material.icons.rounded.Wallpaper
 import androidx.compose.material3.AssistChip
@@ -571,6 +572,7 @@ fun HomeScreen(
                     EmptyState(
                         title = stringResource(R.string.state_empty_filter_title),
                         message = stringResource(R.string.state_empty_filter_body),
+                        icon = Icons.Rounded.SearchOff,
                         actionLabel = stringResource(R.string.state_clear_filters),
                         onAction = onClearFilters,
                     )
