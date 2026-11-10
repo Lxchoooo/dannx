@@ -189,8 +189,9 @@
     <string name="settings_open_editor">Abrir editor al aplicar</string>
     <string name="settings_open_editor_hint">Ajustá el encuadre y los colores antes de poner el fondo.</string>
     <string name="settings_storage">Almacenamiento</string>
-    <string name="settings_cache">Caché del feed</string>
-    <string name="settings_cache_hint">Se descarga de nuevo al actualizar.</string>
+    <string name="settings_cache">Caché</string>
+    <string name="settings_cache_hint">Guardamos el feed y las imágenes para que la app abra más rápido.</string>
+    <string name="settings_cache_used">Espacio usado: %1$s</string>
     <string name="settings_credits">Créditos</string>
     <string name="settings_github" translatable="false">GitHub</string>
     <string name="settings_version">Versión %1$s</string>

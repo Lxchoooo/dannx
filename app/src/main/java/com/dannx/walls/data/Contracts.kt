@@ -190,6 +190,8 @@ interface FeedCacheStore {
     suspend fun writeWallpapers(items: List<Wallpaper>)
     suspend fun readCollections(): List<WallpaperCollection>
     suspend fun writeCollections(items: List<WallpaperCollection>)
+    suspend fun sizeBytes(): Long
+    suspend fun clear()
 }
 
 /**

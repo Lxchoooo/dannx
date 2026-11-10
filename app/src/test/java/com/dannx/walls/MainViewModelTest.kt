@@ -791,6 +791,30 @@ class MainViewModelTest {
     }
 
     @Test
+    fun `cache size is refreshed and cleared`() = runTest(dispatcher) {
+        val appCache = FakeAppCache(bytes = 5L * 1024 * 1024)
+        val model = MainViewModel(
+            savedState = SavedStateHandle(),
+            prefs = store,
+            api = repository,
+            cache = cache,
+            appCache = appCache,
+            actions = actions,
+        )
+
+        model.refreshCacheSize()
+        advanceUntilIdle()
+        assertEquals(5L * 1024 * 1024, model.state.value.cacheSizeBytes)
+
+        model.clearCache()
+        assertEquals(0L, model.state.value.cacheSizeBytes)
+        advanceUntilIdle()
+
+        assertEquals(0L, model.state.value.cacheSizeBytes)
+        assertTrue(appCache.cleared)
+    }
+
+    @Test
     fun `bulk actions update several wallpapers at once`() = runTest(dispatcher) {
         store.saveSession("admin@test", "token", null, "u1")
         repository.session = AdminSession("admin@test", "token", "u1")

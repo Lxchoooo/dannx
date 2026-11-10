@@ -189,8 +189,9 @@
     <string name="settings_open_editor">Open editor when applying</string>
     <string name="settings_open_editor_hint">Adjust the crop and colors before setting the wallpaper.</string>
     <string name="settings_storage">Storage</string>
-    <string name="settings_cache">Feed cache</string>
-    <string name="settings_cache_hint">It downloads again when you refresh.</string>
+    <string name="settings_cache">Cache</string>
+    <string name="settings_cache_hint">We keep the feed and images so the app opens faster.</string>
+    <string name="settings_cache_used">Space used: %1$s</string>
     <string name="settings_credits">Credits</string>
     <string name="settings_version">Version %1$s</string>
     <string name="settings_made_by">Made by Lxchoooo.</string>

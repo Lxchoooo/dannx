@@ -2,6 +2,7 @@ package com.dannx.walls
 
 import android.net.Uri
 import com.dannx.walls.data.AdminSession
+import com.dannx.walls.data.AppCacheStore
 import com.dannx.walls.data.AppSettings
 import com.dannx.walls.data.DannXError
 import com.dannx.walls.data.FeedCacheStore
@@ -417,6 +418,24 @@ class FakeCache : FeedCacheStore {
 
     override suspend fun writeCollections(items: List<WallpaperCollection>) {
         collections = items
+    }
+
+    override suspend fun sizeBytes(): Long = 0L
+
+    override suspend fun clear() {
+        wallpapers = emptyList()
+        collections = emptyList()
+    }
+}
+
+class FakeAppCache(private var bytes: Long = 0L) : AppCacheStore {
+    var cleared = false
+
+    override suspend fun sizeBytes(): Long = bytes
+
+    override suspend fun clear() {
+        cleared = true
+        bytes = 0L
     }
 }
 

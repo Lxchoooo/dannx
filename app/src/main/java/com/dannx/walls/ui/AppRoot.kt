@@ -543,6 +543,7 @@ private fun MainApp(
                     onThemeModeChange = viewModel::setThemeMode,
                     onLiteModeChange = viewModel::setLiteMode,
                     onOpenEditorOnApplyChange = viewModel::setOpenEditorOnApply,
+                    onRefreshCacheSize = viewModel::refreshCacheSize,
                     onClearCache = viewModel::clearCache,
                     onOpenAbout = { navController.navigate("about") },
                     onResetAppearance = viewModel::resetAppearance,

@@ -56,6 +56,7 @@ import com.dannx.walls.ui.components.UpdateDialog
 import com.dannx.walls.ui.update.UpdateState
 import com.dannx.walls.ui.update.UpdateViewModel
 import com.dannx.walls.util.AppLinks
+import com.dannx.walls.util.formatFileSize
 import com.dannx.walls.util.openUrl
 
 /**
@@ -69,6 +70,7 @@ fun SettingsScreen(
     onThemeModeChange: (ThemeMode) -> Unit,
     onLiteModeChange: (Boolean) -> Unit,
     onOpenEditorOnApplyChange: (Boolean) -> Unit,
+    onRefreshCacheSize: () -> Unit,
     onClearCache: () -> Unit,
     onOpenAbout: () -> Unit,
     onResetAppearance: () -> Unit,
@@ -81,6 +83,7 @@ fun SettingsScreen(
     )
     val updateState by updateViewModel.state.collectAsStateWithLifecycle()
     LaunchedEffect(Unit) {
+        onRefreshCacheSize()
         updateViewModel.checkInBackground(BuildConfig.VERSION_NAME)
     }
     Scaffold(
@@ -235,6 +238,15 @@ fun SettingsScreen(
                             Text(stringResource(R.string.settings_cache), style = MaterialTheme.typography.titleMedium)
                             Text(
                                 stringResource(R.string.settings_cache_hint),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                            Spacer(Modifier.height(4.dp))
+                            Text(
+                                text = stringResource(
+                                    R.string.settings_cache_used,
+                                    formatFileSize(state.cacheSizeBytes),
+                                ),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )

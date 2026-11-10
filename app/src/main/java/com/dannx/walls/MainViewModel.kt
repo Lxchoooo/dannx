@@ -13,15 +13,19 @@ import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.dannx.walls.data.AdminSession
+import com.dannx.walls.data.AppCache
+import com.dannx.walls.data.AppCacheStore
 import com.dannx.walls.data.AppSettings
 import com.dannx.walls.data.AppearancePrefs
 import com.dannx.walls.data.AppearanceStore
 import com.dannx.walls.data.BulkTagLimit
 import com.dannx.walls.data.CategoryAll
 import com.dannx.walls.data.CategoryFeatured
+import com.dannx.walls.data.CoilImageCache
 import com.dannx.walls.data.CoilWallpaperColorResolver
 import com.dannx.walls.data.Connectivity
 import com.dannx.walls.data.DannXError
+import com.dannx.walls.data.EmptyAppCache
 import com.dannx.walls.data.FeedCache
 import com.dannx.walls.data.FeedCacheStore
 import com.dannx.walls.data.InMemoryAppearanceStore
@@ -193,6 +197,8 @@ data class UiState(
     val themeMode: ThemeMode = ThemeMode.SYSTEM,
     val liteMode: Boolean = false,
     val openEditorOnApply: Boolean = true,
+    /** Espacio que ocupa la caché local, en bytes. */
+    val cacheSizeBytes: Long = 0L,
     val appSettings: AppSettings = AppSettings(),
 ) {
     val filtered: List<Wallpaper>
@@ -270,6 +276,7 @@ class MainViewModel(
     private val prefs: LocalStore,
     private val api: WallpapersRepository,
     private val cache: FeedCacheStore,
+    private val appCache: AppCacheStore = EmptyAppCache,
     private val actions: WallpaperActions,
     private val isOnline: () -> Boolean = { true },
     private val appearance: AppearanceStore = InMemoryAppearanceStore(),
@@ -3155,15 +3162,42 @@ class MainViewModel(
         }
     }
 
-    /** Borra la copia local del feed; se vuelve a bajar al actualizar. */
-    fun clearCache() {
+    /** Recalcula el espacio que ocupa la caché local. */
+    fun refreshCacheSize() {
         viewModelScope.launch {
-            cache.writeWallpapers(emptyList())
-            cache.writeCollections(emptyList())
+            val size = readCacheSize()
+            _state.update { it.copy(cacheSizeBytes = size) }
+        }
+    }
+
+    /** Borra la copia local del feed y las imágenes descargadas. */
+    fun clearCache() {
+        _state.update { it.copy(cacheSizeBytes = 0L) }
+        viewModelScope.launch {
+            try {
+                appCache.clear()
+            } catch (error: CancellationException) {
+                throw error
+            } catch (_: Exception) {
+                // Si algo no se pudo borrar, el tamaño real se muestra abajo.
+            }
+            val size = readCacheSize()
             _state.update {
-                it.copy(message = strings.get(R.string.msg_cache_cleared), messageAction = null)
+                it.copy(
+                    cacheSizeBytes = size,
+                    message = strings.get(R.string.msg_cache_cleared),
+                    messageAction = null,
+                )
             }
         }
+    }
+
+    private suspend fun readCacheSize(): Long = try {
+        appCache.sizeBytes()
+    } catch (error: CancellationException) {
+        throw error
+    } catch (_: Exception) {
+        0L
     }
 
     /**
@@ -3406,11 +3440,13 @@ class MainViewModel(
         fun factory(application: Application): ViewModelProvider.Factory = viewModelFactory {
             initializer {
                 val prefs = Prefs(application)
+                val feedCache = FeedCache(application)
                 MainViewModel(
                     savedState = createSavedStateHandle(),
                     prefs = prefs,
                     api = WallsApi(application, prefs),
-                    cache = FeedCache(application),
+                    cache = feedCache,
+                    appCache = AppCache(feedCache, CoilImageCache(application)),
                     actions = WallpaperFiles(application),
                     isOnline = { Connectivity.isOnline(application) },
                     appearance = AppearancePrefs(application),

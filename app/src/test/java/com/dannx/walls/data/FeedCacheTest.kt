@@ -59,6 +59,21 @@ class FeedCacheTest {
         assertTrue(cache.readCollections().isEmpty())
     }
 
+    @Test
+    fun sizeCountsFilesAndClearRemovesThem() = runTest {
+        val cache = FeedCache(folder)
+        cache.writeWallpapers(listOf(wallpaper("w1")))
+        cache.writeCollections(listOf(collection("c1")))
+
+        assertTrue(cache.sizeBytes() > 0L)
+
+        cache.clear()
+
+        assertEquals(0L, cache.sizeBytes())
+        assertTrue(cache.readWallpapers().isEmpty())
+        assertTrue(cache.readCollections().isEmpty())
+    }
+
     private fun wallpaper(id: String) = Wallpaper(
         id = id,
         title = id,

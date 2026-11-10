@@ -61,6 +61,23 @@ class FeedCache internal constructor(private val folder: File) : FeedCacheStore 
         }
     }
 
+    override suspend fun sizeBytes(): Long = withContext(Dispatchers.IO) {
+        runCatching {
+            folder.walkTopDown()
+                .filter { it.isFile }
+                .sumOf { it.length() }
+        }.getOrDefault(0L)
+    }
+
+    override suspend fun clear() {
+        withContext(Dispatchers.IO) {
+            runCatching {
+                folder.deleteRecursively()
+                folder.mkdirs()
+            }
+        }
+    }
+
     /**
      * Escribe primero en un archivo temporal y lo reemplaza de una vez, para
      * que un cierre a mitad de escritura no deje el caché corrupto. El nombre
