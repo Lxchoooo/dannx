@@ -21,6 +21,11 @@ Screenshots for the current build live in
 [`docs/screenshots/`](docs/screenshots/). The 1.5.0 set is being refreshed for
 1.6.0; see the note there for how to take them.
 
+## 🎬 Demo
+
+Coming soon: a short demo GIF. It will live at
+[`docs/demo.gif`](docs/demo.gif) and be shown here once it is uploaded.
+
 ## ✨ Features
 
 - Feed with featured wallpapers, search, categories and free-form tags.

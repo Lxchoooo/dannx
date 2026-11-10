@@ -21,6 +21,11 @@ Las capturas del build actual viven en
 [`docs/screenshots/`](docs/screenshots/). El set de 1.5.0 se está renovando para
 1.6.0; mirá la nota de ahí para saber cómo tomarlas.
 
+## 🎬 Demo
+
+Próximamente: GIF de demo. Va a quedar en
+[`docs/demo.gif`](docs/demo.gif) y se muestra acá cuando esté subido.
+
 ## ✨ Características
 
 - Feed con destacados, búsqueda, categorías y tags libres.
