@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="560" viewBox="0 0 1200 560" role="img" aria-label="DannX demo placeholder">
+  <defs>
+    <linearGradient id="background" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#17151c"/>
+      <stop offset="1" stop-color="#2a2238"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#6750a4"/>
+      <stop offset="1" stop-color="#9a7bd4"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="560" fill="url(#background)"/>
+  <circle cx="1070" cy="70" r="230" fill="#6750a4" opacity="0.22"/>
+  <circle cx="120" cy="500" r="190" fill="#9a7bd4" opacity="0.14"/>
+  <circle cx="930" cy="470" r="90" fill="#e8def8" opacity="0.08"/>
+  <text x="600" y="238" text-anchor="middle" font-family="Inter, 'Segoe UI', Roboto, sans-serif" font-size="104" font-weight="700" fill="#ffffff">DannX</text>
+  <text x="600" y="302" text-anchor="middle" font-family="Inter, 'Segoe UI', Roboto, sans-serif" font-size="30" fill="#cac4d0">Wallpapers for Android</text>
+  <rect x="450" y="360" width="300" height="58" rx="29" fill="url(#accent)"/>
+  <text x="600" y="397" text-anchor="middle" font-family="Inter, 'Segoe UI', Roboto, sans-serif" font-size="22" font-weight="600" fill="#ffffff">Demo GIF coming soon</text>
+</svg>
