@@ -362,7 +362,10 @@ fun DetailScreen(
                     }
                 }
                 FilledIconButton(
-                    onClick = onToggleFavorite,
+                    onClick = {
+                        haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                        onToggleFavorite()
+                    },
                     colors = IconButtonDefaults.filledIconButtonColors(
                         containerColor = Color.Black.copy(alpha = 0.35f),
                         contentColor = if (isFavorite) accent else Color.White,

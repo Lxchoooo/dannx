@@ -162,6 +162,12 @@ data class UiState(
     val studioBusy: Boolean = false,
     /** Fondo elegido para hoy en este teléfono; null = tarjeta oculta. */
     val dailyWallpaper: Wallpaper? = null,
+    /**
+     * Contadores que avisan una sola vez que una acción terminó bien, para el
+     * tacto de confirmación (aplicar fondo, crear colección).
+     */
+    val applyTick: Int = 0,
+    val collectionCreatedTick: Int = 0,
     /** Edición en bloque de tags: (fondos editados, total). */
     val bulkProgress: Pair<Int, Int>? = null,
     val bulkResult: BulkTagResult? = null,
@@ -2612,6 +2618,7 @@ class MainViewModel(
                     collectionItems = updated,
                     collections = LoadState.Content(updated),
                     message = strings.get(R.string.msg_collection_created, cleanName),
+                    collectionCreatedTick = it.collectionCreatedTick + 1,
                 )
             }
             return
@@ -2625,6 +2632,7 @@ class MainViewModel(
                         collectionBusy = false,
                         collectionItems = listOf(created) + it.collectionItems,
                         message = strings.get(R.string.msg_collection_created, cleanName),
+                        collectionCreatedTick = it.collectionCreatedTick + 1,
                     )
                 }
             } catch (error: Exception) {
@@ -2918,7 +2926,11 @@ class MainViewModel(
                 if (token != actionToken) return@launch
                 finishAction(token)
                 _state.update {
-                    it.copy(message = appliedMessage(applied), messageAction = null)
+                    it.copy(
+                        message = appliedMessage(applied),
+                        messageAction = null,
+                        applyTick = it.applyTick + 1,
+                    )
                 }
             } catch (error: CancellationException) {
                 finishAction(token)
@@ -2942,7 +2954,13 @@ class MainViewModel(
      * mismo mensaje que el flujo anterior.
      */
     fun onWallpaperApplied(target: WallpaperTarget) {
-        _state.update { it.copy(message = appliedMessage(target), messageAction = null) }
+        _state.update {
+            it.copy(
+                message = appliedMessage(target),
+                messageAction = null,
+                applyTick = it.applyTick + 1,
+            )
+        }
     }
 
     private fun appliedMessage(target: WallpaperTarget): String = when (target) {

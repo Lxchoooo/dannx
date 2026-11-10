@@ -39,12 +39,16 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
@@ -140,6 +144,16 @@ private fun MainApp(
     val startDestination = if (startTab in topTabs.map { it.route }) startTab else "home"
     val liteMode = LocalLiteMode.current
     val snackbarHostState = remember { SnackbarHostState() }
+    val haptics = LocalHapticFeedback.current
+    // Tacto de confirmación cuando el fondo terminó de aplicarse. Se guarda el
+    // último aviso visto para que no vibre al volver a entrar a la pantalla.
+    var seenApplyTick by remember { mutableIntStateOf(state.applyTick) }
+    LaunchedEffect(state.applyTick) {
+        if (state.applyTick > seenApplyTick) {
+            haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+            seenApplyTick = state.applyTick
+        }
+    }
 
     val lifecycleOwner = LocalLifecycleOwner.current
     DisposableEffect(lifecycleOwner) {

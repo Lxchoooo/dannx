@@ -36,14 +36,18 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -73,6 +77,15 @@ fun CollectionsScreen(
     onRefresh: () -> Unit = {},
 ) {
     var showCreate by rememberSaveable { mutableStateOf(false) }
+    val haptics = LocalHapticFeedback.current
+    // Confirma con un toque suave cuando la colección quedó creada de verdad.
+    var seenCreatedTick by remember { mutableIntStateOf(state.collectionCreatedTick) }
+    LaunchedEffect(state.collectionCreatedTick) {
+        if (state.collectionCreatedTick > seenCreatedTick) {
+            haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+            seenCreatedTick = state.collectionCreatedTick
+        }
+    }
 
     LazyColumn(
         modifier = Modifier
