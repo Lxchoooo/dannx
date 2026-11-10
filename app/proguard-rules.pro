@@ -1,5 +1,11 @@
+# El catálogo se consume por REST con OkHttp; no hay SDK extra que conservar.
+# OkHttp y Coil incluyen sus propias reglas de consumer, así que no se
+# duplican acá.
 -keepattributes *Annotation*, InnerClasses
 -dontnote kotlinx.serialization.**
+
+# Serializadores generados por kotlinx.serialization.
+-keep,includedescriptorclasses class com.dannx.walls.**$$serializer { *; }
 
 -keepclassmembers class **$$serializer {
     *** descriptor;

@@ -3,7 +3,6 @@ package com.dannx.walls.ui.screens
 import android.app.Application
 import android.content.Context
 import android.content.Intent
-import android.net.Uri
 import android.os.Build
 import android.provider.Settings
 import androidx.annotation.RequiresApi
@@ -46,6 +45,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
+import androidx.core.net.toUri
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.dannx.walls.BuildConfig
@@ -353,7 +353,7 @@ private fun SectionTitle(text: String) {
 
 @RequiresApi(Build.VERSION_CODES.TIRAMISU)
 private fun openAppLanguageSettings(context: Context) {
-    val packageUri = Uri.parse("package:${context.packageName}")
+    val packageUri = "package:${context.packageName}".toUri()
     val localeIntent = Intent(Settings.ACTION_APP_LOCALE_SETTINGS, packageUri)
     if (runCatching { context.startActivity(localeIntent) }.isSuccess) return
     runCatching {

@@ -43,6 +43,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -90,7 +91,7 @@ private const val AUTHOR_MAX_LENGTH = 60
 private class TagDragState(private val info: () -> LazyListLayoutInfo?) {
     var dragging by mutableIntStateOf(-1)
         private set
-    var dragOffset by mutableStateOf(0f)
+    var dragOffset by mutableFloatStateOf(0f)
         private set
 
     fun start(index: Int) {

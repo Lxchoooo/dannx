@@ -376,9 +376,7 @@
     <string name="studio_walls">Fondos</string>
     <string name="studio_order">Orden</string>
     <string name="studio_open">Abrir</string>
-    <string name="studio_no_category">Sin categoría</string>
     <string name="studio_edit_wallpaper">Editar fondo</string>
-    <string name="studio_tags_comma">Separados por comas. El primero es el principal y aparece en Inicio.</string>
     <string name="studio_featured">Destacado</string>
     <string name="studio_rename_category">Renombrar categoría</string>
     <string name="studio_delete_category">Borrar categoría</string>

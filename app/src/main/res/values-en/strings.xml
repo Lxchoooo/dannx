@@ -375,9 +375,7 @@
     <string name="studio_walls">Wallpapers</string>
     <string name="studio_order">Order</string>
     <string name="studio_open">Open</string>
-    <string name="studio_no_category">Uncategorized</string>
     <string name="studio_edit_wallpaper">Edit wallpaper</string>
-    <string name="studio_tags_comma">Separated by commas. The first one is primary and appears in Home.</string>
     <string name="studio_featured">Featured</string>
     <string name="studio_rename_category">Rename category</string>
     <string name="studio_delete_category">Delete category</string>

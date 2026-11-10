@@ -246,10 +246,6 @@ data class UiState(
         isDemo || collection.isLocal ||
             (session != null && session.userId == collection.ownerId)
 
-    fun wallpapersIn(collection: WallpaperCollection): List<Wallpaper> {
-        val byId = wallpapers.associateBy { it.id }
-        return collection.wallpaperIds.mapNotNull { byId[it] }
-    }
 }
 
 /**

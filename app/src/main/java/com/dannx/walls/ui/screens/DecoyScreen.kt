@@ -21,7 +21,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -59,8 +60,8 @@ fun DecoyScreen(
     onOpenStudio: () -> Unit = {},
 ) {
     val haptics = LocalHapticFeedback.current
-    var consecutiveTaps by remember { mutableStateOf(0) }
-    var lastTapAt by remember { mutableStateOf(0L) }
+    var consecutiveTaps by remember { mutableIntStateOf(0) }
+    var lastTapAt by remember { mutableLongStateOf(0L) }
 
     Box(
         modifier = Modifier
