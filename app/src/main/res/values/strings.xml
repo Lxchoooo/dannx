@@ -107,6 +107,17 @@
     <string name="home_clear_search">Borrar búsqueda</string>
     <string name="home_recent_searches">Búsquedas recientes</string>
     <string name="home_clear_recent_searches">Borrar recientes</string>
+    <string name="home_color_filter_description">Filtrar por %1$s</string>
+    <string name="home_color_filter_red">Rojo</string>
+    <string name="home_color_filter_orange">Naranja</string>
+    <string name="home_color_filter_yellow">Amarillo</string>
+    <string name="home_color_filter_green">Verde</string>
+    <string name="home_color_filter_blue">Azul</string>
+    <string name="home_color_filter_purple">Morado</string>
+    <string name="home_color_filter_pink">Rosa</string>
+    <string name="home_color_filter_black">Negro</string>
+    <string name="home_color_filter_gray">Blanco o gris</string>
+    <string name="home_color_filtering">Analizando colores…</string>
     <string name="filter_all">Todos</string>
     <string name="filter_featured">Destacados</string>
     <string name="filter_all_tags">Todas</string>

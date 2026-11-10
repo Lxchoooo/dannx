@@ -97,6 +97,8 @@ import com.dannx.walls.data.CategoryAll
 import com.dannx.walls.data.CategoryFeatured
 import com.dannx.walls.data.DefaultCategories
 import com.dannx.walls.data.Wallpaper
+import com.dannx.walls.data.WallpaperColor
+import com.dannx.walls.ui.components.ColorFilterRow
 import com.dannx.walls.ui.components.EmptyState
 import com.dannx.walls.ui.components.ErrorState
 import com.dannx.walls.ui.components.FeaturedCard
@@ -125,6 +127,7 @@ fun HomeScreen(
     onQueryChange: (String) -> Unit,
     onCategoryChange: (String?) -> Unit,
     onTagChange: (String?) -> Unit,
+    onColorChange: (WallpaperColor?) -> Unit = {},
     onRefresh: () -> Unit,
     onOpenWallpaper: (Wallpaper) -> Unit,
     onRandomWallpaper: (Wallpaper) -> Unit = onOpenWallpaper,
@@ -133,6 +136,7 @@ fun HomeScreen(
         onQueryChange("")
         onCategoryChange(null)
         onTagChange(null)
+        onColorChange(null)
     },
     onOpenStudio: () -> Unit = {},
     onOpenSettings: () -> Unit = {},
@@ -145,7 +149,14 @@ fun HomeScreen(
     }
     val favorites = state.favorites
     val featured = remember(state.wallpapers) { state.featured }
-    val filtered = remember(state.wallpapers, state.query, state.category, state.tag) {
+    val filtered = remember(
+        state.wallpapers,
+        state.query,
+        state.category,
+        state.tag,
+        state.color,
+        state.wallpaperColors,
+    ) {
         state.filtered
     }
     val availableTags = remember(state.wallpapers) { state.availableTags }
@@ -198,7 +209,10 @@ fun HomeScreen(
         }
         precached = true
     }
-    LaunchedEffect(gridState, state.query, state.category, state.tag) {
+    LaunchedEffect(gridState, state.query, state.category, state.tag, state.color) {
+        // El filtro por color trabaja con lo que ya está cargado, así que no
+        // tiene sentido seguir pidiendo páginas mientras está activo.
+        if (state.color != null) return@LaunchedEffect
         snapshotFlow {
             val info = gridState.layoutInfo
             (info.visibleItemsInfo.lastOrNull()?.index ?: -1) to info.totalItemsCount
@@ -213,7 +227,8 @@ fun HomeScreen(
         stringResource(R.string.home_tagline)
     }
     /** Sin búsqueda ni filtro: condición para el hero y la tarjeta del día. */
-    val plainFeed = state.query.isBlank() && state.category == null && state.tag == null
+    val plainFeed = state.query.isBlank() && state.category == null &&
+        state.tag == null && state.color == null
     val showHero = plainFeed && featured.isNotEmpty()
     val categories = remember(state.wallpapers, state.categories) {
         val names = state.categories.map { it.name }
@@ -380,7 +395,33 @@ fun HomeScreen(
                             unfocusedBorderColor = MaterialTheme.colorScheme.surfaceContainerHigh,
                         ),
                     )
-                    if (state.query.isBlank() && state.recentSearches.isNotEmpty()) {
+                    Spacer(Modifier.height(12.dp))
+                    ColorFilterRow(
+                        selected = state.color,
+                        onSelect = { color ->
+                            onColorChange(if (state.color == color) null else color)
+                        },
+                    )
+                    if (state.color != null && state.classifyingColors) {
+                        Spacer(Modifier.height(6.dp))
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(14.dp),
+                                strokeWidth = 2.dp,
+                            )
+                            Spacer(Modifier.width(8.dp))
+                            Text(
+                                text = stringResource(R.string.home_color_filtering),
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                    }
+                    if (
+                        state.query.isBlank() &&
+                        state.recentSearches.isNotEmpty() &&
+                        state.color == null
+                    ) {
                         Spacer(Modifier.height(10.dp))
                         Row(
                             modifier = Modifier.fillMaxWidth(),
@@ -584,7 +625,7 @@ fun HomeScreen(
                     verticalAlignment = Alignment.Bottom,
                 ) {
                     Text(
-                        text = if (state.query.isBlank()) {
+                        text = if (state.query.isBlank() && state.color == null) {
                             stringResource(R.string.home_section_explore)
                         } else {
                             stringResource(R.string.home_section_results)
@@ -646,6 +687,26 @@ fun HomeScreen(
                     }
                 }
 
+                state.color != null && state.classifyingColors -> {
+                    item(span = { GridItemSpan(maxLineSpan) }) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 28.dp),
+                            horizontalArrangement = Arrangement.Center,
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            CircularProgressIndicator(Modifier.size(20.dp))
+                            Spacer(Modifier.width(10.dp))
+                            Text(
+                                text = stringResource(R.string.home_color_filtering),
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                    }
+                }
+
                 filtered.isEmpty() -> {
                     item(span = { GridItemSpan(maxLineSpan) }) {
                         EmptyState(
@@ -667,7 +728,7 @@ fun HomeScreen(
                 ) { index, wallpaper ->
                     StaggeredAppear(
                         index = index,
-                        resetKey = "${state.query}|${state.category}|${state.tag}",
+                        resetKey = "${state.query}|${state.category}|${state.tag}|${state.color?.key}",
                     ) {
                         WallpaperCard(
                             wallpaper = wallpaper,

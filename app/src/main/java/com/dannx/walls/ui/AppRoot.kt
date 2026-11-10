@@ -401,10 +401,12 @@ private fun MainApp(
                             viewModel.setQuery("")
                             viewModel.setCategory(null)
                             viewModel.setTag(null)
+                            viewModel.setColor(null)
                         },
                         onQueryChange = viewModel::setQuery,
                         onCategoryChange = viewModel::setCategory,
                         onTagChange = viewModel::setTag,
+                        onColorChange = viewModel::setColor,
                         onRefresh = viewModel::refresh,
                         onOpenWallpaper = { wallpaper ->
                             viewModel.rememberCurrentSearch()

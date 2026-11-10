@@ -16,8 +16,10 @@ import com.dannx.walls.data.AdminSession
 import com.dannx.walls.data.AppSettings
 import com.dannx.walls.data.AppearancePrefs
 import com.dannx.walls.data.AppearanceStore
+import com.dannx.walls.data.BulkTagLimit
 import com.dannx.walls.data.CategoryAll
 import com.dannx.walls.data.CategoryFeatured
+import com.dannx.walls.data.CoilWallpaperColorResolver
 import com.dannx.walls.data.Connectivity
 import com.dannx.walls.data.DannXError
 import com.dannx.walls.data.FeedCache
@@ -27,7 +29,6 @@ import com.dannx.walls.data.LOCAL_COLLECTION_OWNER
 import com.dannx.walls.data.LOCAL_COLLECTION_PREFIX
 import com.dannx.walls.data.LocalStore
 import com.dannx.walls.data.Prefs
-import com.dannx.walls.data.BulkTagLimit
 import com.dannx.walls.data.StudioEditException
 import com.dannx.walls.data.TagsLimit
 import com.dannx.walls.data.ThemeMode
@@ -35,6 +36,8 @@ import com.dannx.walls.data.Wallpaper
 import com.dannx.walls.data.WallpaperActions
 import com.dannx.walls.data.WallpaperCategory
 import com.dannx.walls.data.WallpaperCollection
+import com.dannx.walls.data.WallpaperColor
+import com.dannx.walls.data.WallpaperColorResolver
 import com.dannx.walls.data.WallpaperFilter
 import com.dannx.walls.data.WallpapersRepository
 import com.dannx.walls.data.WallsApi
@@ -51,6 +54,9 @@ import java.util.Locale
 import java.util.UUID
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -153,6 +159,11 @@ data class UiState(
     val recentSearches: List<String> = emptyList(),
     val category: String? = null,
     val tag: String? = null,
+    /** Color elegido en el feed; null = sin filtro de color. */
+    val color: WallpaperColor? = null,
+    /** Color resuelto por fondo. Se completa al usar el filtro. */
+    val wallpaperColors: Map<String, WallpaperColor> = emptyMap(),
+    val classifyingColors: Boolean = false,
     val favorites: Set<String> = emptySet(),
     val session: AdminSession? = null,
     val isDemo: Boolean = true,
@@ -187,6 +198,7 @@ data class UiState(
     val filtered: List<Wallpaper>
         get() = filterWallpapers(wallpapers, query, category, tag)
             .filterNot { it.isDeleted }
+            .filter { color == null || wallpaperColors[it.id] == color }
             .let { items ->
                 if (category == CategoryFeatured) {
                     items.sortedBy { it.featuredPosition }
@@ -263,6 +275,7 @@ class MainViewModel(
     private val appearance: AppearanceStore = InMemoryAppearanceStore(),
     private val strings: StringResolver = StringResolver { _, _ -> "" },
     private val now: () -> Long = System::currentTimeMillis,
+    private val colorResolver: WallpaperColorResolver? = null,
 ) : ViewModel() {
     private var actionJob: Job? = null
     private var actionToken = 0
@@ -270,6 +283,9 @@ class MainViewModel(
     private var loadMoreJob: Job? = null
     private var dailyJob: Job? = null
     private var filterJob: Job? = null
+    private var colorJob: Job? = null
+    /** null = se intentó y no se pudo resolver; evita reintentos infinitos. */
+    private val colorCache = mutableMapOf<String, WallpaperColor?>()
     private var lastFeedRefreshAt: Long? = null
     private var detailJob: Job? = null
     private var detailToken = 0
@@ -288,6 +304,7 @@ class MainViewModel(
             recentSearches = prefs.recentSearches(),
             category = savedState.get<String>(KEY_CATEGORY),
             tag = savedState.get<String>(KEY_TAG),
+            color = WallpaperColor.fromKey(savedState.get<String>(KEY_COLOR)),
             selectedUploadUri = savedState.get<String>(KEY_UPLOAD_URI),
             themeMode = appearance.themeMode(),
             liteMode = appearance.liteMode(),
@@ -346,6 +363,7 @@ class MainViewModel(
                 loadMoreError = null,
             )
         }
+        if (_state.value.color != null) classifyPendingColors()
     }
 
     /** Une las colecciones guardadas en el teléfono con las del servidor. */
@@ -490,6 +508,7 @@ class MainViewModel(
                     )
                 }
                 lastFeedRefreshAt = now()
+                if (_state.value.color != null) classifyPendingColors()
                 if (preserveFeed) {
                     pruneLocalCollections()
                 }
@@ -636,6 +655,9 @@ class MainViewModel(
      */
     fun loadMore() {
         val snapshot = _state.value
+        // El color se resuelve sobre lo que ya está cargado; pedir más páginas
+        // solo agregaría fondos sin clasificar.
+        if (snapshot.color != null) return
         if (!snapshot.hasMore || snapshot.loadingMore || snapshot.refreshing) return
         if (refreshJob?.isActive == true) return
         val filter = snapshot.feedFilter(offset = snapshot.wallpapers.size)
@@ -1088,6 +1110,69 @@ class MainViewModel(
         _state.update { it.copy(tag = value) }
         filterJob?.cancel()
         reloadFeed()
+    }
+
+    /**
+     * Activa o quita el filtro por color. La clasificación es perezosa: recién
+     * al elegir un color se analizan las miniaturas que falten.
+     */
+    fun setColor(value: WallpaperColor?) {
+        savedState[KEY_COLOR] = value?.key
+        if (value == _state.value.color) return
+        _state.update { it.copy(color = value) }
+        if (value == null) {
+            colorJob?.cancel()
+            colorJob = null
+            _state.update { it.copy(classifyingColors = false) }
+        } else {
+            classifyPendingColors()
+        }
+    }
+
+    private fun classifyPendingColors() {
+        val resolver = colorResolver ?: return
+        if (colorJob?.isActive == true) return
+        val pending = _state.value.wallpapers.filter { it.id !in colorCache }
+        if (pending.isEmpty()) return
+        colorJob = viewModelScope.launch {
+            _state.update { it.copy(classifyingColors = true) }
+            try {
+                pending.chunked(COLOR_BATCH_SIZE).forEach { chunk ->
+                    val resolved = coroutineScope {
+                        chunk.map { wallpaper ->
+                            async {
+                                val color = try {
+                                    resolver.resolve(wallpaper)
+                                } catch (error: CancellationException) {
+                                    throw error
+                                } catch (_: Exception) {
+                                    null
+                                }
+                                wallpaper.id to color
+                            }
+                        }.awaitAll()
+                    }
+                    var changed = false
+                    resolved.forEach { (id, color) ->
+                        colorCache[id] = color
+                        if (color != null) changed = true
+                    }
+                    if (changed) {
+                        _state.update {
+                            it.copy(wallpaperColors = resolvedColors())
+                        }
+                    }
+                }
+            } finally {
+                _state.update { it.copy(classifyingColors = false) }
+            }
+        }
+    }
+
+    private fun resolvedColors(): Map<String, WallpaperColor> = buildMap {
+        colorCache.forEach { (id, color) ->
+            if (color != null) put(id, color)
+        }
     }
 
     fun setSelectedUploadUri(uri: String?) {
@@ -3312,9 +3397,11 @@ class MainViewModel(
         private const val KEY_QUERY = "query"
         private const val KEY_CATEGORY = "category"
         private const val KEY_TAG = "tag"
+        private const val KEY_COLOR = "color"
         private const val KEY_UPLOAD_URI = "upload_uri"
         private const val SEARCH_DEBOUNCE_MS = 300L
         private const val REFRESH_WINDOW_MS = 5 * 60 * 1000L
+        private const val COLOR_BATCH_SIZE = 4
 
         fun factory(application: Application): ViewModelProvider.Factory = viewModelFactory {
             initializer {
@@ -3328,6 +3415,7 @@ class MainViewModel(
                     isOnline = { Connectivity.isOnline(application) },
                     appearance = AppearancePrefs(application),
                     strings = application.stringResolver(),
+                    colorResolver = CoilWallpaperColorResolver(application),
                 )
             }
         }
