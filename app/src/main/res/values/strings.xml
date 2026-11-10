@@ -106,6 +106,7 @@
     <string name="filter_featured">Destacados</string>
     <string name="filter_all_tags">Todas</string>
     <string name="home_tags_title">Etiquetas</string>
+    <string name="home_daily_title">Fondo del día</string>
     <string name="home_demo_hint">Guardá los fondos que más te gusten y creá tu primera colección.</string>
     <string name="home_section_explore">Explorar</string>
     <string name="home_section_results">Resultados</string>

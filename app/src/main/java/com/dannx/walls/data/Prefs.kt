@@ -164,6 +164,19 @@ class Prefs(context: Context) : LocalStore {
         prefs.edit { putBoolean(KEY_ONBOARDING_DONE, true) }
     }
 
+    override fun dailyWallpaper(date: String): Wallpaper? {
+        if (prefs.getString(KEY_DAILY_DATE, null) != date) return null
+        val raw = prefs.getString(KEY_DAILY_WALLPAPER, null) ?: return null
+        return runCatching { json.decodeFromString<Wallpaper>(raw) }.getOrNull()
+    }
+
+    override fun rememberDailyWallpaper(date: String, wallpaper: Wallpaper) {
+        prefs.edit {
+            putString(KEY_DAILY_DATE, date)
+            putString(KEY_DAILY_WALLPAPER, json.encodeToString(wallpaper))
+        }
+    }
+
     private fun downloads(): Map<String, String> {
         val raw = prefs.getString(KEY_DOWNLOADS, null) ?: return emptyMap()
         return runCatching {
@@ -184,6 +197,8 @@ class Prefs(context: Context) : LocalStore {
         const val KEY_LOCAL_COLLECTIONS = "local_collections"
         const val KEY_DOWNLOADS = "downloads"
         const val KEY_ONBOARDING_DONE = "onboarding_done"
+        const val KEY_DAILY_DATE = "daily_date"
+        const val KEY_DAILY_WALLPAPER = "daily_wallpaper"
         const val MAX_RECENT_SEARCHES = 8
     }
 }

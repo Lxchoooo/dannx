@@ -134,6 +134,15 @@ interface WallpapersRepository {
     suspend fun addTag(tag: String, wallpaperIds: List<String>)
     suspend fun renameTag(oldTag: String, newTag: String)
     suspend fun deleteTag(tag: String)
+
+    /**
+     * Fondo del día: cuenta los vivos (sin papelera ni archivados, aunque haya
+     * sesión de administración) con conteo exacto y devuelve el wallpaper de
+     * la posición pedida del listado por id ascendente. Devuelve null cuando
+     * conviene ocultar la tarjeta en silencio: falló el conteo, no hay vivos o
+     * cambió el total y no se pudo reajustar la posición.
+     */
+    suspend fun loadDailyWallpaper(positionSeed: Long): Wallpaper?
 }
 
 /**
@@ -163,6 +172,14 @@ interface LocalStore {
     fun rememberDownload(wallpaperId: String, uri: String)
     fun onboardingDone(): Boolean
     fun completeOnboarding()
+
+    /**
+     * Fondo del día elegido en este teléfono: solo responde si la fecha
+     * guardada coincide con la pedida, para que la tarjeta no cambie durante
+     * el día aunque el total de vivos cambie.
+     */
+    fun dailyWallpaper(date: String): Wallpaper?
+    fun rememberDailyWallpaper(date: String, wallpaper: Wallpaper)
 }
 
 /**

@@ -7,6 +7,7 @@ import com.dannx.walls.data.Wallpaper
 import com.dannx.walls.data.WallpaperCollection
 import com.dannx.walls.data.isLocal
 import com.dannx.walls.util.StringResolver
+import java.time.LocalDate
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.StandardTestDispatcher
@@ -1126,6 +1127,64 @@ class MainViewModelTest {
             assertTrue(model.state.value.wallpapers.none { it.id == "1" })
             assertTrue(repository.wallpapers.none { it.id == "1" })
         }
+
+    @Test
+    fun `the daily card keeps the phone choice for the whole day`() = runTest(dispatcher) {
+        store.saveSession("admin@test", "token", null, "u1")
+        repository.session = AdminSession("admin@test", "token", "u1")
+        repository.wallpapers = listOf(
+            wallpaper("1"),
+            wallpaper("2"),
+            wallpaper("3"),
+        )
+        val model = viewModel()
+        advanceUntilIdle()
+
+        val expectedIndex = (LocalDate.now().toEpochDay() % 3).toInt()
+        val expected = repository.wallpapers[expectedIndex]
+        assertEquals(expected.id, model.state.value.dailyWallpaper?.id)
+        assertEquals(
+            expected.id,
+            store.dailyWallpaper(LocalDate.now().toString())?.id,
+        )
+
+        // Aunque el vivo cambie después, la elección del día no se descarta.
+        repository.wallpapers = listOf(wallpaper("9"))
+        model.refresh()
+        advanceUntilIdle()
+
+        assertEquals(expected.id, model.state.value.dailyWallpaper?.id)
+    }
+
+    @Test
+    fun `when the daily count fails the card stays hidden in silence`() = runTest(dispatcher) {
+        store.saveSession("admin@test", "token", null, "u1")
+        repository.session = AdminSession("admin@test", "token", "u1")
+        repository.wallpapers = listOf(wallpaper("1"), wallpaper("2"))
+        repository.dailyCountFails = true
+        val model = viewModel()
+        advanceUntilIdle()
+
+        assertNull(model.state.value.dailyWallpaper)
+    }
+
+    @Test
+    fun `the daily card is not asked again after being resolved`() = runTest(dispatcher) {
+        store.saveSession("admin@test", "token", null, "u1")
+        repository.session = AdminSession("admin@test", "token", "u1")
+        repository.wallpapers = listOf(wallpaper("1"), wallpaper("2"))
+        val model = viewModel()
+        advanceUntilIdle()
+
+        val daily = model.state.value.dailyWallpaper
+        assertTrue(daily != null)
+
+        repository.dailyCountFails = true
+        model.refresh()
+        advanceUntilIdle()
+
+        assertEquals(daily?.id, model.state.value.dailyWallpaper?.id)
+    }
 
     private fun wallpaper(id: String) = Wallpaper(
         id = id,

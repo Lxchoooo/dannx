@@ -46,6 +46,7 @@ import com.dannx.walls.util.WallpaperTarget
 import com.dannx.walls.util.StringResolver
 import com.dannx.walls.util.get
 import com.dannx.walls.util.stringResolver
+import java.time.LocalDate
 import java.util.Locale
 import java.util.UUID
 import kotlinx.coroutines.CancellationException
@@ -159,6 +160,8 @@ data class UiState(
     val onboardingDone: Boolean = false,
     val collectionBusy: Boolean = false,
     val studioBusy: Boolean = false,
+    /** Fondo elegido para hoy en este teléfono; null = tarjeta oculta. */
+    val dailyWallpaper: Wallpaper? = null,
     /** Edición en bloque de tags: (fondos editados, total). */
     val bulkProgress: Pair<Int, Int>? = null,
     val bulkResult: BulkTagResult? = null,
@@ -263,6 +266,7 @@ class MainViewModel(
     private var actionToken = 0
     private var refreshJob: Job? = null
     private var loadMoreJob: Job? = null
+    private var dailyJob: Job? = null
     private var filterJob: Job? = null
     private var lastFeedRefreshAt: Long? = null
     private var detailJob: Job? = null
@@ -299,6 +303,7 @@ class MainViewModel(
             refresh()
         } else {
             viewModelScope.launch { loadFromCache() }
+            loadDailyWallpaper()
         }
     }
 
@@ -364,6 +369,7 @@ class MainViewModel(
      * cancela para no apilar estados ni requests.
      */
     fun refresh() {
+        loadDailyWallpaper()
         loadFeed(reloadMeta = true, preserveFeed = true)
     }
 
@@ -1806,6 +1812,31 @@ class MainViewModel(
                         failed = failed,
                     ),
                 )
+            }
+        }
+    }
+
+    /**
+     * Resuelve la tarjeta de fondo del día. Con elección del día ya guardada
+     * en el teléfono se muestra esa sin tocar el servidor; si no, se pide al
+     * catálogo la posición del día y se guarda acá. Todos los caminos que no
+     * encuentran fondo dejan la tarjeta oculta sin avisos.
+     */
+    fun loadDailyWallpaper() {
+        if (dailyJob?.isActive == true) return
+        _state.value.dailyWallpaper?.let { return }
+        dailyJob = viewModelScope.launch {
+            try {
+                val today = LocalDate.now().toString()
+                prefs.dailyWallpaper(today)?.let { saved ->
+                    _state.update { it.copy(dailyWallpaper = saved) }
+                    return@launch
+                }
+                val picked = api.loadDailyWallpaper(LocalDate.now().toEpochDay()) ?: return@launch
+                _state.update { it.copy(dailyWallpaper = picked) }
+                prefs.rememberDailyWallpaper(today, picked)
+            } catch (error: Exception) {
+                if (error is CancellationException) throw error
             }
         }
     }

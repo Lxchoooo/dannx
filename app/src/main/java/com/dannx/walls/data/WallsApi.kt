@@ -440,6 +440,71 @@ class WallsApi(
             ?: throw DannXError.Parse("El servidor no devolvió el fondo actualizado.")
     }
 
+    /**
+     * Fondo del día: conteo exacto de vivos con `Prefer: count=exact` y la
+     * posición pedida sobre el listado por id ascendente, filtrando siempre
+     * papelera y archivados aunque haya sesión de administración. Si cambia
+     * el total entre el conteo y la lectura, se reajusta la posición una sola
+     * vez; cualquier problema hace ocultar la tarjeta en silencio.
+     */
+    override suspend fun loadDailyWallpaper(positionSeed: Long): Wallpaper? =
+        withContext(Dispatchers.IO) {
+            if (!isConfigured) {
+                val items = DemoWallpapers.items.filter { !it.isArchived && !it.isDeleted }
+                if (items.isEmpty()) return@withContext null
+                return@withContext items[(positionSeed % items.size).toInt()]
+            }
+            try {
+                val total = dailyCount() ?: return@withContext null
+                if (total <= 0) return@withContext null
+                val first = dailyWallpaperAt((positionSeed % total).toInt())
+                if (first != null) return@withContext first
+                // El total ya no es el del conteo: una sola vez se vuelve a
+                // contar y se vuelve a pedir la posición.
+                val fresh = dailyCount() ?: return@withContext null
+                if (fresh <= 0) return@withContext null
+                dailyWallpaperAt((positionSeed % fresh).toInt())
+            } catch (error: CancellationException) {
+                throw error
+            } catch (error: Throwable) {
+                null
+            }
+        }
+
+    /** Cantidad exacta de wallpapers vivos; null si la lectura falla. */
+    private fun dailyCount(): Int? {
+        val request = Request.Builder()
+            .url("$baseUrl/rest/v1/wallpapers?select=id&deleted_at=is.null&archived_at=is.null")
+            .header("apikey", anonKey)
+            .header("Authorization", "Bearer $anonKey")
+            .header("Accept", "application/json")
+            .header("Prefer", "count=exact")
+            .build()
+        return client.newCall(request).execute().use { response ->
+            if (!response.isSuccessful) return@use null
+            val range = response.header("Content-Range") ?: return@use null
+            range.substringAfterLast('/').toIntOrNull()
+        }
+    }
+
+    /** El wallpaper vivo en esa posición del listado por id ascendente. */
+    private fun dailyWallpaperAt(offset: Int): Wallpaper? {
+        val path = "wallpapers?select=*&deleted_at=is.null&archived_at=is.null" +
+            "&order=id.asc&limit=1&offset=$offset"
+        val request = Request.Builder()
+            .url("$baseUrl/rest/v1/$path")
+            .header("apikey", anonKey)
+            .header("Authorization", "Bearer $anonKey")
+            .header("Accept", "application/json")
+            .build()
+        return client.newCall(request).execute().use { response ->
+            val body = response.body?.string().orEmpty()
+            if (!response.isSuccessful) return@use null
+            val items = runCatching { decodeList<WallpaperDto>(body) }.getOrNull() ?: return@use null
+            items.firstOrNull()?.toWallpaper(baseUrl)?.takeIf { it.storagePath.isNotBlank() }
+        }
+    }
+
     override suspend fun reorderFeatured(ids: List<String>) = withContext(Dispatchers.IO) {
         ensureConfigured()
         val clean = ids.distinct()

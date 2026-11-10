@@ -3,6 +3,7 @@ package com.dannx.walls.ui.screens
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -64,6 +65,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
@@ -90,6 +92,7 @@ import com.dannx.walls.ui.components.HeroHeight
 import com.dannx.walls.ui.components.FeedSkeleton
 import com.dannx.walls.ui.components.OfflineBanner
 import com.dannx.walls.ui.components.StaggeredAppear
+import com.dannx.walls.ui.components.StatefulImage
 import com.dannx.walls.ui.components.WallpaperCard
 import com.dannx.walls.ui.components.wallpaperThumbRequest
 import com.dannx.walls.ui.LocalWindowSizeClass
@@ -162,8 +165,9 @@ fun HomeScreen(
     val tagline = state.appSettings.tagline.ifBlank {
         stringResource(R.string.home_tagline)
     }
-    val showHero = state.query.isBlank() && state.category == null && state.tag == null &&
-        featured.isNotEmpty()
+    /** Sin búsqueda ni filtro: condición para el hero y la tarjeta del día. */
+    val plainFeed = state.query.isBlank() && state.category == null && state.tag == null
+    val showHero = plainFeed && featured.isNotEmpty()
     val categories = remember(state.wallpapers, state.categories) {
         val names = state.categories.map { it.name }
             .ifEmpty { state.categoryNames.ifEmpty { DefaultCategories } }
@@ -438,6 +442,18 @@ fun HomeScreen(
             }
         }
 
+        if (plainFeed && state.dailyWallpaper != null) {
+            item(key = "daily", span = { GridItemSpan(maxLineSpan) }) {
+                val daily = state.dailyWallpaper
+                if (daily != null) {
+                    HomeDailyCard(
+                        wallpaper = daily,
+                        onTap = { onOpenWallpaper(daily) },
+                    )
+                }
+            }
+        }
+
         if (state.isDemo) {
             item(span = { GridItemSpan(maxLineSpan) }) {
                 Surface(
@@ -628,6 +644,46 @@ fun HomeScreen(
                         )
                     }
                 }
+            }
+        }
+    }
+}
+
+/** Tarjeta del fondo del día: imagen a todo el ancho con su cartel. */
+@Composable
+private fun HomeDailyCard(
+    wallpaper: Wallpaper,
+    onTap: () -> Unit,
+) {
+    val context = LocalContext.current
+    Surface(
+        shape = MaterialTheme.shapes.large,
+        color = MaterialTheme.colorScheme.surfaceContainerLow,
+        onClick = onTap,
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Box {
+            StatefulImage(
+                model = remember(wallpaper.id) { wallpaperThumbRequest(context, wallpaper) },
+                contentDescription = wallpaper.title,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .aspectRatio(16f / 9f),
+            )
+            Surface(
+                shape = MaterialTheme.shapes.small,
+                color = MaterialTheme.colorScheme.primaryContainer,
+                modifier = Modifier
+                    .align(Alignment.BottomStart)
+                    .padding(12.dp),
+            ) {
+                Text(
+                    text = stringResource(R.string.home_daily_title),
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer,
+                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                )
             }
         }
     }

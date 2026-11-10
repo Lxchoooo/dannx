@@ -106,6 +106,7 @@
     <string name="filter_featured">Featured</string>
     <string name="filter_all_tags">All</string>
     <string name="home_tags_title">Tags</string>
+    <string name="home_daily_title">Wallpaper of the day</string>
     <string name="home_demo_hint">Save the wallpapers you like most and create your first collection.</string>
     <string name="home_section_explore">Explore</string>
     <string name="home_section_results">Results</string>

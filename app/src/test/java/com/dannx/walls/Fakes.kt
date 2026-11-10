@@ -31,6 +31,10 @@ class FakeRepository : WallpapersRepository {
     var failTimes: Int = 0
     /** Solo para updates de wallpaper: lanza failWith para esos ids. */
     var failUpdatesFor: Set<String> = emptySet()
+    /** Fondo del día: simula que el conteo falló (tarjeta oculta). */
+    var dailyCountFails: Boolean = false
+    /** Fondo del día: lista viva alternativa (simula total cambiado). */
+    var dailyWallpapersOverride: List<Wallpaper>? = null
     var loadCalls: Int = 0
     val pageFilters: MutableList<WallpaperFilter> = mutableListOf()
     var session: AdminSession? = null
@@ -99,6 +103,14 @@ class FakeRepository : WallpapersRepository {
     }
 
     override suspend fun loadAppSettings(): AppSettings = appSettings
+
+    override suspend fun loadDailyWallpaper(positionSeed: Long): Wallpaper? {
+        if (dailyCountFails) return null
+        val items = (dailyWallpapersOverride ?: wallpapers)
+            .filter { !it.isArchived && !it.isDeleted }
+        if (items.isEmpty()) return null
+        return items[(positionSeed % items.size).toInt()]
+    }
 
     override suspend fun saveAppSettings(settings: AppSettings): AppSettings {
         appSettings = settings.normalized()
@@ -377,6 +389,17 @@ class FakeStore : LocalStore {
 
     override fun completeOnboarding() {
         onboardingDone = true
+    }
+
+    private var dailyDate: String? = null
+    private var dailySaved: Wallpaper? = null
+
+    override fun dailyWallpaper(date: String): Wallpaper? =
+        dailySaved?.takeIf { dailyDate == date }
+
+    override fun rememberDailyWallpaper(date: String, wallpaper: Wallpaper) {
+        dailyDate = date
+        dailySaved = wallpaper
     }
 }
 
