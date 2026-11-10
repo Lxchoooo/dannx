@@ -97,7 +97,7 @@ fun FeedSkeleton(modifier: Modifier = Modifier) {
 @Composable
 fun EmptyState(
     title: String,
-    message: String,
+    message: String?,
     modifier: Modifier = Modifier,
     icon: ImageVector = Icons.Rounded.Wallpaper,
     actionLabel: String? = null,
@@ -121,13 +121,15 @@ fun EmptyState(
             style = MaterialTheme.typography.titleLarge,
             textAlign = TextAlign.Center,
         )
-        Spacer(Modifier.height(6.dp))
-        Text(
-            text = message,
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            textAlign = TextAlign.Center,
-        )
+        if (message != null) {
+            Spacer(Modifier.height(6.dp))
+            Text(
+                text = message,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center,
+            )
+        }
         if (actionLabel != null && onAction != null) {
             Spacer(Modifier.height(16.dp))
             Button(onClick = onAction) {

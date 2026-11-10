@@ -141,7 +141,11 @@ fun CollectionDetailScreen(
             item(span = { GridItemSpan(2) }) {
                 EmptyState(
                     title = stringResource(R.string.collection_empty_title),
-                    message = stringResource(R.string.collection_empty_body),
+                    message = if (collection.isPublic) {
+                        null
+                    } else {
+                        stringResource(R.string.collection_empty_body)
+                    },
                     icon = Icons.Rounded.CollectionsBookmark,
                     actionLabel = stringResource(R.string.state_explore),
                     onAction = onExplore,
