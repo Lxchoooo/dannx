@@ -224,8 +224,9 @@ fun DetailScreen(
             wallpaper.id,
             wallpaper.imageUrl,
             wallpaper.thumbnailUrl,
+            liteMode,
         ) {
-            wallpaperThumbRequest(context, wallpaper)
+            wallpaperThumbRequest(context, wallpaper, liteMode)
                 .newBuilder()
                 .networkCachePolicy(CachePolicy.DISABLED)
                 .build()
@@ -234,10 +235,17 @@ fun DetailScreen(
             wallpaper.id,
             wallpaper.imageUrl,
             windowSize,
+            liteMode,
         ) {
+            // En lite la imagen de pantalla completa se decodifica más chica:
+            // pesa la mitad en memoria a costa de algo de nitidez al hacer zoom.
+            val scale = if (liteMode) 0.7f else 1f
             ImageRequest.Builder(context)
                 .data(wallpaper.imageUrl)
-                .size(windowSize.width, windowSize.height)
+                .size(
+                    (windowSize.width * scale).toInt(),
+                    (windowSize.height * scale).toInt(),
+                )
                 .build()
         }
         Box(

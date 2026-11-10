@@ -15,6 +15,7 @@ import androidx.core.graphics.get
 import coil.imageLoader
 import coil.request.ImageRequest
 import coil.request.SuccessResult
+import com.dannx.walls.ui.theme.LocalLiteMode
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlin.math.max
@@ -26,8 +27,12 @@ import kotlin.math.max
 @Composable
 fun rememberWallpaperAccent(url: String, fallback: Color): Color {
     val context = LocalContext.current
+    val lite = LocalLiteMode.current
     var accent by remember(url) { mutableStateOf(fallback) }
-    LaunchedEffect(url) {
+    LaunchedEffect(url, lite) {
+        // En lite no se decodifica la imagen solo para sacar un color: es
+        // trabajo y memoria que en gama baja pesa más que el detalle visual.
+        if (lite) return@LaunchedEffect
         accent = extractAccent(context, url) ?: fallback
     }
     return accent

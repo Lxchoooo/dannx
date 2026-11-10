@@ -63,6 +63,7 @@ import com.dannx.walls.ui.components.ErrorState
 import com.dannx.walls.ui.components.FeedSkeleton
 import com.dannx.walls.ui.components.StatefulImage
 import com.dannx.walls.ui.components.screenImageSize
+import com.dannx.walls.ui.theme.LocalLiteMode
 
 @Composable
 fun CollectionsScreen(
@@ -186,11 +187,15 @@ private fun CollectionCard(
         ) {
             if (cover != null) {
                 val context = LocalContext.current
+                val lite = LocalLiteMode.current
                 val coverSize = screenImageSize(190.dp)
-                val coverRequest = remember(cover.id, cover.thumbnailUrl, coverSize) {
+                val coverRequest = remember(cover.id, cover.thumbnailUrl, coverSize, lite) {
+                    // En lite la portada va un poco más chica: se estira igual
+                    // al ancho de la tarjeta sin que se note en un uso liviano.
+                    val scale = if (lite) 0.7f else 1f
                     ImageRequest.Builder(context)
                         .data(cover.thumbnailUrl)
-                        .size(coverSize.width, coverSize.height)
+                        .size((coverSize.width * scale).toInt(), (coverSize.height * scale).toInt())
                         .build()
                 }
                 StatefulImage(

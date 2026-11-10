@@ -64,6 +64,13 @@ internal const val ThumbWidth = 540
 internal const val ThumbHeight = 960
 
 /**
+ * Modo lite: una miniatura de 360x640 en RGB_565 ocupa ~4 veces menos memoria
+ * que la de 540x960 en ARGB_8888, que es lo que más pesa en gama baja.
+ */
+private const val LiteThumbWidth = 360
+private const val LiteThumbHeight = 640
+
+/**
  * Altura del hero en el feed. Se comparte con la pantalla que lo dibuja para
  * pedir la imagen con el tamaño exacto y no decodificar de más.
  */
@@ -91,15 +98,25 @@ internal fun screenImageSize(height: androidx.compose.ui.unit.Dp): IntSize {
  */
 private const val USE_RGB565_FOR_THUMBS = false
 
-internal fun wallpaperThumbRequest(context: Context, wallpaper: Wallpaper): ImageRequest =
+internal fun wallpaperThumbRequest(
+    context: Context,
+    wallpaper: Wallpaper,
+    lite: Boolean = false,
+): ImageRequest =
     ImageRequest.Builder(context)
         .data(wallpaper.thumbnailUrl)
-        .size(ThumbWidth, ThumbHeight)
+        .size(
+            if (lite) LiteThumbWidth else ThumbWidth,
+            if (lite) LiteThumbHeight else ThumbHeight,
+        )
         // La grilla y el Detalle comparten esta clave para que la miniatura
-        // cacheada se pueda mostrar al instante como imagen provisoria.
-        .memoryCacheKey("dannx-thumb:${wallpaper.id}")
+        // cacheada se pueda mostrar al instante como imagen provisoria. En
+        // lite va aparte: así al cambiar de modo no se reusan las pesadas.
+        .memoryCacheKey(
+            if (lite) "dannx-thumb-lite:${wallpaper.id}" else "dannx-thumb:${wallpaper.id}",
+        )
         .apply {
-            if (USE_RGB565_FOR_THUMBS) {
+            if (lite || USE_RGB565_FOR_THUMBS) {
                 allowRgb565(true)
             }
         }
@@ -314,15 +331,22 @@ fun FeaturedCard(
 @Composable
 private fun WallpaperImage(wallpaper: Wallpaper, isHero: Boolean, heroHeight: Dp = HeroHeight) {
     val context = LocalContext.current
+    val lite = LocalLiteMode.current
     val heroSize = if (isHero) screenImageSize(heroHeight) else null
-    val model = remember(wallpaper.id, wallpaper.thumbnailUrl, isHero, heroSize) {
+    val model = remember(wallpaper.id, wallpaper.thumbnailUrl, isHero, heroSize, lite) {
         if (heroSize != null) {
+            // El hero es la imagen más grande del feed: en lite se pide más
+            // chica y en RGB_565, que es donde más se nota el ahorro.
+            val scale = if (lite) 0.6f else 1f
             ImageRequest.Builder(context)
                 .data(wallpaper.imageUrl)
-                .size(heroSize.width, heroSize.height)
+                .size((heroSize.width * scale).toInt(), (heroSize.height * scale).toInt())
+                .apply {
+                    if (lite) allowRgb565(true)
+                }
                 .build()
         } else {
-            wallpaperThumbRequest(context, wallpaper)
+            wallpaperThumbRequest(context, wallpaper, lite)
         }
     }
     StatefulImage(

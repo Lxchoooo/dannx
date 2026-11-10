@@ -95,6 +95,7 @@ import com.dannx.walls.ui.components.StaggeredAppear
 import com.dannx.walls.ui.components.StatefulImage
 import com.dannx.walls.ui.components.WallpaperCard
 import com.dannx.walls.ui.components.wallpaperThumbRequest
+import com.dannx.walls.ui.theme.LocalLiteMode
 import com.dannx.walls.ui.LocalWindowSizeClass
 import kotlin.math.min
 import kotlinx.coroutines.delay
@@ -136,13 +137,20 @@ fun HomeScreen(
     }
     val availableTags = remember(state.wallpapers) { state.availableTags }
     val context = LocalContext.current
+    val liteMode = LocalLiteMode.current
     val gridState = rememberLazyGridState()
     var lastRandomId by rememberSaveable { mutableStateOf<String?>(null) }
     // Solo se precargan las miniaturas una vez por carga del feed: al volver a
     // la pestaña no se relanza, para no competir con las imagenes visibles.
+    // En modo lite no se precarga nada: el ahorro de datos y memoria es el
+    // punto del modo.
     var precached by rememberSaveable(state.wallpapers) { mutableStateOf(false) }
-    LaunchedEffect(state.wallpapers) {
+    LaunchedEffect(state.wallpapers, liteMode) {
         if (precached) return@LaunchedEffect
+        if (liteMode) {
+            precached = true
+            return@LaunchedEffect
+        }
         delay(300)
         state.wallpapers.take(12).forEach { wallpaper ->
             context.imageLoader.enqueue(
@@ -656,6 +664,7 @@ private fun HomeDailyCard(
     onTap: () -> Unit,
 ) {
     val context = LocalContext.current
+    val lite = LocalLiteMode.current
     Surface(
         shape = MaterialTheme.shapes.large,
         color = MaterialTheme.colorScheme.surfaceContainerLow,
@@ -664,7 +673,9 @@ private fun HomeDailyCard(
     ) {
         Box {
             StatefulImage(
-                model = remember(wallpaper.id) { wallpaperThumbRequest(context, wallpaper) },
+                model = remember(wallpaper.id, lite) {
+                    wallpaperThumbRequest(context, wallpaper, lite)
+                },
                 contentDescription = wallpaper.title,
                 contentScale = ContentScale.Crop,
                 modifier = Modifier

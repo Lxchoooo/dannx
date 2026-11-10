@@ -21,6 +21,7 @@ import androidx.compose.ui.unit.dp
 import coil.compose.SubcomposeAsyncImage
 import coil.request.ImageRequest
 import com.dannx.walls.R
+import com.dannx.walls.ui.theme.LocalLiteMode
 
 /**
  * Imagen remota con estados explícitos: un indicador pequeño mientras carga y
@@ -36,12 +37,14 @@ fun StatefulImage(
     contentScale: ContentScale = ContentScale.Crop,
 ) {
     val context = LocalContext.current
-    val request = remember(model) {
+    val lite = LocalLiteMode.current
+    val fade = if (lite) 0 else 220
+    val request = remember(model, lite) {
         when (model) {
-            is ImageRequest -> model.newBuilder().crossfade(220).build()
+            is ImageRequest -> model.newBuilder().crossfade(fade).build()
             else -> ImageRequest.Builder(context)
                 .data(model)
-                .crossfade(220)
+                .crossfade(fade)
                 .build()
         }
     }

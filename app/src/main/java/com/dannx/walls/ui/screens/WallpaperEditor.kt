@@ -73,6 +73,7 @@ import com.dannx.walls.data.WallpaperCategory
 import com.dannx.walls.kind
 import com.dannx.walls.ui.components.StatefulImage
 import com.dannx.walls.ui.components.wallpaperThumbRequest
+import com.dannx.walls.ui.theme.LocalLiteMode
 import java.util.Locale
 import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.coroutines.launch
@@ -382,6 +383,7 @@ internal fun WallpaperEditorSheet(
 @Composable
 private fun EditorThumb(wallpaper: Wallpaper) {
     val context = LocalContext.current
+    val lite = LocalLiteMode.current
     val description = stringResource(R.string.editor_thumb_description)
     Box(
         modifier = Modifier
@@ -392,7 +394,9 @@ private fun EditorThumb(wallpaper: Wallpaper) {
             .semantics { contentDescription = description },
     ) {
         StatefulImage(
-            model = remember(wallpaper.id) { wallpaperThumbRequest(context, wallpaper) },
+            model = remember(wallpaper.id, lite) {
+                wallpaperThumbRequest(context, wallpaper, lite)
+            },
             contentDescription = null,
             contentScale = ContentScale.Crop,
             modifier = Modifier
