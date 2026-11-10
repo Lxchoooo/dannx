@@ -165,6 +165,8 @@ internal fun WallpaperEditorSheet(
 
     // Mensajes mapeados antes, porque el guardado corre fuera de la
     // composición y ahí no se pueden resolver recursos.
+    val untitledText = stringResource(R.string.studio_untitled)
+    val fallbackAuthor = stringResource(R.string.app_name)
     val offlineText = stringResource(R.string.error_offline)
     val serverText = stringResource(R.string.error_server)
     val sessionText = stringResource(R.string.error_session)
@@ -216,10 +218,10 @@ internal fun WallpaperEditorSheet(
                 val finalName = match?.name ?: typed
                 onSave(
                     wallpaper.id,
-                    title.trim().take(TITLE_MAX_LENGTH).ifBlank { "Sin título" },
+                    title.trim().take(TITLE_MAX_LENGTH).ifBlank { untitledText },
                     finalName,
                     finalId,
-                    author.trim().take(AUTHOR_MAX_LENGTH).ifBlank { "DannX" },
+                    author.trim().take(AUTHOR_MAX_LENGTH).ifBlank { fallbackAuthor },
                     tags,
                     featured,
                 )

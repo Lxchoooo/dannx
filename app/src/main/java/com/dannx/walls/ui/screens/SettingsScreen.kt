@@ -250,7 +250,7 @@ fun SettingsScreen(
             item {
                 Card(Modifier.fillMaxWidth()) {
                     Column(Modifier.padding(16.dp)) {
-                        Text("DannX", style = MaterialTheme.typography.titleMedium)
+                        Text(stringResource(R.string.app_name), style = MaterialTheme.typography.titleMedium)
                         Text(
                             stringResource(R.string.settings_version, BuildConfig.VERSION_NAME),
                             style = MaterialTheme.typography.bodySmall,
@@ -280,7 +280,7 @@ fun SettingsScreen(
                             )
                         }
                         TextButton(onClick = { openUrl(context, AppLinks.Repo) }) {
-                            Text("GitHub")
+                            Text(stringResource(R.string.settings_github))
                             Spacer(Modifier.width(6.dp))
                             Icon(
                                 Icons.Rounded.OpenInNew,

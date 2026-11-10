@@ -394,7 +394,7 @@ private fun WordmarkContent(accent: Color, drift: State<Float>?) {
         },
     ) {
         Text(
-            text = "DannX",
+            text = stringResource(R.string.app_name),
             style = MaterialTheme.typography.displayLarge,
             color = accent,
         )
@@ -452,7 +452,7 @@ private fun FinishStage(accent: Color) {
             },
         ) {
             Text(
-                text = "DannX",
+                text = stringResource(R.string.app_name),
                 style = MaterialTheme.typography.displayLarge,
                 color = accent,
             )

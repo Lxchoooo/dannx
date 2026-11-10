@@ -181,6 +181,7 @@
     <string name="settings_cache">Caché del feed</string>
     <string name="settings_cache_hint">Se descarga de nuevo al actualizar.</string>
     <string name="settings_credits">Créditos</string>
+    <string name="settings_github" translatable="false">GitHub</string>
     <string name="settings_version">Versión %1$s</string>
     <string name="settings_made_by">Hecho por Lxchoooo.</string>
     <string name="settings_license">Código abierto con licencia MIT.</string>
@@ -236,6 +237,7 @@
 
     <!-- Estudio -->
     <string name="studio_title">Estudio</string>
+    <string name="studio_untitled">Sin título</string>
     <string name="studio_subtitle">Publicá y administrá el catálogo desde un solo lugar.</string>
     <string name="studio_subtitle_admin">Administrá fondos, categorías, tags y colecciones.</string>
     <string name="studio_saving">Guardando cambios…</string>
@@ -419,6 +421,8 @@
     <string name="editor_close_tools">Cerrar herramientas</string>
     <string name="editor_pinch_hint">Pellizcá con dos dedos para acercar y arrastrá para mover.</string>
     <string name="editor_zoom">Zoom %1$d%%</string>
+    <string name="editor_percent">%1$d%%</string>
+    <string name="editor_preview_time" translatable="false">9:41</string>
     <string name="editor_center">Centrar</string>
     <string name="editor_reset">Restablecer</string>
     <string name="editor_undo">Deshacer</string>

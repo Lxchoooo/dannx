@@ -54,7 +54,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
-import coil.imageLoader
 import coil.request.ImageRequest
 import com.dannx.walls.R
 import com.dannx.walls.data.Wallpaper

@@ -106,7 +106,6 @@ import com.dannx.walls.data.Wallpaper
 import com.dannx.walls.ui.components.ApplyWallpaperSheet
 import com.dannx.walls.util.WallpaperTarget
 import com.dannx.walls.util.wallpaperTargetSize
-import kotlin.math.min
 import kotlin.math.roundToInt
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withTimeoutOrNull
@@ -258,7 +257,7 @@ private fun LoadingState(progress: Int?) {
                     modifier = Modifier.width(220.dp),
                 )
                 Spacer(Modifier.height(6.dp))
-                Text("$progress%", style = MaterialTheme.typography.labelMedium)
+                Text(stringResource(R.string.editor_percent, progress), style = MaterialTheme.typography.labelMedium)
             }
         }
     }
@@ -318,7 +317,7 @@ private fun ApplyProgressOverlay(progress: Int) {
                     modifier = Modifier.width(220.dp),
                 )
                 Spacer(Modifier.height(6.dp))
-                Text("$progress%", style = MaterialTheme.typography.labelMedium)
+                Text(stringResource(R.string.editor_percent, progress), style = MaterialTheme.typography.labelMedium)
             }
         }
     }
@@ -650,7 +649,7 @@ private fun BoxScope.LockPreviewOverlay() {
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Text(
-            text = "9:41",
+            text = stringResource(R.string.editor_preview_time),
             color = Color.White,
             style = MaterialTheme.typography.displayLarge.copy(
                 shadow = Shadow(
@@ -1255,7 +1254,7 @@ private fun EditorSlider(
                 modifier = Modifier.weight(1f),
             )
             Text(
-                text = "${(value * 100f).roundToInt()}%",
+                text = stringResource(R.string.editor_percent, (value * 100f).roundToInt()),
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )

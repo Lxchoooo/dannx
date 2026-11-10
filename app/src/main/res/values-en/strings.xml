@@ -236,6 +236,7 @@
 
     <!-- Studio -->
     <string name="studio_title">Studio</string>
+    <string name="studio_untitled">Untitled</string>
     <string name="studio_subtitle">Publish and manage the catalog from one place.</string>
     <string name="studio_subtitle_admin">Manage wallpapers, categories, tags, and collections.</string>
     <string name="studio_saving">Saving changes…</string>
@@ -419,6 +420,7 @@
     <string name="editor_close_tools">Close tools</string>
     <string name="editor_pinch_hint">Pinch with two fingers to zoom and drag to move.</string>
     <string name="editor_zoom">Zoom %1$d%%</string>
+    <string name="editor_percent">%1$d%%</string>
     <string name="editor_center">Center</string>
     <string name="editor_reset">Reset</string>
     <string name="editor_undo">Undo</string>

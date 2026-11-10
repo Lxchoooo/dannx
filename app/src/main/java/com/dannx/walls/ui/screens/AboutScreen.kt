@@ -84,7 +84,7 @@ fun AboutScreen(onBack: () -> Unit) {
             item {
                 Card(Modifier.fillMaxWidth()) {
                     Column(Modifier.padding(16.dp)) {
-                        Text("DannX", style = MaterialTheme.typography.headlineSmall)
+                        Text(stringResource(R.string.app_name), style = MaterialTheme.typography.headlineSmall)
                         Text(
                             stringResource(
                                 R.string.about_version,

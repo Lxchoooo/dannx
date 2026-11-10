@@ -42,7 +42,6 @@ import androidx.compose.material.icons.rounded.SearchOff
 import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material.icons.rounded.Wallpaper
 import androidx.compose.material3.AssistChip
-import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
@@ -288,7 +287,7 @@ fun HomeScreen(
                             // segundos sin mover el dedo abre la puerta del Estudio.
                             val haptics = LocalHapticFeedback.current
                             Text(
-                                text = "DannX",
+                                text = stringResource(R.string.app_name),
                                 style = MaterialTheme.typography.displayLarge,
                                 color = MaterialTheme.colorScheme.primary,
                                 modifier = Modifier.pointerInput(onOpenStudio) {
