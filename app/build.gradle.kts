@@ -134,7 +134,9 @@ dependencies {
     testImplementation(libs.kotlinx.coroutines.test)
 
     androidTestImplementation(libs.junit)
-    androidTestImplementation(libs.kotlinx.coroutines.test)
+    // Sin kotlinx-coroutines-test acá: la prueba usa runBlocking de la versión
+    // que ya resuelve la app; una versión más nueva solo desalineaba el APK de
+    // test contra el de la app en el emulador.
     androidTestImplementation(libs.androidx.test.ext.junit)
     androidTestImplementation(libs.androidx.test.runner)
 }
