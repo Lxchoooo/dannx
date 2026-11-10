@@ -94,6 +94,7 @@ import com.dannx.walls.UiAction
 import com.dannx.walls.data.Wallpaper
 import com.dannx.walls.data.WallpaperCollection
 import com.dannx.walls.ui.components.ApplyWallpaperSheet
+import com.dannx.walls.ui.components.rememberFavoriteBounce
 import com.dannx.walls.ui.components.rememberWallpaperAccent
 import com.dannx.walls.ui.components.wallpaperThumbRequest
 import com.dannx.walls.ui.theme.LocalLiteMode
@@ -147,6 +148,7 @@ fun DetailScreen(
     var showCreateCollection by rememberSaveable { mutableStateOf(false) }
     var showApplySheet by rememberSaveable { mutableStateOf(false) }
     val haptics = LocalHapticFeedback.current
+    val favoriteScale = rememberFavoriteBounce(isFavorite)
     // El botón principal toma el color de la imagen para sentirse parte de ella.
     val accent = rememberWallpaperAccent(wallpaper.imageUrl, MaterialTheme.colorScheme.primary)
     val onAccent = if (accent.luminance() > 0.5f) Color.Black else Color.White
@@ -381,6 +383,10 @@ fun DetailScreen(
                             stringResource(R.string.action_remove_favorite)
                         } else {
                             stringResource(R.string.action_add_favorite)
+                        },
+                        modifier = Modifier.graphicsLayer {
+                            scaleX = favoriteScale
+                            scaleY = favoriteScale
                         },
                     )
                 }

@@ -367,6 +367,7 @@ private fun FavoriteButton(
     modifier: Modifier = Modifier,
 ) {
     val haptics = LocalHapticFeedback.current
+    val heartScale = rememberFavoriteBounce(isFavorite)
     val favoriteState = if (isFavorite) {
         stringResource(R.string.favorite_state_on)
     } else {
@@ -396,6 +397,10 @@ private fun FavoriteButton(
                 stringResource(R.string.action_remove_favorite)
             } else {
                 stringResource(R.string.action_add_favorite)
+            },
+            modifier = Modifier.graphicsLayer {
+                scaleX = heartScale
+                scaleY = heartScale
             },
         )
     }
