@@ -1786,7 +1786,6 @@ class MainViewModel(
                             if (error is CancellationException) throw error
                             failed += wallpaper.id
                         } finally {
-                            semaphore.release()
                             done += 1
                             _state.update {
                                 it.copy(bulkProgress = done to targets.size)
