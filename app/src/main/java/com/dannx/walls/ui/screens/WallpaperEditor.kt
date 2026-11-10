@@ -445,7 +445,7 @@ private fun CategorySelector(
         categories.forEach { category ->
             DropdownMenuItem(
                 text = {
-                    Text(category.name, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text(category.name, maxLines = 2, overflow = TextOverflow.Ellipsis)
                 },
                 onClick = {
                     expanded = false
@@ -617,7 +617,7 @@ private fun EditorTagChip(
                 text = "#$tag",
                 style = MaterialTheme.typography.labelLarge,
                 fontWeight = if (primary) FontWeight.SemiBold else null,
-                maxLines = 1,
+                maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.padding(start = 8.dp),
             )

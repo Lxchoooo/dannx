@@ -194,7 +194,7 @@ fun WallpaperCard(
                 text = wallpaper.title,
                 style = MaterialTheme.typography.titleMedium,
                 color = Color.White,
-                maxLines = 1,
+                maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
             )
         }

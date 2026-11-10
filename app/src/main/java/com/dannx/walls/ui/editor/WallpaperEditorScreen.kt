@@ -887,7 +887,8 @@ private fun ToolButton(
             text = label,
             color = contentColor,
             fontSize = 9.sp,
-            maxLines = 1,
+            maxLines = 2,
+            textAlign = TextAlign.Center,
             overflow = TextOverflow.Ellipsis,
         )
     }

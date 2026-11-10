@@ -252,7 +252,7 @@ fun StudioScreen(
                             text = session.email,
                             style = MaterialTheme.typography.labelMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            maxLines = 1,
+                            maxLines = 2,
                             overflow = TextOverflow.Ellipsis,
                             modifier = Modifier.padding(end = 8.dp),
                         )
@@ -1047,7 +1047,7 @@ private fun FeaturedOrderPanel(
                     Text(
                         text = wallpaper.title,
                         style = MaterialTheme.typography.titleMedium,
-                        maxLines = 1,
+                        maxLines = 2,
                         overflow = TextOverflow.Ellipsis,
                     )
                     Text(
@@ -1930,7 +1930,7 @@ private fun LazyListScope.trashPanel(
                     Text(
                         text = wallpaper.title,
                         style = MaterialTheme.typography.titleMedium,
-                        maxLines = 1,
+                        maxLines = 2,
                         overflow = TextOverflow.Ellipsis,
                     )
                     Text(
@@ -2934,7 +2934,7 @@ private fun CollectionWallsDialog(
                             Text(
                                 wallpaper.title,
                                 style = MaterialTheme.typography.bodyMedium,
-                                maxLines = 1,
+                                maxLines = 2,
                                 overflow = TextOverflow.Ellipsis,
                             )
                             if (wallpaper.isArchived) {
@@ -2986,7 +2986,7 @@ private fun CollectionOrderDialog(
                         Text(
                             text = wallpaper?.title.orEmpty(),
                             modifier = Modifier.weight(1f),
-                            maxLines = 1,
+                            maxLines = 2,
                             overflow = TextOverflow.Ellipsis,
                         )
                         IconButton(
@@ -3099,7 +3099,7 @@ private fun TagCreateDialog(
                         )
                         Text(
                             wallpaper.title,
-                            maxLines = 1,
+                            maxLines = 2,
                             overflow = TextOverflow.Ellipsis,
                         )
                     }

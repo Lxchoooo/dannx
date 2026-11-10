@@ -265,7 +265,7 @@ private fun CollectionCard(
                     text = collection.name,
                     style = MaterialTheme.typography.headlineSmall,
                     color = Color.White,
-                    maxLines = 1,
+                    maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
                 )
                 val total = collection.wallpaperIds.size
