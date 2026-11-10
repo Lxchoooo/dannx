@@ -34,7 +34,7 @@
     <string name="msg_download_cancelled">Descarga cancelada.</string>
     <string name="msg_apply_cancelled">Aplicación cancelada.</string>
     <string name="msg_action_cancelled">Acción cancelada.</string>
-    <string name="download_duplicate_title">Ya lo tenías descargado</string>
+    <string name="download_duplicate_title">Ya la tenías descargada</string>
     <string name="download_duplicate_body">Esta imagen ya está en tu galería. Podés abrirla o guardar una copia nueva.</string>
     <string name="download_again">Descargar de nuevo</string>
 
@@ -52,11 +52,11 @@
     <string name="state_empty_filter_title">Sin resultados</string>
     <string name="state_empty_filter_body">Probá con otras palabras o quitá los filtros.</string>
     <string name="state_clear_filters">Limpiar filtros</string>
-    <string name="state_empty_favorites_title">Tu colección empieza aquí</string>
-    <string name="state_empty_favorites_body">Toca el corazón de cualquier fondo para guardarlo.</string>
+    <string name="state_empty_favorites_title">Tus favoritos empiezan aquí</string>
+    <string name="state_empty_favorites_body">Tocá el corazón de cualquier fondo para guardarlo.</string>
     <string name="state_explore">Explorar fondos</string>
     <string name="state_empty_collections_title">Tu primera colección empieza aquí</string>
-    <string name="state_empty_collections_body">Creá una carpeta con lo que te guste: una serie, un color, una temporada.</string>
+    <string name="state_empty_collections_body">Creá una colección con lo que te guste: una serie, un color, una temporada.</string>
 
     <!-- Pantalla señuelo del acceso al Estudio -->
     <string name="decoy_title">Acá no hay nada</string>
@@ -76,10 +76,10 @@
     <string name="action_change">Cambiar</string>
     <string name="action_settings">Ajustes</string>
     <string name="action_retry">Reintentar</string>
-    <string name="action_add_favorite">Añadir a favoritos</string>
+    <string name="action_add_favorite">Agregar a favoritos</string>
     <string name="action_remove_favorite">Quitar de favoritos</string>
-    <string name="favorite_state_on">Favorito</string>
-    <string name="favorite_state_off">No favorito</string>
+    <string name="favorite_state_on">Es favorito</string>
+    <string name="favorite_state_off">No es favorito</string>
 
     <string name="field_name">Nombre</string>
     <string name="field_description">Descripción</string>
@@ -88,7 +88,7 @@
     <string name="field_author">Autor</string>
     <string name="field_category">Categoría</string>
     <string name="field_default_category">Abstracto</string>
-    <string name="field_tags">Tags</string>
+    <string name="field_tags">Etiquetas</string>
 
     <!-- Tarjetas de fondos -->
     <string name="wallpaper_card_description">Fondo %1$s, %2$s, de %3$s</string>
@@ -97,13 +97,13 @@
     <string name="image_load_error_description">La imagen no se pudo cargar</string>
 
     <!-- Explorar -->
-    <string name="home_tagline">Wallpapers que se sienten tuyos.</string>
-    <string name="action_refresh_feed">Actualizar feed</string>
+    <string name="home_tagline">Fondos que se sienten tuyos.</string>
+    <string name="action_refresh_feed">Actualizar fondos</string>
     <string name="action_random_wallpaper">Sorprendeme</string>
     <string name="feed_refreshing">Actualizando…</string>
     <string name="feed_loading_more">Cargando más fondos…</string>
     <string name="feed_no_more">No hay más fondos.</string>
-    <string name="home_search_hint">Buscar fondos o tags</string>
+    <string name="home_search_hint">Buscar fondos o etiquetas</string>
     <string name="home_clear_search">Borrar búsqueda</string>
     <string name="home_recent_searches">Búsquedas recientes</string>
     <string name="home_clear_recent_searches">Borrar recientes</string>
@@ -140,13 +140,13 @@
 
     <!-- Colecciones -->
     <string name="collections_title">Colecciones</string>
-    <string name="collections_subtitle">Agrupa fondos por edición, serie o lo que imagines.</string>
+    <string name="collections_subtitle">Agrupá fondos por edición, serie o lo que imagines.</string>
     <string name="collections_create">Crear colección</string>
     <string name="collection_private_badge">Privada</string>
     <string name="collection_yours_badge">Tuya</string>
     <string name="collection_private_label">Colección privada</string>
     <string name="collection_new">Nueva colección</string>
-    <string name="collection_name_hint">Ej. Immortal Edition</string>
+    <string name="collection_name_hint">Ej. Paisajes</string>
     <string name="collection_public">Pública</string>
     <string name="collection_public_hint">Visible para todos en la app.</string>
     <string name="collection_private_hint">Solo vos podés verla.</string>
@@ -157,9 +157,9 @@
     <string name="collection_destination_account_hint">Se sincroniza con tu cuenta y se puede ver en otros dispositivos.</string>
     <string name="collection_create_new">Crear nueva colección</string>
     <string name="collection_delete">Eliminar colección</string>
-    <string name="collection_delete_body">Se eliminará “%1$s” de tu perfil. Los fondos seguirán disponibles en el feed.</string>
+    <string name="collection_delete_body">Se eliminará “%1$s” de tu perfil. Los fondos seguirán disponibles en Inicio.</string>
     <string name="collection_empty_title">Esta colección está vacía</string>
-    <string name="collection_empty_body">Todavía no guardaste fondos acá. Abre uno y toca el ícono de colecciones para agregarlo.</string>
+    <string name="collection_empty_body">Todavía no guardaste fondos acá. Abrí uno y tocá el ícono de colecciones para agregarlo.</string>
     <string name="collection_remove_item">Quitar de la colección</string>
     <plurals name="collection_meta">
         <item quantity="one">%1$d fondo · %2$s</item>
@@ -185,12 +185,12 @@
     <string name="theme_light">Claro</string>
     <string name="theme_dark">Oscuro</string>
     <string name="settings_lite">Modo lite</string>
-    <string name="settings_lite_hint">Menos animaciones para gastar menos batería.</string>
+    <string name="settings_lite_hint">Menos animaciones para consumir menos batería.</string>
     <string name="settings_open_editor">Abrir editor al aplicar</string>
     <string name="settings_open_editor_hint">Ajustá el encuadre y los colores antes de poner el fondo.</string>
     <string name="settings_storage">Almacenamiento</string>
     <string name="settings_cache">Caché</string>
-    <string name="settings_cache_hint">Guardamos el feed y las imágenes para que la app abra más rápido.</string>
+    <string name="settings_cache_hint">Guardamos el catálogo y las imágenes para que la app abra más rápido.</string>
     <string name="settings_cache_used">Espacio usado: %1$s</string>
     <string name="settings_credits">Créditos</string>
     <string name="settings_github" translatable="false">GitHub</string>
@@ -221,8 +221,8 @@
     <string name="update_error_title">No se pudo actualizar</string>
     <string name="update_error_network">Revisá tu conexión e intentá de nuevo.</string>
     <string name="update_error_no_release">No hay una versión publicada para descargar.</string>
-    <string name="update_error_asset">La release no incluye el APK o su checksum.</string>
-    <string name="update_error_checksum">La descarga no coincide con el checksum. No se instalará.</string>
+    <string name="update_error_asset">La versión no incluye el APK o su suma de verificación.</string>
+    <string name="update_error_checksum">La descarga no coincide con la suma de verificación. No se instalará.</string>
     <string name="update_error_download">No se pudo descargar el APK.</string>
     <string name="update_error_format">El servidor devolvió una versión que no se puede leer.</string>
     <string name="update_error_install">No se pudo abrir el instalador de Android.</string>
@@ -232,7 +232,7 @@
     <!-- Acerca de -->
     <string name="about_title">Acerca de</string>
     <string name="about_version">Versión %1$s (%2$d)</string>
-    <string name="about_description">DannX es una app de fondos de pantalla hecha con Kotlin y Jetpack Compose. Explorá el feed, armá colecciones y aplicá o descargá cualquier imagen en dos toques.</string>
+    <string name="about_description">DannX es una app de fondos de pantalla hecha con Kotlin y Jetpack Compose. Explorá el catálogo, armá colecciones y aplicá o descargá cualquier imagen en pocos toques.</string>
     <string name="about_project">Proyecto</string>
     <string name="about_repository">Código en GitHub</string>
     <string name="about_releases">Versiones</string>
@@ -251,17 +251,17 @@
     <string name="studio_title">Estudio</string>
     <string name="studio_untitled">Sin título</string>
     <string name="studio_subtitle">Publicá y administrá el catálogo desde un solo lugar.</string>
-    <string name="studio_subtitle_admin">Administrá fondos, categorías, tags y colecciones.</string>
+    <string name="studio_subtitle_admin">Administrá fondos, categorías, etiquetas y colecciones.</string>
     <string name="studio_saving">Guardando cambios…</string>
     <string name="studio_wallpaper_delete_title">Mover a la papelera</string>
     <string name="studio_wallpaper_delete_body">Se moverá “%1$s” a la papelera. Podés restaurarlo durante 30 días.</string>
     <string name="studio_collection_delete_title">Borrar colección</string>
     <string name="studio_collection_delete_body">Se eliminará “%1$s”. Los fondos seguirán publicados.</string>
-    <string name="studio_tag_delete_title">Borrar tag</string>
-    <string name="studio_tag_delete_body">Se quitará “%1$s” de todos los fondos que lo tengan.</string>
+    <string name="studio_tag_delete_title">Borrar etiqueta</string>
+    <string name="studio_tag_delete_body">Se quitará “%1$s” de todos los fondos que la tengan.</string>
     <string name="studio_delete_confirm">Borrar</string>
-    <string name="studio_setup_title">Falta conectar el catálogo</string>
-    <string name="studio_setup_body">La app funciona con fondos de ejemplo. Al conectar el catálogo, el Estudio administra el feed real.</string>
+    <string name="studio_setup_title">Catálogo no conectado</string>
+    <string name="studio_setup_body">La app funciona con fondos de ejemplo. Al conectar el catálogo, el Estudio pasa a administrar el contenido real.</string>
     <string name="studio_retry_connection">Reintentar conexión</string>
     <string name="studio_admin_only">Solo administradores</string>
     <string name="studio_login_hint">Iniciá sesión con tu cuenta de creador para administrar el catálogo.</string>
@@ -270,7 +270,7 @@
     <string name="studio_signing_in">Entrando…</string>
     <string name="studio_sign_in">Entrar</string>
     <string name="studio_section_publish">Publicar</string>
-    <string name="studio_section_tags">Tags</string>
+    <string name="studio_section_tags">Etiquetas</string>
     <string name="studio_content">Contenido</string>
     <string name="studio_content_help">Estos textos se muestran en la portada de la app.</string>
     <string name="studio_tagline">Frase de portada</string>
@@ -293,12 +293,12 @@
     <string name="studio_bulk_delete_body">¿Mover %1$d fondos a la papelera? Podés restaurarlos durante 30 días.</string>
     <string name="studio_bulk_edit">Editar seleccionados</string>
     <string name="studio_bulk_edit_title">Editar seleccionados</string>
-    <string name="studio_bulk_add_tag">Agregar un tag a todos</string>
-    <string name="studio_bulk_remove_tag">Quitar un tag de todos</string>
-    <string name="studio_bulk_tag_summary_add">Se va a agregar el tag %1$s a %2$d fondos.</string>
-    <string name="studio_bulk_tag_summary_remove">Se va a quitar el tag %1$s de %2$d fondos.</string>
-    <string name="studio_bulk_first_warn">Aviso: en algunos fondos ese tag es el principal. Al quitarlo, el tag que sigue pasa a ser el principal y es el que se ve en Inicio.</string>
-    <string name="studio_bulk_tag_limit">%1$d fondos superan el tope por operación: se van a editar los primeros %2$d.</string>
+    <string name="studio_bulk_add_tag">Agregar una etiqueta a todos</string>
+    <string name="studio_bulk_remove_tag">Quitar una etiqueta de todos</string>
+    <string name="studio_bulk_tag_summary_add">Se va a agregar la etiqueta %1$s a %2$d fondos.</string>
+    <string name="studio_bulk_tag_summary_remove">Se va a quitar la etiqueta %1$s de %2$d fondos.</string>
+    <string name="studio_bulk_first_warn">Aviso: en algunos fondos esa etiqueta es la principal. Al quitarla, la etiqueta que sigue pasa a ser la principal y es la que se ve en Inicio.</string>
+    <string name="studio_bulk_tag_limit">%1$d fondos superan el límite por operación: se van a editar los primeros %2$d.</string>
     <string name="studio_bulk_progress">Modificando %1$d de %2$d…</string>
     <string name="studio_bulk_result">Se modificaron %1$d de %2$d fondos.</string>
     <string name="studio_bulk_failed">%1$d fondos quedaron sin cambios.</string>
@@ -309,11 +309,11 @@
     <string name="editor_thumb_description">Miniatura del fondo</string>
     <string name="editor_category_new">Escribí una nueva o abrí la lista con la flecha</string>
     <string name="editor_open_categories">Elegir categoría</string>
-    <string name="editor_tag_hint">Nuevo tag</string>
-    <string name="editor_add_tag">Agregar tag</string>
-    <string name="editor_remove_tag">Quitar el tag %1$s</string>
-    <string name="editor_tags_limit">Hasta %1$d tags por fondo</string>
-    <string name="editor_tag_duplicate">Ese tag ya está cargado</string>
+    <string name="editor_tag_hint">Nueva etiqueta</string>
+    <string name="editor_add_tag">Agregar etiqueta</string>
+    <string name="editor_remove_tag">Quitar la etiqueta %1$s</string>
+    <string name="editor_tags_limit">Hasta %1$d etiquetas por fondo</string>
+    <string name="editor_tag_duplicate">Esa etiqueta ya está cargada</string>
     <string name="editor_tag_length">Máximo 24 caracteres</string>
     <string name="studio_title_counter">%1$d/120 caracteres</string>
     <string name="studio_trash">Papelera</string>
@@ -356,8 +356,8 @@
     <string name="studio_change_image">Cambiar imagen</string>
     <string name="studio_title_hint">Ej. Atardecer en la playa</string>
     <string name="studio_tags_hint">anime, noche, flores</string>
-    <string name="studio_tags_help">Sepáralos con comas. El primer tag es el principal y es el que aparece en Inicio.</string>
-    <string name="editor_tags_help">El primero es el principal y es el que aparece en Inicio. Mantené apretado un chip y arrastralo para cambiar el orden.</string>
+    <string name="studio_tags_help">Sepáralas con comas. La primera etiqueta es la principal y es la que aparece en Inicio.</string>
+    <string name="editor_tags_help">La primera etiqueta es la principal y es la que aparece en Inicio. Mantené presionada una etiqueta y arrastrala para cambiar el orden.</string>
     <string name="studio_collection_optional">Colección (opcional)</string>
     <string name="studio_no_collections_hint">Creá una colección desde esta sección para agrupar el fondo.</string>
     <string name="studio_no_collection">Sin colección</string>
@@ -379,9 +379,9 @@
     <string name="studio_create_category">Crear categoría</string>
     <string name="studio_categories_empty">Todavía no hay categorías. Creá la primera.</string>
     <string name="studio_rename">Renombrar</string>
-    <string name="studio_create_tag">Crear tag</string>
-    <string name="studio_tags_help_section">Los tags se aplican a los fondos que elijas y se pueden renombrar o unir.</string>
-    <string name="studio_tags_empty">Todavía no hay tags.</string>
+    <string name="studio_create_tag">Crear etiqueta</string>
+    <string name="studio_tags_help_section">Las etiquetas se aplican a los fondos que elijas y se pueden renombrar o unir.</string>
+    <string name="studio_tags_empty">Todavía no hay etiquetas.</string>
     <string name="studio_collections">Colecciones</string>
     <string name="studio_collections_help">Cambiá el nombre, la visibilidad y los fondos de cada colección.</string>
     <string name="studio_collections_empty">Todavía no tenés colecciones.</string>
@@ -402,9 +402,9 @@
     <string name="studio_move_up">Subir</string>
     <string name="studio_move_down">Bajar</string>
     <string name="studio_collection_empty">La colección no tiene fondos.</string>
-    <string name="studio_tag_name">Nombre del tag</string>
+    <string name="studio_tag_name">Nombre de la etiqueta</string>
     <string name="studio_apply_to">Aplicar a</string>
-    <string name="studio_rename_tag">Renombrar tag</string>
+    <string name="studio_rename_tag">Renombrar etiqueta</string>
     <string name="studio_new_name">Nombre nuevo</string>
     <plurals name="studio_archived_count">
         <item quantity="one">%d archivado</item>
@@ -468,31 +468,31 @@
     <string name="error_session">Tu sesión venció. Volvé a iniciar sesión.</string>
     <string name="error_permission">No tenés permiso para esta acción.</string>
     <string name="error_unexpected">Algo salió mal. Intentá de nuevo.</string>
-    <string name="msg_enter_credentials">Completá tu correo y contraseña.</string>
+    <string name="msg_enter_credentials">Completá tu correo y tu contraseña.</string>
     <string name="msg_signed_in">Sesión iniciada como %1$s.</string>
     <string name="msg_signed_out">Sesión cerrada.</string>
-    <string name="msg_wallpaper_published">Wallpaper publicado.</string>
+    <string name="msg_wallpaper_published">Fondo publicado.</string>
     <string name="msg_uploaded_without_collection">El fondo se publicó, pero no se pudo agregar a la colección.</string>
-    <string name="msg_category_name_required">Poné un nombre para la categoría.</string>
+    <string name="msg_category_name_required">Escribí un nombre para la categoría.</string>
     <string name="msg_name_reserved">Ese nombre está reservado. Elegí otro.</string>
     <string name="msg_category_created">Categoría “%1$s” creada.</string>
     <string name="msg_category_updated">Categoría actualizada.</string>
     <string name="msg_category_renamed">Categoría renombrada.</string>
-    <string name="msg_category_delete_blocked">La categoría “%1$s” tiene fondos (%2$d). Reasignalos antes de borrarla.</string>
+    <string name="msg_category_delete_blocked">La categoría “%1$s” tiene fondos (%2$d). Movelos a otra categoría antes de borrarla.</string>
     <string name="msg_category_deleted">Categoría “%1$s” eliminada.</string>
     <string name="msg_wallpaper_updated">Fondo actualizado.</string>
     <string name="msg_image_updated">Imagen actualizada.</string>
     <string name="msg_image_replaced">Imagen reemplazada.</string>
     <string name="msg_wallpaper_archived">Fondo archivado.</string>
     <string name="msg_wallpaper_restored">Fondo restaurado.</string>
-    <string name="msg_collection_name_required">Poné un nombre para la colección.</string>
+    <string name="msg_collection_name_required">Escribí un nombre para la colección.</string>
     <string name="msg_collection_updated">Colección actualizada.</string>
     <string name="msg_order_updated">Orden actualizado.</string>
     <string name="msg_pick_name_and_wallpaper">Elegí un nombre y al menos un fondo.</string>
-    <string name="msg_tag_applied">Tag “%1$s” aplicado.</string>
-    <string name="msg_tag_replace_required">Elegí el tag que querés reemplazar.</string>
-    <string name="msg_tag_renamed">Tag “%1$s” renombrado a “%2$s”.</string>
-    <string name="msg_tag_deleted">Tag “%1$s” eliminado.</string>
+    <string name="msg_tag_applied">Etiqueta “%1$s” aplicada.</string>
+    <string name="msg_tag_replace_required">Elegí la etiqueta que querés reemplazar.</string>
+    <string name="msg_tag_renamed">Etiqueta “%1$s” renombrada a “%2$s”.</string>
+    <string name="msg_tag_deleted">Etiqueta “%1$s” eliminada.</string>
     <string name="msg_collection_created">Colección “%1$s” creada.</string>
     <string name="msg_already_in_collection">Ya está en %1$s.</string>
     <string name="msg_saved_in_collection">Guardado en %1$s.</string>
@@ -502,11 +502,11 @@
     <string name="msg_collection_renamed">Colección “%1$s” actualizada.</string>
     <string name="msg_login_to_delete_collections">Iniciá sesión en Estudio para borrar colecciones.</string>
     <string name="msg_collection_deleted">Colección “%1$s” eliminada.</string>
-    <string name="msg_saved_gallery">Guardado en Galería, carpeta Pictures/DannX.</string>
+    <string name="msg_saved_gallery">Guardado en la galería, en la carpeta Pictures/DannX.</string>
     <string name="msg_apply_failed">No se pudo aplicar el fondo. Probá de nuevo.</string>
-    <string name="msg_applied_system">Listo, tu fondo de pantalla cambió.</string>
-    <string name="msg_applied_lock">Listo, cambiaste el fondo del bloqueo.</string>
-    <string name="msg_applied_both">Listo, cambiaste el fondo de inicio y del bloqueo.</string>
+    <string name="msg_applied_system">Listo, cambiaste el fondo de la pantalla de inicio.</string>
+    <string name="msg_applied_lock">Listo, cambiaste el fondo de la pantalla de bloqueo.</string>
+    <string name="msg_applied_both">Listo, cambiaste los fondos de inicio y de bloqueo.</string>
     <string name="msg_share_failed">No se pudo preparar la imagen para compartir.</string>
     <string name="msg_settings_reset">Ajustes restablecidos.</string>
     <string name="msg_cache_cleared">Caché borrada.</string>
