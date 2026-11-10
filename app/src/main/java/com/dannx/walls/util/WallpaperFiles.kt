@@ -36,7 +36,65 @@ enum class WallpaperTarget {
     BOTH,
 }
 
-class WallpaperFiles(private val context: Context) : WallpaperActions {
+/**
+ * Aplica un bitmap al sistema. Es una interfaz para que las pruebas puedan
+ * recorrer el flujo completo (descarga, recorte y destino) sin cambiar el fondo
+ * real del dispositivo ni depender de permisos especiales.
+ */
+interface WallpaperApplier {
+    fun apply(bitmap: Bitmap, target: WallpaperTarget): WallpaperTarget
+}
+
+/**
+ * Implementación real sobre [WallpaperManager]. Si el bloqueo no se puede
+ * modificar en este teléfono, cae a la pantalla de inicio.
+ */
+class AndroidWallpaperApplier(private val context: Context) : WallpaperApplier {
+    override fun apply(bitmap: Bitmap, target: WallpaperTarget): WallpaperTarget {
+        val manager = WallpaperManager.getInstance(context)
+        return when (target) {
+            WallpaperTarget.SYSTEM -> {
+                manager.setBitmap(bitmap, null, true, WallpaperManager.FLAG_SYSTEM)
+                WallpaperTarget.SYSTEM
+            }
+
+            WallpaperTarget.LOCK -> {
+                try {
+                    manager.setBitmap(bitmap, null, true, WallpaperManager.FLAG_LOCK)
+                    WallpaperTarget.LOCK
+                } catch (error: Exception) {
+                    manager.setBitmap(bitmap, null, true, WallpaperManager.FLAG_SYSTEM)
+                    WallpaperTarget.SYSTEM
+                }
+            }
+
+            WallpaperTarget.BOTH -> {
+                try {
+                    manager.setBitmap(
+                        bitmap,
+                        null,
+                        true,
+                        WallpaperManager.FLAG_SYSTEM or WallpaperManager.FLAG_LOCK,
+                    )
+                    WallpaperTarget.BOTH
+                } catch (error: Exception) {
+                    manager.setBitmap(bitmap, null, true, WallpaperManager.FLAG_SYSTEM)
+                    try {
+                        manager.setBitmap(bitmap, null, true, WallpaperManager.FLAG_LOCK)
+                        WallpaperTarget.BOTH
+                    } catch (lockError: Exception) {
+                        WallpaperTarget.SYSTEM
+                    }
+                }
+            }
+        }
+    }
+}
+
+class WallpaperFiles(
+    private val context: Context,
+    private val applier: WallpaperApplier = AndroidWallpaperApplier(context),
+) : WallpaperActions {
     private val defaultBufferSize = 64 * 1024
     private val maxSharedFiles = 8
     private val sharedMaxAgeMs = 6 * 60 * 60 * 1000L
@@ -243,7 +301,7 @@ class WallpaperFiles(private val context: Context) : WallpaperActions {
             downloadToFile(wallpaper, temp)
             val bitmap = decodeCroppedBitmap(temp, size.x, size.y)
             try {
-                applyBitmap(bitmap, target)
+                applier.apply(bitmap, target)
             } finally {
                 bitmap.recycle()
             }
@@ -260,50 +318,7 @@ class WallpaperFiles(private val context: Context) : WallpaperActions {
         bitmap: Bitmap,
         target: WallpaperTarget,
     ): WallpaperTarget = withContext(Dispatchers.IO) {
-        applyBitmap(bitmap, target)
-    }
-
-    private fun applyBitmap(
-        bitmap: Bitmap,
-        target: WallpaperTarget,
-    ): WallpaperTarget {
-        val manager = WallpaperManager.getInstance(context)
-        return when (target) {
-            WallpaperTarget.SYSTEM -> {
-                manager.setBitmap(bitmap, null, true, WallpaperManager.FLAG_SYSTEM)
-                WallpaperTarget.SYSTEM
-            }
-
-            WallpaperTarget.LOCK -> {
-                try {
-                    manager.setBitmap(bitmap, null, true, WallpaperManager.FLAG_LOCK)
-                    WallpaperTarget.LOCK
-                } catch (error: Exception) {
-                    manager.setBitmap(bitmap, null, true, WallpaperManager.FLAG_SYSTEM)
-                    WallpaperTarget.SYSTEM
-                }
-            }
-
-            WallpaperTarget.BOTH -> {
-                try {
-                    manager.setBitmap(
-                        bitmap,
-                        null,
-                        true,
-                        WallpaperManager.FLAG_SYSTEM or WallpaperManager.FLAG_LOCK,
-                    )
-                    WallpaperTarget.BOTH
-                } catch (error: Exception) {
-                    manager.setBitmap(bitmap, null, true, WallpaperManager.FLAG_SYSTEM)
-                    try {
-                        manager.setBitmap(bitmap, null, true, WallpaperManager.FLAG_LOCK)
-                        WallpaperTarget.BOTH
-                    } catch (lockError: Exception) {
-                        WallpaperTarget.SYSTEM
-                    }
-                }
-            }
-        }
+        applier.apply(bitmap, target)
     }
 
     /**

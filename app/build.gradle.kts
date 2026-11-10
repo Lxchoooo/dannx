@@ -49,6 +49,8 @@ android {
         versionCode = configValue("VERSION_CODE").toIntOrNull() ?: 2
         versionName = configValue("VERSION_NAME").ifBlank { "1.6.0" }
 
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
         buildConfigField("String", "SUPABASE_URL", quoted(configValue("SUPABASE_URL")))
         buildConfigField(
             "String",
@@ -130,4 +132,9 @@ dependencies {
 
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)
+
+    androidTestImplementation(libs.junit)
+    androidTestImplementation(libs.kotlinx.coroutines.test)
+    androidTestImplementation(libs.androidx.test.ext.junit)
+    androidTestImplementation(libs.androidx.test.runner)
 }

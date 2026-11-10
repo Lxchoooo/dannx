@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!--
+      Solo en debug: permite HTTP sin cifrar contra el loopback, que es lo que
+      necesita la prueba instrumentada del flujo de aplicar fondo. El build de
+      release mantiene el tráfico sin cifrar bloqueado.
+    -->
+    <application android:networkSecurityConfig="@xml/test_network_security_config" />
+</manifest>
