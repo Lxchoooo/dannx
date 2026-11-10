@@ -2521,7 +2521,6 @@ private fun BulkCategoryDialog(
     )
 }
 
-@Composable
 /**
  * Edición de tags en bloque: elige sumar un tag, quitar uno o cambiar a todos
  * a otra categoría (ese reutiliza el diálogo ya existente). Antes de tocar

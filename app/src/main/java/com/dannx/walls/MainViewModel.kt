@@ -1685,11 +1685,10 @@ class MainViewModel(
         if (updates.isEmpty()) return
         val byId = updates.associateBy { it.id }
         _state.update { state ->
-            val detailWallpaper = state.detailWallpaper as? LoadState.Content<Wallpaper>
+            val detailWallpaper = (state.detailWallpaper as? LoadState.Content<Wallpaper>)
                 ?.takeIf { it.data.id in byId }
                 ?.let { content -> LoadState.Content(byId.getValue(content.data.id)) }
-            val detailCollection = state.detailCollection
-                as? LoadState.Content<CollectionDetailData>
+            val detailCollection = (state.detailCollection as? LoadState.Content<CollectionDetailData>)
                 ?.takeIf { content -> content.data.wallpapers.any { it.id in byId } }
                 ?.let { content ->
                     LoadState.Content(
