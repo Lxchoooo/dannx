@@ -1,9 +1,10 @@
 package com.dannx.walls.ui.components
 
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.FastOutSlowInEasing
-import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
-import androidx.compose.foundation.layout.Box
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.slideInVertically
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -11,55 +12,48 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.unit.dp
 import com.dannx.walls.ui.theme.LocalLiteMode
 import kotlinx.coroutines.delay
+import kotlin.math.min
 
 /**
- * Aparición escalonada para las tarjetas de una lista: cada una entra con un
- * fade y una subida mínima. En modo lite entra de inmediato, sin espera.
+ * Aparición escalonada para las tarjetas de una lista: entran con fade y una
+ * subida corta, con un retraso por índice que nunca pasa de 500 ms.
  *
- * El estado se guarda con [rememberSaveable] para que al volver a pasar por la
- * lista no se repita la animación.
+ * [resetKey] permite repetir la entrada al cambiar de categoría o búsqueda. En
+ * modo lite entra enseguida con un fade simple.
  */
 @Composable
 fun StaggeredAppear(
     index: Int,
     modifier: Modifier = Modifier,
+    resetKey: Any = Unit,
     content: @Composable () -> Unit,
 ) {
     val lite = LocalLiteMode.current
-    var visible by rememberSaveable { mutableStateOf(false) }
+    var visible by rememberSaveable(resetKey) { mutableStateOf(false) }
 
-    LaunchedEffect(Unit) {
-        if (!lite && !visible) {
-            delay((index % 8) * 35L)
+    LaunchedEffect(resetKey) {
+        if (!lite) {
+            delay(min(index * 50L, 500L))
         }
         visible = true
     }
 
-    val alpha by animateFloatAsState(
-        targetValue = if (visible) 1f else 0f,
-        animationSpec = tween(
-            durationMillis = if (lite) 120 else 280,
-            easing = FastOutSlowInEasing,
-        ),
-        label = "appearAlpha",
-    )
-    val offset by animateFloatAsState(
-        targetValue = if (visible) 0f else 24f,
-        animationSpec = tween(
-            durationMillis = if (lite) 120 else 320,
-            easing = FastOutSlowInEasing,
-        ),
-        label = "appearOffset",
-    )
-
-    Box(
-        modifier = modifier.graphicsLayer {
-            this.alpha = alpha
-            translationY = offset.dp.toPx()
+    AnimatedVisibility(
+        visible = visible,
+        modifier = modifier,
+        enter = if (lite) {
+            fadeIn(animationSpec = tween(durationMillis = 120))
+        } else {
+            fadeIn(animationSpec = tween(durationMillis = 220)) +
+                slideInVertically(
+                    animationSpec = tween(
+                        durationMillis = 320,
+                        easing = FastOutSlowInEasing,
+                    ),
+                    initialOffsetY = { it / 5 },
+                )
         },
     ) {
         content()

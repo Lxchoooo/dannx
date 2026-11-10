@@ -586,7 +586,10 @@ fun HomeScreen(
                 key = { _, wallpaper -> wallpaper.id },
                 contentType = { _, _ -> "wall" },
             ) { index, wallpaper ->
-                StaggeredAppear(index = index) {
+                StaggeredAppear(
+                    index = index,
+                    resetKey = "${state.query}|${state.category}|${state.tag}",
+                ) {
                     WallpaperCard(
                         wallpaper = wallpaper,
                         isFavorite = wallpaper.id in state.favorites,
