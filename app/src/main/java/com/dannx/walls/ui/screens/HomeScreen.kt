@@ -1,11 +1,16 @@
 package com.dannx.walls.ui.screens
 
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.layout.Arrangement
@@ -73,12 +78,14 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.res.pluralStringResource
@@ -162,6 +169,14 @@ fun HomeScreen(
     val availableTags = remember(state.wallpapers) { state.availableTags }
     val context = LocalContext.current
     val liteMode = LocalLiteMode.current
+    val focusManager = LocalFocusManager.current
+    var searchFocused by remember { mutableStateOf(false) }
+    val showColorFilters = searchFocused || state.query.isNotBlank()
+    LaunchedEffect(showColorFilters, state.color) {
+        if (!showColorFilters && state.color != null) {
+            onColorChange(null)
+        }
+    }
     val gridState = rememberLazyGridState()
     val pullState = rememberPullToRefreshState()
     var lastRandomId by rememberSaveable { mutableStateOf<String?>(null) }
@@ -368,15 +383,29 @@ fun HomeScreen(
                     Spacer(Modifier.height(18.dp))
                     OutlinedTextField(
                         value = state.query,
-                        onValueChange = onQueryChange,
-                        modifier = Modifier.fillMaxWidth(),
+                        onValueChange = { value ->
+                            onQueryChange(value)
+                            if (value.isEmpty()) {
+                                onColorChange(null)
+                                focusManager.clearFocus()
+                            }
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .onFocusChanged { searchFocused = it.isFocused },
                         placeholder = { Text(stringResource(R.string.home_search_hint)) },
                         leadingIcon = {
                             Icon(Icons.Rounded.Search, contentDescription = null)
                         },
                         trailingIcon = {
                             if (state.query.isNotEmpty()) {
-                                IconButton(onClick = { onQueryChange("") }) {
+                                IconButton(
+                                    onClick = {
+                                        onQueryChange("")
+                                        onColorChange(null)
+                                        focusManager.clearFocus()
+                                    },
+                                ) {
                                     Icon(
                                         Icons.Rounded.Close,
                                         contentDescription = stringResource(R.string.home_clear_search),
@@ -395,26 +424,42 @@ fun HomeScreen(
                             unfocusedBorderColor = MaterialTheme.colorScheme.surfaceContainerHigh,
                         ),
                     )
-                    Spacer(Modifier.height(12.dp))
-                    ColorFilterRow(
-                        selected = state.color,
-                        onSelect = { color ->
-                            onColorChange(if (state.color == color) null else color)
+                    AnimatedVisibility(
+                        visible = showColorFilters,
+                        enter = if (liteMode) {
+                            fadeIn()
+                        } else {
+                            expandVertically() + fadeIn()
                         },
-                    )
-                    if (state.color != null && state.classifyingColors) {
-                        Spacer(Modifier.height(6.dp))
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(14.dp),
-                                strokeWidth = 2.dp,
+                        exit = if (liteMode) {
+                            fadeOut()
+                        } else {
+                            shrinkVertically() + fadeOut()
+                        },
+                    ) {
+                        Column {
+                            Spacer(Modifier.height(12.dp))
+                            ColorFilterRow(
+                                selected = state.color,
+                                onSelect = { color ->
+                                    onColorChange(if (state.color == color) null else color)
+                                },
                             )
-                            Spacer(Modifier.width(8.dp))
-                            Text(
-                                text = stringResource(R.string.home_color_filtering),
-                                style = MaterialTheme.typography.labelMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
+                            if (state.color != null && state.classifyingColors) {
+                                Spacer(Modifier.height(6.dp))
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    CircularProgressIndicator(
+                                        modifier = Modifier.size(14.dp),
+                                        strokeWidth = 2.dp,
+                                    )
+                                    Spacer(Modifier.width(8.dp))
+                                    Text(
+                                        text = stringResource(R.string.home_color_filtering),
+                                        style = MaterialTheme.typography.labelMedium,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                }
+                            }
                         }
                     }
                     if (
