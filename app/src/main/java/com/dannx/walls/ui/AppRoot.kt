@@ -5,12 +5,15 @@ import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
 import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -215,68 +218,122 @@ private fun MainApp(
                 navController = navController,
                 startDestination = startDestination,
                 enterTransition = {
-                    val randomDetail = targetState.destination.route
-                        ?.startsWith("detail") == true &&
+                    val targetRoute = targetState.destination.route
+                    val initialRoute = initialState.destination.route
+                    val randomDetail = isDetailRoute(targetRoute) &&
                         targetState.arguments?.getBoolean("random") == true
-                    val detailToDetail = initialState.destination.route
-                        ?.startsWith("detail") == true &&
-                        targetState.destination.route?.startsWith("detail") == true
-                    if (liteMode) {
-                        fadeIn(tween(120))
-                    } else if (randomDetail) {
-                        // Sorpréndeme: se cruza con la imagen que había en pantalla.
-                        fadeIn(tween(340))
-                    } else if (detailToDetail) {
-                        // Pasar de un fondo a otro se cruza suave, sin saltar.
-                        fadeIn(tween(300))
-                    } else {
-                        fadeIn(tween(240)) +
+                    val detailToDetail = isDetailRoute(initialRoute) && isDetailRoute(targetRoute)
+                    when {
+                        liteMode -> fadeIn(tween(120))
+                        randomDetail -> fadeIn(tween(340))
+                        detailToDetail -> fadeIn(tween(300))
+                        isDetailRoute(targetRoute) -> {
+                            // Del feed al detalle: entra desde la derecha con resorte.
                             slideInHorizontally(
-                                animationSpec = tween(280, easing = FastOutSlowInEasing),
-                            ) { it / 14 } +
-                            scaleIn(
-                                animationSpec = tween(280, easing = FastOutSlowInEasing),
-                                initialScale = 0.985f,
-                            )
+                                animationSpec = spring(
+                                    dampingRatio = Spring.DampingRatioNoBouncy,
+                                    stiffness = Spring.StiffnessMediumLow,
+                                ),
+                            ) { it } + fadeIn(tween(200))
+                        }
+
+                        isSecondaryRoute(targetRoute) -> {
+                            // Ajustes, colecciones y editor: aparecen sin empujar.
+                            fadeIn(tween(240)) +
+                                scaleIn(
+                                    animationSpec = tween(260, easing = FastOutSlowInEasing),
+                                    initialScale = 0.95f,
+                                )
+                        }
+
+                        else -> {
+                            fadeIn(tween(240)) +
+                                slideInHorizontally(
+                                    animationSpec = tween(280, easing = FastOutSlowInEasing),
+                                ) { it / 14 } +
+                                scaleIn(
+                                    animationSpec = tween(280, easing = FastOutSlowInEasing),
+                                    initialScale = 0.985f,
+                                )
+                        }
                     }
                 },
                 exitTransition = {
-                    val randomDetail = targetState.destination.route
-                        ?.startsWith("detail") == true &&
+                    val targetRoute = targetState.destination.route
+                    val randomDetail = isDetailRoute(targetRoute) &&
                         targetState.arguments?.getBoolean("random") == true
-                    val detailToDetail = initialState.destination.route
-                        ?.startsWith("detail") == true &&
-                        targetState.destination.route?.startsWith("detail") == true
-                    if (liteMode) {
-                        fadeOut(tween(90))
-                    } else if (randomDetail || detailToDetail) {
-                        fadeOut(tween(300))
-                    } else {
-                        fadeOut(tween(160)) +
-                            scaleOut(
-                                animationSpec = tween(220, easing = FastOutSlowInEasing),
-                                targetScale = 0.99f,
-                            )
+                    val detailToDetail = isDetailRoute(initialState.destination.route) &&
+                        isDetailRoute(targetRoute)
+                    when {
+                        liteMode -> fadeOut(tween(90))
+                        randomDetail || detailToDetail -> fadeOut(tween(300))
+                        isDetailRoute(targetRoute) -> fadeOut(tween(180))
+                        isSecondaryRoute(targetRoute) -> {
+                            fadeOut(tween(180)) +
+                                scaleOut(
+                                    animationSpec = tween(220, easing = FastOutSlowInEasing),
+                                    targetScale = 0.98f,
+                                )
+                        }
+
+                        else -> {
+                            fadeOut(tween(160)) +
+                                scaleOut(
+                                    animationSpec = tween(220, easing = FastOutSlowInEasing),
+                                    targetScale = 0.99f,
+                                )
+                        }
                     }
                 },
                 popEnterTransition = {
-                    if (liteMode) {
-                        fadeIn(tween(120))
-                    } else {
-                        // La pantalla de atrás ya está quieta y visible; la
-                        // tarjeta que sale es la que hace el movimiento.
-                        EnterTransition.None
+                    when {
+                        liteMode -> fadeIn(tween(120))
+                        targetState.destination.route in topTabRoutes -> {
+                            // La pantalla de atrás ya está quieta y visible; la
+                            // que sale es la que hace el movimiento.
+                            EnterTransition.None
+                        }
+
+                        isSecondaryRoute(initialState.destination.route) -> {
+                            fadeIn(tween(220)) +
+                                scaleIn(
+                                    animationSpec = tween(240, easing = FastOutSlowInEasing),
+                                    initialScale = 0.98f,
+                                )
+                        }
+
+                        else -> EnterTransition.None
                     }
                 },
                 popExitTransition = {
-                    if (liteMode) {
-                        fadeOut(tween(90))
-                    } else {
-                        scaleOut(
-                            animationSpec = tween(220, easing = LinearEasing),
-                            targetScale = 0.9f,
-                            transformOrigin = TransformOrigin.Center,
-                        )
+                    val leaving = initialState.destination.route
+                    when {
+                        liteMode -> fadeOut(tween(90))
+                        isDetailRoute(leaving) -> {
+                            // Al volver, el detalle se va hacia la derecha.
+                            slideOutHorizontally(
+                                animationSpec = spring(
+                                    dampingRatio = Spring.DampingRatioNoBouncy,
+                                    stiffness = Spring.StiffnessMediumLow,
+                                ),
+                            ) { it } + fadeOut(tween(200))
+                        }
+
+                        isSecondaryRoute(leaving) -> {
+                            fadeOut(tween(180)) +
+                                scaleOut(
+                                    animationSpec = tween(220, easing = FastOutSlowInEasing),
+                                    targetScale = 0.97f,
+                                )
+                        }
+
+                        else -> {
+                            scaleOut(
+                                animationSpec = tween(220, easing = LinearEasing),
+                                targetScale = 0.9f,
+                                transformOrigin = TransformOrigin.Center,
+                            )
+                        }
                     }
                 },
                 predictivePopEnterTransition = {
@@ -290,17 +347,38 @@ private fun MainApp(
                     }
                 },
                 predictivePopExitTransition = {
-                    if (initialState.destination.route in topTabRoutes) {
-                        // Salir de una pestaña hacia otra no escala la barra.
-                        ExitTransition.None
-                    } else if (liteMode) {
-                        fadeOut(tween(90))
-                    } else {
-                        scaleOut(
-                            animationSpec = tween(220, easing = LinearEasing),
-                            targetScale = 0.9f,
-                            transformOrigin = TransformOrigin.Center,
-                        )
+                    val leaving = initialState.destination.route
+                    when {
+                        leaving in topTabRoutes -> {
+                            // Salir de una pestaña hacia otra no escala la barra.
+                            ExitTransition.None
+                        }
+
+                        liteMode -> fadeOut(tween(90))
+                        isDetailRoute(leaving) -> {
+                            slideOutHorizontally(
+                                animationSpec = spring(
+                                    dampingRatio = Spring.DampingRatioNoBouncy,
+                                    stiffness = Spring.StiffnessMediumLow,
+                                ),
+                            ) { it } + fadeOut(tween(200))
+                        }
+
+                        isSecondaryRoute(leaving) -> {
+                            fadeOut(tween(180)) +
+                                scaleOut(
+                                    animationSpec = tween(220, easing = FastOutSlowInEasing),
+                                    targetScale = 0.97f,
+                                )
+                        }
+
+                        else -> {
+                            scaleOut(
+                                animationSpec = tween(220, easing = LinearEasing),
+                                targetScale = 0.9f,
+                                transformOrigin = TransformOrigin.Center,
+                            )
+                        }
                     }
                 },
             ) {
@@ -769,6 +847,17 @@ private fun TopLevelScaffold(
         }
     }
 }
+
+/** Pantallas que se abren desde una pestaña y vuelven con gesto de atrás. */
+private fun isDetailRoute(route: String?): Boolean = route?.startsWith("detail") == true
+
+/** Ajustes, colecciones, editor y Estudio: aparecen con fade + escala. */
+private fun isSecondaryRoute(route: String?): Boolean =
+    route == "settings" ||
+        route == "decoy" ||
+        route == "studio" ||
+        route?.startsWith("editor/") == true ||
+        route?.startsWith("collection/") == true
 
 private fun NavHostController.navigateTopLevel(route: String) {
     navigate(route) {
