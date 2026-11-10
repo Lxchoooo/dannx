@@ -1,5 +1,11 @@
 package com.dannx.walls.ui.components
 
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -19,6 +25,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -27,29 +34,58 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.dannx.walls.R
+import com.dannx.walls.ui.theme.LocalLiteMode
 
 /**
- * Marcador de carga liviano: bloques estáticos sin animación para no gastar
- * CPU en equipos lentos.
+ * Marcador de carga liviano: bloques que simulan la grilla. Cuando hay modo
+ * lite queda estático, sin animación, para no gastar CPU en equipos lentos.
  */
 @Composable
 fun FeedSkeleton(modifier: Modifier = Modifier) {
+    val lite = LocalLiteMode.current
     val placeholder = MaterialTheme.colorScheme.surfaceVariant
+    val alpha = if (lite) {
+        1f
+    } else {
+        val transition = rememberInfiniteTransition(label = "feedSkeleton")
+        val pulse by transition.animateFloat(
+            initialValue = 0.55f,
+            targetValue = 1f,
+            animationSpec = infiniteRepeatable(
+                animation = tween(durationMillis = 900, easing = LinearEasing),
+                repeatMode = RepeatMode.Reverse,
+            ),
+            label = "feedSkeletonPulse",
+        )
+        pulse
+    }
+    val color = placeholder.copy(alpha = alpha)
+    // Alturas desparejas para que se parezca a la grilla real.
+    val heights = listOf(
+        230.dp to 190.dp,
+        200.dp to 240.dp,
+        220.dp to 200.dp,
+    )
     Column(
         modifier = modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        repeat(3) {
+        heights.forEach { (left, right) ->
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                repeat(2) {
-                    Box(
-                        modifier = Modifier
-                            .weight(1f)
-                            .height(210.dp)
-                            .clip(RoundedCornerShape(22.dp))
-                            .background(placeholder),
-                    )
-                }
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(left)
+                        .clip(RoundedCornerShape(22.dp))
+                        .background(color),
+                )
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(right)
+                        .clip(RoundedCornerShape(22.dp))
+                        .background(color),
+                )
             }
         }
     }
