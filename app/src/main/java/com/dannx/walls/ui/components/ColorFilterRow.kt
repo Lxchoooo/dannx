@@ -41,26 +41,16 @@ fun ColorFilterRow(
     LazyRow(
         modifier = modifier,
         contentPadding = PaddingValues(end = 20.dp),
-        horizontalArrangement = Arrangement.spacedBy(9.dp),
+        horizontalArrangement = Arrangement.spacedBy(2.dp),
     ) {
         items(WallpaperColor.entries, key = { "color-filter-${it.key}" }) { color ->
             val label = stringResource(labelFor(color))
             val description = stringResource(R.string.home_color_filter_description, label)
             val isSelected = selected == color
+            // El círculo mide 38 dp, pero el objetivo táctil llega a 48 dp.
             Box(
                 modifier = Modifier
-                    .size(38.dp)
-                    .clip(CircleShape)
-                    .background(swatchFor(color))
-                    .border(
-                        width = if (isSelected) 3.dp else 1.dp,
-                        color = if (isSelected) {
-                            MaterialTheme.colorScheme.onSurface
-                        } else {
-                            MaterialTheme.colorScheme.outlineVariant
-                        },
-                        shape = CircleShape,
-                    )
+                    .size(48.dp)
                     .selectable(
                         selected = isSelected,
                         role = Role.RadioButton,
@@ -69,13 +59,30 @@ fun ColorFilterRow(
                     .semantics { contentDescription = description },
                 contentAlignment = Alignment.Center,
             ) {
-                if (isSelected) {
-                    Icon(
-                        imageVector = Icons.Rounded.Check,
-                        contentDescription = null,
-                        tint = checkTintFor(color),
-                        modifier = Modifier.size(20.dp),
-                    )
+                Box(
+                    modifier = Modifier
+                        .size(38.dp)
+                        .clip(CircleShape)
+                        .background(swatchFor(color))
+                        .border(
+                            width = if (isSelected) 3.dp else 1.dp,
+                            color = if (isSelected) {
+                                MaterialTheme.colorScheme.onSurface
+                            } else {
+                                MaterialTheme.colorScheme.outlineVariant
+                            },
+                            shape = CircleShape,
+                        ),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    if (isSelected) {
+                        Icon(
+                            imageVector = Icons.Rounded.Check,
+                            contentDescription = null,
+                            tint = checkTintFor(color),
+                            modifier = Modifier.size(20.dp),
+                        )
+                    }
                 }
             }
         }

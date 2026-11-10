@@ -47,6 +47,8 @@ published in [`docs/screenshots/`](docs/screenshots/) with the next release.
 
 - Featured wallpapers, categories and free-form tags.
 - Search that keeps up as you type, with recent searches.
+- Filter the feed by colour with a single tap; tap the same colour again to
+  clear it.
 - Pull to refresh, plus offline browsing of the feed you already loaded.
 - Favourites and collections stored on your phone.
 - **Surprise me** opens a random wallpaper from the current filter.
