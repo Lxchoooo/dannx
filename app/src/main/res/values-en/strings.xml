@@ -43,6 +43,8 @@
     <string name="detail_wallpaper_missing">We couldn\'t find this wallpaper. It may no longer be available.</string>
     <string name="detail_collection_missing">We couldn\'t find this collection. It may no longer be available.</string>
     <string name="msg_open_file_failed">There is no app that can open this file.</string>
+    <string name="state_offline_title">Looks like you\'re offline</string>
+    <string name="state_offline_body">Check your connection and try again.</string>
     <string name="state_offline">No connection: showing what you already had saved.</string>
     <string name="state_offline_detail">No connection: downloading, applying and sharing need internet.</string>
     <string name="state_empty_feed_title">No wallpapers yet</string>

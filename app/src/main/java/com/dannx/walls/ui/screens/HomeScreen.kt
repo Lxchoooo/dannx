@@ -35,6 +35,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Casino
 import androidx.compose.material.icons.rounded.Close
+import androidx.compose.material.icons.rounded.CloudOff
 import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.SearchOff
@@ -88,6 +89,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import coil.imageLoader
 import com.dannx.walls.BuildConfig
+import com.dannx.walls.ErrorKind
 import com.dannx.walls.R
 import com.dannx.walls.LoadState
 import com.dannx.walls.UiState
@@ -617,11 +619,22 @@ fun HomeScreen(
                 }
 
                 state.feed is LoadState.Error && state.wallpapers.isEmpty() -> {
+                    val error = state.feed as LoadState.Error
                     item(span = { GridItemSpan(maxLineSpan) }) {
-                        ErrorState(
-                            message = (state.feed as LoadState.Error).message,
-                            onRetry = onRefresh,
-                        )
+                        if (error.kind == ErrorKind.OFFLINE) {
+                            EmptyState(
+                                title = stringResource(R.string.state_offline_title),
+                                message = stringResource(R.string.state_offline_body),
+                                icon = Icons.Rounded.CloudOff,
+                                actionLabel = stringResource(R.string.action_retry),
+                                onAction = onRefresh,
+                            )
+                        } else {
+                            ErrorState(
+                                message = error.message,
+                                onRetry = onRefresh,
+                            )
+                        }
                     }
                 }
 

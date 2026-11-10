@@ -43,6 +43,8 @@
     <string name="detail_wallpaper_missing">No encontramos este fondo. Puede que ya no esté disponible.</string>
     <string name="detail_collection_missing">No encontramos esta colección. Puede que ya no esté disponible.</string>
     <string name="msg_open_file_failed">No hay una app para abrir este archivo.</string>
+    <string name="state_offline_title">Parece que no hay conexión</string>
+    <string name="state_offline_body">Revisá tu conexión y probá de nuevo.</string>
     <string name="state_offline">Sin conexión: mostramos lo que ya tenías guardado.</string>
     <string name="state_offline_detail">Sin conexión: descargar, aplicar y compartir necesitan internet.</string>
     <string name="state_empty_feed_title">Todavía no hay fondos</string>
