@@ -337,6 +337,7 @@
     <string name="studio_title_hint">E.g. Sunset on the beach</string>
     <string name="studio_tags_hint">anime, night, flowers</string>
     <string name="studio_tags_help">Separate them with commas. The first tag is the primary one and is what appears in Home.</string>
+    <string name="editor_tags_help">The first one is primary and is what appears in Home. Press and hold a chip and drag it to change the order.</string>
     <string name="studio_collection_optional">Collection (optional)</string>
     <string name="studio_no_collections_hint">Create a collection from this section to group the wallpaper.</string>
     <string name="studio_no_collection">No collection</string>

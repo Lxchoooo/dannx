@@ -337,6 +337,7 @@
     <string name="studio_title_hint">Ej. Atardecer en la playa</string>
     <string name="studio_tags_hint">anime, noche, flores</string>
     <string name="studio_tags_help">Sepáralos con comas. El primer tag es el principal y es el que aparece en Inicio.</string>
+    <string name="editor_tags_help">El primero es el principal y es el que aparece en Inicio. Mantené apretado un chip y arrastralo para cambiar el orden.</string>
     <string name="studio_collection_optional">Colección (opcional)</string>
     <string name="studio_no_collections_hint">Creá una colección desde esta sección para agrupar el fondo.</string>
     <string name="studio_no_collection">Sin colección</string>

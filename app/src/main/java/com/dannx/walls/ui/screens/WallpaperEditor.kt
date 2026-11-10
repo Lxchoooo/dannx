@@ -516,7 +516,7 @@ private fun EditorTagChips(
         }
         if (tags.isNotEmpty()) {
             Text(
-                text = stringResource(R.string.studio_tags_help),
+                text = stringResource(R.string.editor_tags_help),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
