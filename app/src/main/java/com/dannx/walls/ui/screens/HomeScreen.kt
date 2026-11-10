@@ -1,5 +1,11 @@
 package com.dannx.walls.ui.screens
 
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.layout.Arrangement
@@ -64,6 +70,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
@@ -116,6 +123,7 @@ fun HomeScreen(
     onTagChange: (String?) -> Unit,
     onRefresh: () -> Unit,
     onOpenWallpaper: (Wallpaper) -> Unit,
+    onRandomWallpaper: (Wallpaper) -> Unit = onOpenWallpaper,
     onToggleFavorite: (String) -> Unit,
     onClearFilters: () -> Unit = {
         onQueryChange("")
@@ -141,6 +149,22 @@ fun HomeScreen(
     val liteMode = LocalLiteMode.current
     val gridState = rememberLazyGridState()
     var lastRandomId by rememberSaveable { mutableStateOf<String?>(null) }
+    // Balanceo suave del dado de "Sorpréndeme". En lite queda quieto.
+    val surpriseWiggle = if (liteMode) {
+        0f
+    } else {
+        val transition = rememberInfiniteTransition(label = "surprise")
+        val angle by transition.animateFloat(
+            initialValue = -4f,
+            targetValue = 4f,
+            animationSpec = infiniteRepeatable(
+                animation = tween(durationMillis = 900, easing = FastOutSlowInEasing),
+                repeatMode = RepeatMode.Reverse,
+            ),
+            label = "surpriseWiggle",
+        )
+        angle
+    }
     // Solo se precargan las miniaturas una vez por carga del feed: al volver a
     // la pestaña no se relanza, para no competir con las imagenes visibles.
     // En modo lite no se precarga nada: el ahorro de datos y memoria es el
@@ -385,11 +409,17 @@ fun HomeScreen(
                                     .ifEmpty { filtered }
                                 val picked = candidates.random()
                                 lastRandomId = picked.id
-                                onOpenWallpaper(picked)
+                                onRandomWallpaper(picked)
                             },
                             label = { Text(stringResource(R.string.action_random_wallpaper)) },
                             leadingIcon = {
-                                Icon(Icons.Rounded.Casino, contentDescription = null)
+                                Icon(
+                                    Icons.Rounded.Casino,
+                                    contentDescription = null,
+                                    modifier = Modifier.graphicsLayer {
+                                        rotationZ = surpriseWiggle
+                                    },
+                                )
                             },
                             shape = CircleShape,
                         )

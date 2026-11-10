@@ -215,8 +215,20 @@ private fun MainApp(
                 navController = navController,
                 startDestination = startDestination,
                 enterTransition = {
+                    val randomDetail = targetState.destination.route
+                        ?.startsWith("detail") == true &&
+                        targetState.arguments?.getBoolean("random") == true
+                    val detailToDetail = initialState.destination.route
+                        ?.startsWith("detail") == true &&
+                        targetState.destination.route?.startsWith("detail") == true
                     if (liteMode) {
                         fadeIn(tween(120))
+                    } else if (randomDetail) {
+                        // Sorpréndeme: se cruza con la imagen que había en pantalla.
+                        fadeIn(tween(340))
+                    } else if (detailToDetail) {
+                        // Pasar de un fondo a otro se cruza suave, sin saltar.
+                        fadeIn(tween(300))
                     } else {
                         fadeIn(tween(240)) +
                             slideInHorizontally(
@@ -229,8 +241,16 @@ private fun MainApp(
                     }
                 },
                 exitTransition = {
+                    val randomDetail = targetState.destination.route
+                        ?.startsWith("detail") == true &&
+                        targetState.arguments?.getBoolean("random") == true
+                    val detailToDetail = initialState.destination.route
+                        ?.startsWith("detail") == true &&
+                        targetState.destination.route?.startsWith("detail") == true
                     if (liteMode) {
                         fadeOut(tween(90))
+                    } else if (randomDetail || detailToDetail) {
+                        fadeOut(tween(300))
                     } else {
                         fadeOut(tween(160)) +
                             scaleOut(
@@ -311,6 +331,12 @@ private fun MainApp(
                         onOpenWallpaper = { wallpaper ->
                             viewModel.rememberCurrentSearch()
                             navController.navigate("detail/${wallpaper.id}") {
+                                launchSingleTop = true
+                            }
+                        },
+                        onRandomWallpaper = { wallpaper ->
+                            viewModel.rememberCurrentSearch()
+                            navController.navigate("detail/${wallpaper.id}?random=true") {
                                 launchSingleTop = true
                             }
                         },
@@ -536,9 +562,13 @@ private fun MainApp(
                 }
             }
             composable(
-                route = "detail/{id}",
+                route = "detail/{id}?random={random}",
                 arguments = listOf(
                     navArgument("id") { type = NavType.StringType },
+                    navArgument("random") {
+                        type = NavType.BoolType
+                        defaultValue = false
+                    },
                 ),
             ) { entry ->
                 val id = entry.arguments?.getString("id").orEmpty()
