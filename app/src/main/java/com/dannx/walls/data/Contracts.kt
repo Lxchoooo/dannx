@@ -33,6 +33,19 @@ data class WallpaperPage(
 
 const val FEED_PAGE_SIZE = 30
 
+/** Cantidad máxima de tags que acepta un fondo en el editor. */
+const val TagsLimit = 12
+
+/** Fondos por edición de tags en bloque: al tope se corta la cola. */
+const val BulkTagLimit = 50
+
+/**
+ * Fallo de una edición con su mensaje listo para la pantalla. Permite
+ * repasar errores puntuales (una categoría reservada, un título vacío) sin
+ * acoplar la interfaz a los detalles internos.
+ */
+class StudioEditException(message: String) : Exception(message)
+
 /**
  * Contrato de los datos remotos. Permite probar el ViewModel con un fake.
  */

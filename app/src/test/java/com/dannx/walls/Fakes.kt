@@ -29,6 +29,8 @@ class FakeRepository : WallpapersRepository {
     var collections: List<WallpaperCollection> = emptyList()
     var failWith: Throwable? = null
     var failTimes: Int = 0
+    /** Solo para updates de wallpaper: lanza failWith para esos ids. */
+    var failUpdatesFor: Set<String> = emptySet()
     var loadCalls: Int = 0
     val pageFilters: MutableList<WallpaperFilter> = mutableListOf()
     var session: AdminSession? = null
@@ -136,28 +138,34 @@ class FakeRepository : WallpapersRepository {
         tags: List<String>,
         featured: Boolean,
         featuredPosition: Int,
-    ): Wallpaper = (wallpapers + adminWallpapers.orEmpty())
-        .firstOrNull { it.id == wallpaperId }
-        ?.copy(
-            title = title,
-            category = category,
-            categoryId = categoryId,
-            author = author,
-            tags = tags,
-            featured = featured,
-            featuredPosition = featuredPosition,
-        )
-        ?: Wallpaper(
-            id = wallpaperId,
-            title = title,
-            category = category,
-            categoryId = categoryId,
-            author = author,
-            imageUrl = "url",
-            tags = tags,
-            featured = featured,
-            featuredPosition = featuredPosition,
-        )
+    ): Wallpaper {
+        val error = failWith
+        if (error != null && wallpaperId in failUpdatesFor) {
+            throw error
+        }
+        return (wallpapers + adminWallpapers.orEmpty())
+            .firstOrNull { it.id == wallpaperId }
+            ?.copy(
+                title = title,
+                category = category,
+                categoryId = categoryId,
+                author = author,
+                tags = tags,
+                featured = featured,
+                featuredPosition = featuredPosition,
+            )
+            ?: Wallpaper(
+                id = wallpaperId,
+                title = title,
+                category = category,
+                categoryId = categoryId,
+                author = author,
+                imageUrl = "url",
+                tags = tags,
+                featured = featured,
+                featuredPosition = featuredPosition,
+            )
+    }
 
     override suspend fun reorderFeatured(ids: List<String>) {
         featuredOrder = ids

@@ -473,6 +473,20 @@ private fun MainApp(
                         onMoveCategory = viewModel::moveCategory,
                         onDeleteCategory = viewModel::deleteCategory,
                         onUpdateWallpaper = viewModel::updateWallpaper,
+                        onUpdateWallpaperNow = { wallpaperId, title, category, categoryId, author, tags, featured ->
+                            viewModel.updateWallpaperNow(
+                                wallpaperId = wallpaperId,
+                                title = title,
+                                categoryInput = category,
+                                categoryId = categoryId,
+                                author = author,
+                                tags = tags,
+                                featured = featured,
+                            )
+                            Unit
+                        },
+                        onBulkEditTags = viewModel::bulkEditTags,
+                        onClearBulkResult = viewModel::clearBulkResult,
                         onReplaceImage = viewModel::replaceWallpaperImage,
                         onArchiveWallpaper = viewModel::archiveWallpaper,
                         onDeleteWallpaper = viewModel::deleteWallpaper,

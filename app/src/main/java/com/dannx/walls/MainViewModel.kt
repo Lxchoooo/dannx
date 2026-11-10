@@ -27,6 +27,9 @@ import com.dannx.walls.data.LOCAL_COLLECTION_OWNER
 import com.dannx.walls.data.LOCAL_COLLECTION_PREFIX
 import com.dannx.walls.data.LocalStore
 import com.dannx.walls.data.Prefs
+import com.dannx.walls.data.BulkTagLimit
+import com.dannx.walls.data.StudioEditException
+import com.dannx.walls.data.TagsLimit
 import com.dannx.walls.data.ThemeMode
 import com.dannx.walls.data.Wallpaper
 import com.dannx.walls.data.WallpaperActions
@@ -43,6 +46,7 @@ import com.dannx.walls.util.WallpaperTarget
 import com.dannx.walls.util.StringResolver
 import com.dannx.walls.util.get
 import com.dannx.walls.util.stringResolver
+import java.util.Locale
 import java.util.UUID
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
@@ -51,7 +55,10 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withPermit
 
 enum class UiAction {
     DOWNLOAD,
@@ -75,11 +82,24 @@ data class DownloadPrompt(
     val uri: String,
 )
 
-/** Colección resuelta para su pantalla de detalle, con sus fondos completos. */
+/**
+ * Colección resuelta para su pantalla de detalle, con sus fondos completos.
+ */
 @Immutable
 data class CollectionDetailData(
     val collection: WallpaperCollection,
     val wallpapers: List<Wallpaper>,
+)
+
+/**
+ * Cierre de una edición de tags en bloque: el tag tocado, si fue alta o baja,
+ * cuántos fondos quedaron bien y lista de los que fallaron para reintentos.
+ */
+data class BulkTagResult(
+    val tag: String,
+    val add: Boolean,
+    val saved: Int,
+    val failed: List<String>,
 )
 
 /**
@@ -139,6 +159,9 @@ data class UiState(
     val onboardingDone: Boolean = false,
     val collectionBusy: Boolean = false,
     val studioBusy: Boolean = false,
+    /** Edición en bloque de tags: (fondos editados, total). */
+    val bulkProgress: Pair<Int, Int>? = null,
+    val bulkResult: BulkTagResult? = null,
     val uploadSuccessCount: Int = 0,
     val authBusy: Boolean = false,
     val message: String? = null,
@@ -1511,70 +1534,280 @@ class MainViewModel(
         tags: List<String>,
         featured: Boolean,
     ) {
+        viewModelScope.launch {
+            try {
+                updateWallpaperNow(
+                    wallpaperId = wallpaperId,
+                    title = title,
+                    categoryInput = category,
+                    categoryId = categoryId,
+                    author = author,
+                    tags = tags,
+                    featured = featured,
+                )
+                _state.update { it.copy(message = strings.get(R.string.msg_wallpaper_updated)) }
+            } catch (error: Exception) {
+                if (error is CancellationException) throw error
+                _state.update { it.afterError(error) }
+            }
+        }
+    }
+
+    /**
+     * Guarda una edición de fondo y devuelve el wallpaper actualizado. La usa
+     * la hoja de edición con la pantalla de espera y Reintentar; al confirmar
+     * el servidor, esparce los nuevos datos por todas las pantallas y la caché
+     * para que no quede ningún dato viejo a la vista.
+     */
+    suspend fun updateWallpaperNow(
+        wallpaperId: String,
+        title: String,
+        categoryInput: String,
+        categoryId: String?,
+        author: String,
+        tags: List<String>,
+        featured: Boolean,
+    ): Wallpaper {
         val cleanTags = tags.map { it.trim() }
             .filter { it.isNotBlank() }
             .distinctBy { it.lowercase() }
         val cleanAuthor = author.trim().ifBlank { "DannX" }.take(60)
+        val cleanTitle = title.trim().take(120)
         val current = _state.value.studioWallpapers.firstOrNull { it.id == wallpaperId }
+            ?: throw StudioEditException(strings.get(R.string.error_unexpected))
+        val resolved = resolveCategoryForEdit(current, categoryInput, categoryId)
         val nextFeaturedPosition = when {
-            current == null -> 0
             featured && !current.featured ->
                 (_state.value.studioWallpapers.filter { it.featured }
                     .maxOfOrNull { it.featuredPosition } ?: -1) + 1
             else -> current.featuredPosition
         }
         if (_state.value.isDemo) {
-            // En demo los archivados solo están en studioWallpapers. Antes se
-            // buscaban en wallpapers y editarlos no hacía nada.
-            val updated = current?.copy(
-                title = title,
-                category = category,
-                categoryId = categoryId,
+            val updated = current.copy(
+                title = cleanTitle,
+                category = resolved.first,
+                categoryId = resolved.second,
                 author = cleanAuthor,
                 tags = cleanTags,
                 featured = featured,
                 featuredPosition = nextFeaturedPosition,
-            ) ?: return
+            )
+            applyWallpaperUpdates(listOf(updated))
+            return updated
+        }
+        val updated = api.updateWallpaper(
+            wallpaperId = wallpaperId,
+            title = cleanTitle,
+            category = resolved.first,
+            categoryId = resolved.second,
+            author = cleanAuthor,
+            tags = cleanTags,
+            featured = featured,
+            featuredPosition = nextFeaturedPosition,
+        )
+        applyWallpaperUpdates(listOf(updated))
+        return updated
+    }
+
+    /**
+     * Cierra la pareja (nombre, id) de la categoría elegida en el editor:
+     * texto que coincide con una de la lista usa su id; texto igual al nombre
+     * actual conserva el id previo; texto nuevo crea la categoría antes de
+     * tocar el fondo. El texto vacío conserva la categoría que ya tenía.
+     */
+    private suspend fun resolveCategoryForEdit(
+        current: Wallpaper,
+        categoryInput: String,
+        categoryId: String?,
+    ): Pair<String, String?> {
+        val typed = categoryInput.trim().take(40)
+        if (typed.isBlank()) {
+            return current.category to current.categoryId
+        }
+        val existing = _state.value.categories.firstOrNull {
+            it.name.equals(typed, ignoreCase = true)
+        }
+        if (existing != null) return existing.name to existing.id
+        if (categoryId != null && current.category.equals(typed, ignoreCase = true)) {
+            return typed to categoryId
+        }
+        val created = createCategoryNow(typed)
+        return created.name to created.id
+    }
+
+    /**
+     * Crea una categoría y la devuelve sin avisar en pantalla: la llama el
+     * editor cuando se guarda con una categoría que todavía no existe. Si
+     * falla, la edición entera queda con su error y sin tocar el fondo.
+     */
+    suspend fun createCategoryNow(name: String): WallpaperCategory {
+        val clean = name.trim().take(40)
+        if (clean.isBlank()) {
+            throw StudioEditException(strings.get(R.string.msg_category_name_required))
+        }
+        if (isReservedCategoryName(clean)) {
+            throw StudioEditException(strings.get(R.string.msg_name_reserved))
+        }
+        _state.value.categories.firstOrNull { it.name.equals(clean, ignoreCase = true) }
+            ?.let { return it }
+        val position = (_state.value.categories.maxOfOrNull { it.position } ?: -1) + 1
+        if (_state.value.isDemo) {
+            val created = WallpaperCategory(
+                id = "local-category-" + UUID.randomUUID().toString(),
+                name = clean,
+                position = position,
+            )
+            _state.update { it.copy(categories = it.categories + created) }
+            return created
+        }
+        try {
+            val created = api.createCategory(clean, position)
             _state.update {
                 it.copy(
-                    wallpapers = it.wallpapers.map { w -> if (w.id == wallpaperId) updated else w },
-                    adminWallpapers = it.adminWallpapers.map { w ->
-                        if (w.id == wallpaperId) updated else w
-                    },
-                    message = strings.get(R.string.msg_wallpaper_updated),
+                    categories = (it.categories + created)
+                        .distinctBy { c -> c.id }
+                        .sortedWith(compareBy({ c -> c.position }, { c -> c.name })),
                 )
             }
-            return
+            return created
+        } catch (error: Exception) {
+            if (error is CancellationException) throw error
+            throw StudioEditException(error.userMessage())
         }
-        viewModelScope.launch {
-            _state.update { it.copy(studioBusy = true) }
-            try {
-                val updated = api.updateWallpaper(
-                    wallpaperId = wallpaperId,
-                    title = title,
-                    category = category,
-                    categoryId = categoryId,
-                    author = cleanAuthor,
-                    tags = cleanTags,
-                    featured = featured,
-                    featuredPosition = nextFeaturedPosition,
-                )
-                _state.update {
-                    it.copy(
-                        studioBusy = false,
-                        wallpapers = it.wallpapers.map { w ->
-                            if (w.id == wallpaperId) updated else w
-                        },
-                        adminWallpapers = it.adminWallpapers.map { w ->
-                            if (w.id == wallpaperId) updated else w
-                        },
-                        message = strings.get(R.string.msg_wallpaper_updated),
+    }
+
+    /**
+     * Esparce wallpapers editados por todo el estado: listas del Estudio y del
+     * feed, detalle de fondo, detalle de colección y caché del feed. Es el
+     * punto único para que una edición se vea al instante en cada pantalla.
+     */
+    private suspend fun applyWallpaperUpdates(updates: List<Wallpaper>) {
+        if (updates.isEmpty()) return
+        val byId = updates.associateBy { it.id }
+        _state.update { state ->
+            val detailWallpaper = state.detailWallpaper as? LoadState.Content<Wallpaper>
+                ?.takeIf { it.data.id in byId }
+                ?.let { content -> LoadState.Content(byId.getValue(content.data.id)) }
+            val detailCollection = state.detailCollection
+                as? LoadState.Content<CollectionDetailData>
+                ?.takeIf { content -> content.data.wallpapers.any { it.id in byId } }
+                ?.let { content ->
+                    LoadState.Content(
+                        content.data.copy(
+                            wallpapers = content.data.wallpapers.map { byId[it.id] ?: it },
+                        ),
                     )
                 }
-            } catch (error: Exception) {
+            state.copy(
+                wallpapers = state.wallpapers.map { byId[it.id] ?: it },
+                adminWallpapers = state.adminWallpapers.map { byId[it.id] ?: it },
+                detailWallpaper = detailWallpaper ?: state.detailWallpaper,
+                detailCollection = detailCollection ?: state.detailCollection,
+            )
+        }
+        runCatching {
+            val cached = cache.readWallpapers()
+            if (cached.any { it.id in byId }) {
+                cache.writeWallpapers(cached.map { byId[it.id] ?: it })
+            }
+        }
+    }
+
+    /** Cierra el resumen de una corrida de edición de tags en bloque. */
+    fun clearBulkResult() {
+        _state.update { it.copy(bulkResult = null) }
+    }
+
+    /** Reemplaza el tag en las listas del fondo sin repetirlo. */
+    private fun Wallpaper.withBulkTag(tag: String, add: Boolean): Wallpaper {
+        val lowered = tag.lowercase(Locale.ROOT)
+        val without = tags.filterNot { it.lowercase(Locale.ROOT) == lowered }
+        return copy(tags = if (add) without + tag else without)
+    }
+
+    /**
+     * Editar tags de varios fondos a la vez: agrega el tag al final de cada
+     * uno (sin repetir) o lo quita. Hace una petición por fondo con a lo sumo
+     * tres en paralelo y muestra el progreso en pantalla; ante un fallo, ese
+     * fondo queda como está y queda en la lista para reintentarlo.
+     */
+    fun bulkEditTags(ids: List<String>, tag: String, add: Boolean) {
+        val targets = ids.asSequence()
+            .distinct()
+            .take(BulkTagLimit)
+            .mapNotNull { id -> _state.value.studioWallpapers.firstOrNull { it.id == id } }
+            .toList()
+        val cleanTag = tag.trim().trimStart('#').trim().take(24)
+        if (targets.isEmpty() || cleanTag.isBlank()) return
+        _state.update { it.copy(bulkResult = null, bulkProgress = null) }
+        viewModelScope.launch {
+            if (_state.value.isDemo) {
+                val updated = targets.map { it.withBulkTag(cleanTag, add) }
+                applyWallpaperUpdates(updated)
                 _state.update {
-                    it.afterError(error)
+                    it.copy(
+                        bulkResult = BulkTagResult(
+                            tag = cleanTag,
+                            add = add,
+                            saved = updated.size,
+                            failed = emptyList(),
+                        ),
+                    )
                 }
+                return@launch
+            }
+            var done = 0
+            _state.update { it.copy(bulkProgress = 0 to targets.size) }
+            val saved = mutableListOf<Wallpaper>()
+            val failed = mutableListOf<String>()
+            val semaphore = Semaphore(3)
+            val jobs = targets.map { wallpaper ->
+                launch {
+                    semaphore.withPermit {
+                        val newTags = when {
+                            add && wallpaper.tags.size >= TagsLimit -> null
+                            else -> wallpaper.withBulkTag(cleanTag, add).tags
+                        }
+                        try {
+                            val updated = when (newTags) {
+                                null -> null
+                                else -> api.updateWallpaper(
+                                    wallpaperId = wallpaper.id,
+                                    title = wallpaper.title,
+                                    category = wallpaper.category,
+                                    categoryId = wallpaper.categoryId,
+                                    author = wallpaper.author,
+                                    tags = newTags,
+                                    featured = wallpaper.featured,
+                                    featuredPosition = wallpaper.featuredPosition,
+                                )
+                            }
+                            if (updated != null) saved += updated
+                        } catch (error: Exception) {
+                            if (error is CancellationException) throw error
+                            failed += wallpaper.id
+                        } finally {
+                            semaphore.release()
+                            done += 1
+                            _state.update {
+                                it.copy(bulkProgress = done to targets.size)
+                            }
+                        }
+                    }
+                }
+            }
+            jobs.joinAll()
+            applyWallpaperUpdates(saved)
+            _state.update { state ->
+                state.copy(
+                    bulkProgress = null,
+                    bulkResult = BulkTagResult(
+                        tag = cleanTag,
+                        add = add,
+                        saved = saved.size,
+                        failed = failed,
+                    ),
+                )
             }
         }
     }

@@ -77,6 +77,7 @@ import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -108,6 +109,8 @@ import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.dannx.walls.R
 import com.dannx.walls.UiState
+import com.dannx.walls.BulkTagResult
+import com.dannx.walls.data.BulkTagLimit
 import com.dannx.walls.data.DefaultCategories
 import com.dannx.walls.data.Wallpaper
 import com.dannx.walls.data.WallpaperCategory
@@ -150,6 +153,13 @@ fun StudioScreen(
     onDeleteCategory: (String, String?) -> Unit = { _, _ -> },
     onUpdateWallpaper: (String, String, String, String?, String, List<String>, Boolean) -> Unit =
         { _, _, _, _, _, _, _ -> },
+    /** Guardado de la hoja de edición: corre dentro del editor y avisa ahí. */
+    onUpdateWallpaperNow: suspend (String, String, String, String?, String, List<String>, Boolean) -> Unit =
+        { _, _, _, _, _, _, _ -> },
+    /** Edición de tags en bloque: ids seleccionados, tag y alta/baja. */
+    onBulkEditTags: (List<String>, String, Boolean) -> Unit = { _, _, _ -> },
+    /** Cierra el resumen de la edición de tags en bloque. */
+    onClearBulkResult: () -> Unit = {},
     onReplaceImage: (String, Uri) -> Unit = { _, _ -> },
     onArchiveWallpaper: (String, Boolean) -> Unit = { _, _ -> },
     onDeleteWallpaper: (String) -> Unit = {},
@@ -196,6 +206,7 @@ fun StudioScreen(
     var selectionMode by remember { mutableStateOf(false) }
     var selectedIds by remember { mutableStateOf<Set<String>>(emptySet()) }
     var bulkCategoryDialog by remember { mutableStateOf(false) }
+    var bulkTagsDialog by remember { mutableStateOf(false) }
     var bulkDeleteConfirm by remember { mutableStateOf(false) }
     var emptyTrashConfirm by remember { mutableStateOf(false) }
     var wallpaperToPurge by remember { mutableStateOf<Wallpaper?>(null) }
@@ -419,6 +430,7 @@ fun StudioScreen(
                             selectedIds = emptySet()
                         },
                         onBulkCategory = { bulkCategoryDialog = true },
+                        onBulkTagsDialog = { bulkTagsDialog = true },
                         onBulkDelete = { bulkDeleteConfirm = true },
                         onEdit = { editWallpaper = it },
                         onReplace = { wallpaper ->
@@ -495,22 +507,11 @@ fun StudioScreen(
     }
 
     editWallpaper?.let { wallpaper ->
-        WallpaperEditDialog(
+        WallpaperEditorSheet(
             wallpaper = wallpaper,
-            state = state,
+            categories = state.categories,
+            onSave = onUpdateWallpaperNow,
             onDismiss = { editWallpaper = null },
-            onSave = { title, category, categoryId, author, tags, featured ->
-                onUpdateWallpaper(
-                    wallpaper.id,
-                    title,
-                    category,
-                    categoryId,
-                    author,
-                    tags,
-                    featured,
-                )
-                editWallpaper = null
-            },
         )
     }
     deleteWallpaper?.let { wallpaper ->
@@ -627,6 +628,49 @@ fun StudioScreen(
                 bulkDeleteConfirm = false
                 selectionMode = false
                 selectedIds = emptySet()
+            },
+        )
+    }
+    if (bulkTagsDialog) {
+        BulkTagsDialog(
+            state = state,
+            selectedIds = selectedIds.toList(),
+            onDismiss = { bulkTagsDialog = false },
+            onTags = { ids, tag, add ->
+                onBulkEditTags(ids, tag, add)
+                bulkTagsDialog = false
+            },
+            onCategory = {
+                bulkTagsDialog = false
+                bulkCategoryDialog = true
+            },
+        )
+    }
+    state.bulkProgress?.let { (done, total) ->
+        AlertDialog(
+            onDismissRequest = {},
+            title = { Text(stringResource(R.string.studio_bulk_edit_title)) },
+            text = {
+                Column {
+                    Text(stringResource(R.string.studio_bulk_progress, done, total))
+                    Spacer(Modifier.height(10.dp))
+                    LinearProgressIndicator(
+                        progress = { done.toFloat() / total.toFloat() },
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
+            },
+            confirmButton = {},
+            dismissButton = {},
+        )
+    }
+    state.bulkResult?.let { result ->
+        BulkTagsResultDialog(
+            result = result,
+            onDismiss = onClearBulkResult,
+            onRetry = { failedIds ->
+                onClearBulkResult()
+                onBulkEditTags(failedIds, result.tag, result.add)
             },
         )
     }
@@ -1438,6 +1482,7 @@ private fun LazyListScope.wallsPanel(
     onBulkFeature: (Boolean) -> Unit,
     onBulkArchive: (Boolean) -> Unit,
     onBulkCategory: () -> Unit,
+    onBulkTagsDialog: () -> Unit,
     onBulkDelete: () -> Unit,
     onEdit: (Wallpaper) -> Unit,
     onReplace: (Wallpaper) -> Unit,
@@ -1579,6 +1624,14 @@ private fun LazyListScope.wallsPanel(
                                     enabled = walls.isNotEmpty() && !state.studioBusy,
                                 ) {
                                     Text(stringResource(R.string.studio_select_all))
+                                }
+                            }
+                            item(key = "bulk-edit-tags") {
+                                TextButton(
+                                    onClick = onBulkTagsDialog,
+                                    enabled = selectedIds.isNotEmpty() && !state.studioBusy,
+                                ) {
+                                    Text(stringResource(R.string.studio_bulk_edit))
                                 }
                             }
                             item(key = "bulk-feature") {
@@ -2469,113 +2522,175 @@ private fun BulkCategoryDialog(
 }
 
 @Composable
-private fun WallpaperEditDialog(
-    wallpaper: Wallpaper,
+/**
+ * Edición de tags en bloque: elige sumar un tag, quitar uno o cambiar a todos
+ * a otra categoría (ese reutiliza el diálogo ya existente). Antes de tocar
+ * nada muestra el resumen con cuántos fondos entran y avisa si quitar un tag
+ * le cambia el principal a alguno.
+ */
+@Composable
+private fun BulkTagsDialog(
     state: UiState,
+    selectedIds: List<String>,
     onDismiss: () -> Unit,
-    onSave: (String, String, String?, String, List<String>, Boolean) -> Unit,
+    onTags: (ids: List<String>, tag: String, add: Boolean) -> Unit,
+    onCategory: () -> Unit,
 ) {
-    var title by remember(wallpaper.id) { mutableStateOf(wallpaper.title) }
-    var author by remember(wallpaper.id) { mutableStateOf(wallpaper.author) }
-    var tags by remember(wallpaper.id) { mutableStateOf(wallpaper.tags.joinToString(", ")) }
-    var featured by remember(wallpaper.id) { mutableStateOf(wallpaper.featured) }
-    var categoryId by remember(wallpaper.id) { mutableStateOf(wallpaper.categoryId) }
-    val noCategory = stringResource(R.string.studio_no_category)
-    val options = remember(wallpaper, state.categories, noCategory) {
-        val base = state.categories
-        if (wallpaper.categoryId != null && base.none { it.id == wallpaper.categoryId }) {
-            base + WallpaperCategory(
-                id = wallpaper.categoryId,
-                name = wallpaper.category.ifBlank { noCategory },
-            )
-        } else {
-            base
-        }
-    }
-    val selected = options.firstOrNull { it.id == categoryId }
-        ?: options.firstOrNull()
+    var mode by remember { mutableStateOf<String?>(null) }
+    var tag by remember { mutableStateOf("") }
 
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.studio_edit_wallpaper)) },
-        text = {
-            Column(
-                modifier = Modifier
-                    .heightIn(max = 440.dp)
-                    .verticalScroll(rememberScrollState()),
-            ) {
-                OutlinedTextField(
-                    value = title,
-                    onValueChange = { title = it },
-                    label = { Text(stringResource(R.string.field_title)) },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth(),
-                )
-                Spacer(Modifier.height(10.dp))
-                OutlinedTextField(
-                    value = author,
-                    onValueChange = { author = it },
-                    label = { Text(stringResource(R.string.field_author)) },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth(),
-                )
-                Spacer(Modifier.height(10.dp))
-                Text(stringResource(R.string.field_category), style = MaterialTheme.typography.labelLarge)
-                Spacer(Modifier.height(4.dp))
-                options.forEach { option ->
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable { categoryId = option.id }
-                            .padding(vertical = 4.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Checkbox(
-                            checked = selected?.id == option.id,
-                            onCheckedChange = { categoryId = option.id },
+    if (mode == null) {
+        AlertDialog(
+            onDismissRequest = onDismiss,
+            title = { Text(stringResource(R.string.studio_bulk_edit_title)) },
+            text = {
+                Column {
+                    if (selectedIds.size > BulkTagLimit) {
+                        Text(
+                            text = stringResource(
+                                R.string.studio_bulk_tag_limit,
+                                selectedIds.size,
+                                BulkTagLimit,
+                            ),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.error,
                         )
-                        Text(option.name)
+                    }
+                    TextButton(
+                        onClick = { mode = "add" },
+                        enabled = selectedIds.isNotEmpty(),
+                    ) {
+                        Text(stringResource(R.string.studio_bulk_add_tag))
+                    }
+                    TextButton(
+                        onClick = { mode = "remove" },
+                        enabled = selectedIds.isNotEmpty(),
+                    ) {
+                        Text(stringResource(R.string.studio_bulk_remove_tag))
+                    }
+                    if (state.categories.isNotEmpty()) {
+                        TextButton(onClick = onCategory) {
+                            Text(stringResource(R.string.studio_bulk_category))
+                        }
                     }
                 }
-                Spacer(Modifier.height(8.dp))
+            },
+            confirmButton = {},
+            dismissButton = {
+                TextButton(onClick = onDismiss) {
+                    Text(stringResource(R.string.action_close))
+                }
+            },
+        )
+        return
+    }
+
+    val add = mode == "add"
+    val cleanTag = tag.trim().trimStart('#').trim()
+    val duplicated = state.studioWallpapers
+        .filter { it.id in selectedIds }
+        .count { wall ->
+            if (add) {
+                wall.tags.any { it.equals(cleanTag, ignoreCase = true) }
+            } else {
+                wall.tags.firstOrNull()?.equals(cleanTag, ignoreCase = true) == true
+            }
+        }
+    AlertDialog(
+        onDismissRequest = { mode = null },
+        title = {
+            Text(
+                stringResource(
+                    if (add) R.string.studio_bulk_add_tag else R.string.studio_bulk_remove_tag,
+                ),
+            )
+        },
+        text = {
+            Column {
                 OutlinedTextField(
-                    value = tags,
-                    onValueChange = { tags = it },
+                    value = tag,
+                    onValueChange = { tag = it.take(24) },
                     label = { Text(stringResource(R.string.field_tags)) },
-                    supportingText = { Text(stringResource(R.string.studio_tags_comma)) },
                     singleLine = true,
-                    modifier = Modifier.fillMaxWidth(),
+                    isError = tag.trim().isBlank() || duplicated == selectedIds.size,
                 )
-                Spacer(Modifier.height(8.dp))
-                TagPreviewChips(parseTags(tags))
-                Row(verticalAlignment = Alignment.CenterVertically) {
+                Spacer(Modifier.height(10.dp))
+                val summary = stringResource(
+                    if (add) R.string.studio_bulk_tag_summary_add
+                    else R.string.studio_bulk_tag_summary_remove,
+                    tag.trim(),
+                    selectedIds.size,
+                )
+                Text(summary)
+                if (!add && duplicated > 0) {
+                    Spacer(Modifier.height(8.dp))
                     Text(
-                        stringResource(R.string.studio_featured),
-                        modifier = Modifier.weight(1f),
+                        text = stringResource(R.string.studio_bulk_first_warn),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.tertiary,
                     )
-                    Switch(checked = featured, onCheckedChange = { featured = it })
                 }
             }
         },
         confirmButton = {
             TextButton(
-                onClick = {
-                    onSave(
-                        title,
-                        selected?.name ?: wallpaper.category,
-                        selected?.id,
-                        author,
-                        parseTags(tags),
-                        featured,
-                    )
-                },
-                enabled = title.isNotBlank(),
+                onClick = { onTags(selectedIds, cleanTag, add) },
+                enabled = cleanTag.isNotBlank() && duplicated < selectedIds.size,
             ) {
                 Text(stringResource(R.string.action_save))
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) }
+            TextButton(onClick = { mode = null }) {
+                Text(stringResource(R.string.action_cancel))
+            }
+        },
+    )
+}
+
+/** Resumen final de la corrida: cuántos fondos quedaron bien y cuántos no. */
+@Composable
+private fun BulkTagsResultDialog(
+    result: BulkTagResult,
+    onDismiss: () -> Unit,
+    onRetry: (List<String>) -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.studio_bulk_edit_title)) },
+        text = {
+            Column {
+                Text(
+                    stringResource(
+                        R.string.studio_bulk_result,
+                        result.saved,
+                        result.saved + result.failed.size,
+                    ),
+                )
+                if (result.failed.isNotEmpty()) {
+                    Spacer(Modifier.height(8.dp))
+                    Text(
+                        text = stringResource(
+                            R.string.studio_bulk_failed,
+                            result.failed.size,
+                        ),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.error,
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            if (result.failed.isNotEmpty()) {
+                TextButton(onClick = { onRetry(result.failed) }) {
+                    Text(stringResource(R.string.studio_bulk_retry))
+                }
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.action_close))
+            }
         },
     )
 }

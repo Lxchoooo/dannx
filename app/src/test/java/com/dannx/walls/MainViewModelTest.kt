@@ -468,9 +468,117 @@ class MainViewModelTest {
         }
 
     @Test
-    fun `an expired session hides private collections but keeps the feed`() =
+    fun `bulk tag add appends the tag at the end for every selected wallpaper`() =
         runTest(dispatcher) {
             store.saveSession("admin@test", "token", null, "u1")
+            repository.session = AdminSession("admin@test", "token", "u1")
+            repository.wallpapers = listOf(
+                wallpaper("1").copy(tags = listOf("comun")),
+                wallpaper("2").copy(tags = listOf("propio", "comun")),
+                wallpaper("3").copy(tags = listOf("comun")),
+            )
+            val model = viewModel()
+            advanceUntilIdle()
+            model.loadStudio()
+            advanceUntilIdle()
+
+            model.bulkEditTags(listOf("1", "2", "3"), "Nuevo", add = true)
+            advanceUntilIdle()
+
+            val state = model.state.value
+            assertEquals(listOf("comun", "Nuevo"), state.adminWallpapers.first { it.id == "1" }.tags)
+            assertEquals(
+                listOf("propio", "comun", "Nuevo"),
+                state.adminWallpapers.first { it.id == "2" }.tags,
+            )
+            assertEquals(3, state.bulkResult?.saved)
+            assertTrue(state.bulkResult?.failed.isNullOrEmpty())
+            assertNull(state.bulkProgress)
+        }
+
+    @Test
+    fun `a failed bulk tag run counts failures and retries only them`() = runTest(dispatcher) {
+        store.saveSession("admin@test", "token", null, "u1")
+        repository.session = AdminSession("admin@test", "token", "u1")
+        repository.wallpapers = listOf(
+            wallpaper("1").copy(tags = listOf("comun")),
+            wallpaper("2").copy(tags = listOf("comun")),
+        )
+        repository.failWith = RuntimeException("boom")
+        repository.failUpdatesFor = setOf("2")
+        val model = viewModel()
+        advanceUntilIdle()
+        model.loadStudio()
+        advanceUntilIdle()
+
+        model.bulkEditTags(listOf("1", "2"), "Nuevo", add = true)
+        advanceUntilIdle()
+
+        var result = model.state.value.bulkResult
+        assertEquals(1, result?.saved)
+        assertEquals(listOf("2"), result?.failed)
+        assertEquals(
+            listOf("comun", "Nuevo"),
+            model.state.value.adminWallpapers.first { it.id == "1" }.tags,
+        )
+        assertEquals(listOf("comun"), model.state.value.adminWallpapers.first { it.id == "2" }.tags)
+
+        model.clearBulkResult()
+        assertNull(model.state.value.bulkResult)
+
+        repository.failUpdatesFor = emptySet()
+        model.bulkEditTags(result!!.failed, result.tag, result.add)
+        advanceUntilIdle()
+
+        result = model.state.value.bulkResult
+        assertEquals(1, result?.saved)
+        assertTrue(result?.failed.isNullOrEmpty())
+        assertEquals(
+            listOf("comun", "Nuevo"),
+            model.state.value.adminWallpapers.first { it.id == "2" }.tags,
+        )
+    }
+
+    @Test
+    fun `saving an edit spreads the new title everywhere and updates the cache`() =
+        runTest(dispatcher) {
+            store.saveSession("admin@test", "token", null, "u1")
+            repository.session = AdminSession("admin@test", "token", "u1")
+            repository.wallpapers = listOf(
+                wallpaper("1").copy(title = "Viejo", tags = listOf("a", "b")),
+            )
+            repository.categories = listOf(
+                com.dannx.walls.data.WallpaperCategory(id = "cat1", name = "Gatos", position = 0),
+            )
+            val model = viewModel()
+            advanceUntilIdle()
+            model.refresh()
+            advanceUntilIdle()
+            model.loadStudio()
+            advanceUntilIdle()
+
+            val updated = model.updateWallpaperNow(
+                wallpaperId = "1",
+                title = "Nuevo título",
+                categoryInput = "Gatos",
+                categoryId = "cat1",
+                author = "Autor",
+                tags = listOf("a", "nuevo"),
+                featured = false,
+            )
+            advanceUntilIdle()
+
+            assertEquals("cat1", updated.categoryId)
+            val state = model.state.value
+            assertEquals("Nuevo título", state.wallpapers.single().title)
+            assertEquals("Nuevo título", state.adminWallpapers.single().title)
+            assertEquals(listOf("a", "nuevo"), state.adminWallpapers.single().tags)
+            assertEquals("Nuevo título", cache.readWallpapers().single().title)
+        }
+
+    @Test
+    fun `an expired session hides private collections but keeps the feed`() = runTest(dispatcher) {
+        store.saveSession("admin@test", "token", null, "u1")
             repository.session = AdminSession("admin@test", "token", "u1")
             repository.wallpapers = listOf(wallpaper("1"))
             repository.collections = listOf(
