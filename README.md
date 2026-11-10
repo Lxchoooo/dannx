@@ -24,7 +24,7 @@ Screenshots for the current build live in
 ## 🎬 Demo
 
 Coming soon: a short demo GIF. It will live at
-[`docs/demo.gif`](docs/demo.gif) and be shown here once it is uploaded.
+`docs/demo.gif` and be shown here once it is uploaded.
 
 ## ✨ Features
 
@@ -96,7 +96,7 @@ app/src/main/java/com/dannx/walls/
 ├── ui/        # screens, components, theme, window size classes
 └── util/      # wallpaper files (gallery, apply) and geometry helpers
 .github/       # CI workflows
-docs/          # screenshots and documentation assets
+docs/          # guides, translations, roadmap and screenshots
 ```
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for the full development setup, code
@@ -150,7 +150,7 @@ The following are **planned** and not available yet:
 - A base profile to improve performance on low-end devices.
 - Signed release distributed outside GitHub.
 
-See [ROADMAP.md](ROADMAP.md) for the full priority list and what is already
+See [ROADMAP.md](docs/roadmap/ROADMAP.md) for the full priority list and what is already
 done.
 
 ## 🐞 Contributing

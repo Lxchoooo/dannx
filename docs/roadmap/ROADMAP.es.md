@@ -78,5 +78,5 @@ están probados y cuando hay tiempo para mantenerlos.
 ## Cómo ayudar
 
 Abrí un [issue](https://github.com/Lxchoooo/dannx/issues) con la idea o el bug.
-Leé [CONTRIBUTING.es.md](CONTRIBUTING.es.md) antes de mandar un pull request y
-reportá problemas de seguridad con [SECURITY.es.md](SECURITY.es.md).
+Leé [CONTRIBUTING.es.md](../i18n/CONTRIBUTING.es.md) antes de mandar un pull request y
+reportá problemas de seguridad con [SECURITY.es.md](../i18n/SECURITY.es.md).

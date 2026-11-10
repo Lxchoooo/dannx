@@ -128,4 +128,4 @@ importantes se van a mencionar en las notas de la versión.
 
 Para consultas de privacidad, abrí un issue en
 <https://github.com/Lxchoooo/dannx/issues>. Para reportes sensibles, usá el canal
-privado descrito en [SECURITY.es.md](SECURITY.es.md).
+privado descrito en [SECURITY.es.md](docs/i18n/SECURITY.es.md).

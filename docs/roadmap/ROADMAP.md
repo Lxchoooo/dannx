@@ -78,5 +78,5 @@ maintain them.
 ## How to help
 
 Open an [issue](https://github.com/Lxchoooo/dannx/issues) with the idea or bug.
-Read [CONTRIBUTING.md](CONTRIBUTING.md) before sending a pull request, and report
-security issues through [SECURITY.md](SECURITY.md).
+Read [CONTRIBUTING.md](../../CONTRIBUTING.md) before sending a pull request, and report
+security issues through [SECURITY.md](../../SECURITY.md).

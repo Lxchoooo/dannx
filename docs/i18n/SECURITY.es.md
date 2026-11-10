@@ -1,6 +1,6 @@
 # Seguridad
 
-[English](SECURITY.md) | Español
+[English](../../SECURITY.md) | Español
 
 ## Reportar una vulnerabilidad
 
@@ -47,4 +47,4 @@ otras apps.
 
 La checklist completa, incluidas las opciones de GitHub que se aplican fuera del
 repositorio, está en
-[`docs/designs/security-hardening.md`](docs/designs/security-hardening.md).
+[`docs/designs/security-hardening.md`](../designs/security-hardening.md).

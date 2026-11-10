@@ -24,7 +24,7 @@ Las capturas del build actual viven en
 ## 🎬 Demo
 
 Próximamente: GIF de demo. Va a quedar en
-[`docs/demo.gif`](docs/demo.gif) y se muestra acá cuando esté subido.
+`docs/demo.gif` y se muestra acá cuando esté subido.
 
 ## ✨ Características
 
@@ -97,10 +97,10 @@ app/src/main/java/com/dannx/walls/
 ├── ui/        # pantallas, componentes, tema, clases de tamaño de ventana
 └── util/      # archivos de fondo (galería, aplicar) y helpers de geometría
 .github/       # workflows de CI
-docs/          # capturas y assets de documentación
+docs/          # guías, traducciones, roadmap y capturas
 ```
 
-Mirá [CONTRIBUTING.es.md](CONTRIBUTING.es.md) para el setup completo, el estilo
+Mirá [CONTRIBUTING.es.md](docs/i18n/CONTRIBUTING.es.md) para el setup completo, el estilo
 de código y la checklist de pull requests.
 
 ## 🏗 Arquitectura
@@ -154,7 +154,7 @@ Todo lo siguiente está **planeado** y todavía no existe:
 - Perfil de base para mejorar el rendimiento en equipos de gama baja.
 - Release firmado distribuido fuera de GitHub.
 
-Mirá [ROADMAP.es.md](ROADMAP.es.md) para la lista completa de prioridades y lo
+Mirá [ROADMAP.es.md](docs/roadmap/ROADMAP.es.md) para la lista completa de prioridades y lo
 que ya está hecho.
 
 ## 🐞 Contribuir
@@ -163,8 +163,8 @@ que ya está hecho.
 [issue](https://github.com/Lxchoooo/dannx/issues) con los detalles. Los pull
 requests son bienvenidos.
 
-Leé [CONTRIBUTING.es.md](CONTRIBUTING.es.md) antes de mandar cambios. Al
-participar aceptás el [Código de Conducta](CODE_OF_CONDUCT.es.md).
+Leé [CONTRIBUTING.es.md](docs/i18n/CONTRIBUTING.es.md) antes de mandar cambios. Al
+participar aceptás el [Código de Conducta](docs/i18n/CODE_OF_CONDUCT.es.md).
 
 ## 🔒 Privacidad
 
@@ -175,7 +175,7 @@ colecciones, los ajustes y la caché offline quedan en tu dispositivo. Mirá
 ## 🛡 Seguridad
 
 No abras un issue público para vulnerabilidades. Seguí
-[SECURITY.es.md](SECURITY.es.md) para reportarlas de forma privada.
+[SECURITY.es.md](docs/i18n/SECURITY.es.md) para reportarlas de forma privada.
 
 Cada release incluye `DannX.apk.sha256` y una atestación de procedencia. Después
 de descargarlo, verificá el checksum con `sha256sum -c DannX.apk.sha256` o la

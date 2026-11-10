@@ -1,6 +1,6 @@
 # Security
 
-English | [Español](SECURITY.es.md)
+English | [Español](docs/i18n/SECURITY.es.md)
 
 ## Reporting a vulnerability
 

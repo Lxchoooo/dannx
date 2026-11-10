@@ -11,3 +11,7 @@ captures/
 *.p12
 keystore.properties
 release-keystore/
+*.hprof
+*.log
+.cxx/
+.externalNativeBuild/

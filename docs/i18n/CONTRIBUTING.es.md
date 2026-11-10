@@ -104,5 +104,5 @@ Los releases los publica el maintainer:
 
 ## Licencia
 
-DannX se distribuye bajo la [licencia MIT](LICENSE). Al contribuir, aceptás que
+DannX se distribuye bajo la [licencia MIT](../../LICENSE). Al contribuir, aceptás que
 tus cambios se distribuyan bajo la misma licencia.

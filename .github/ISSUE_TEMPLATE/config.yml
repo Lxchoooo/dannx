@@ -1,7 +1,7 @@
 blank_issues_enabled: true
 contact_links:
   - name: Guía para contribuir
-    url: https://github.com/Lxchoooo/dannx/blob/main/CONTRIBUTING.es.md
+    url: https://github.com/Lxchoooo/dannx/blob/main/docs/i18n/CONTRIBUTING.es.md
     about: Cómo compilar, probar y mandar cambios
   - name: Seguridad
     url: https://github.com/Lxchoooo/dannx/security/advisories/new
