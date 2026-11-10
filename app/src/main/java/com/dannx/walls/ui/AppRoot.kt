@@ -562,6 +562,7 @@ private fun MainApp(
                             canChooseCollectionDestination = state.session != null,
                             collectionBusy = state.collectionBusy,
                             actionState = actionState,
+                            applySuccessTick = state.applyTick,
                             downloadPrompt = state.downloadPrompt
                                 ?.takeIf { it.wallpaperId == wallpaper.id },
                             alreadyDownloaded = wallpaper.id in state.downloadedIds,

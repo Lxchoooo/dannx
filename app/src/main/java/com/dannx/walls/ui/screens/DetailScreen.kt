@@ -1,10 +1,19 @@
 package com.dannx.walls.ui.screens
 
 import androidx.activity.compose.LocalActivity
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateColorAsState
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.rememberTransformableState
@@ -33,6 +42,7 @@ import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.BookmarkAdd
 import androidx.compose.material.icons.rounded.ChevronLeft
 import androidx.compose.material.icons.rounded.ChevronRight
+import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.CollectionsBookmark
 import androidx.compose.material.icons.rounded.Download
 import androidx.compose.material.icons.rounded.Favorite
@@ -49,6 +59,7 @@ import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButtonDefaults
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
@@ -59,6 +70,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -105,12 +117,19 @@ import com.dannx.walls.util.WallpaperTarget
 import com.dannx.walls.util.ZoomState
 import com.dannx.walls.util.clampPan
 import com.dannx.walls.util.clampScale
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 private val ZoomStateSaver = listSaver<ZoomState, Float>(
     save = { listOf(it.scale, it.offset.x, it.offset.y) },
     restore = { ZoomState(it[0], PanOffset(it[1], it[2])) },
 )
+
+/** Estados visuales del botón Aplicar mientras el fondo se prepara. */
+private enum class ApplyPhase { Idle, Loading, Done }
+
+/** Verde suave para confirmar que el fondo se aplicó. */
+private val ApplySuccessGreen = Color(0xFF2E7D32)
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
@@ -122,6 +141,7 @@ fun DetailScreen(
     canChooseCollectionDestination: Boolean,
     collectionBusy: Boolean,
     actionState: ActionState = ActionState(),
+    applySuccessTick: Int = 0,
     downloadPrompt: DownloadPrompt? = null,
     alreadyDownloaded: Boolean = false,
     offline: Boolean = false,
@@ -174,6 +194,25 @@ fun DetailScreen(
     }
     val activity = LocalActivity.current
     val liteMode = LocalLiteMode.current
+    var applyPhase by remember { mutableStateOf(ApplyPhase.Idle) }
+    var seenApplyTick by remember { mutableIntStateOf(applySuccessTick) }
+    LaunchedEffect(applySuccessTick) {
+        if (applySuccessTick > seenApplyTick) {
+            seenApplyTick = applySuccessTick
+            applyPhase = ApplyPhase.Done
+            delay(2_000)
+            if (applyPhase == ApplyPhase.Done) applyPhase = ApplyPhase.Idle
+        }
+    }
+    LaunchedEffect(actionState.active) {
+        if (actionState.active == UiAction.APPLY) {
+            applyPhase = ApplyPhase.Loading
+        } else if (applyPhase == ApplyPhase.Loading) {
+            // Si el fondo no se pudo aplicar, el botón vuelve solo.
+            delay(800)
+            if (applyPhase == ApplyPhase.Loading) applyPhase = ApplyPhase.Idle
+        }
+    }
     var entered by remember { mutableStateOf(false) }
     var fullImageLoaded by remember(wallpaper.id) { mutableStateOf(false) }
     LaunchedEffect(Unit) { entered = true }
@@ -480,6 +519,20 @@ fun DetailScreen(
                 )
                 Spacer(Modifier.height(10.dp))
             }
+            val applyContainer by animateColorAsState(
+                targetValue = if (applyPhase == ApplyPhase.Done) {
+                    ApplySuccessGreen
+                } else {
+                    MaterialTheme.colorScheme.secondaryContainer
+                },
+                animationSpec = tween(durationMillis = if (liteMode) 0 else 220),
+                label = "applyButtonColor",
+            )
+            val applyContent = if (applyPhase == ApplyPhase.Done) {
+                Color.White
+            } else {
+                MaterialTheme.colorScheme.onSecondaryContainer
+            }
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(10.dp),
@@ -518,14 +571,66 @@ fun DetailScreen(
                             showApplySheet = true
                         }
                     },
-                    modifier = Modifier.weight(1f),
+                    modifier = Modifier
+                        .weight(1f)
+                        .animateContentSize(
+                            animationSpec = if (liteMode) {
+                                tween(0)
+                            } else {
+                                spring(
+                                    dampingRatio = Spring.DampingRatioNoBouncy,
+                                    stiffness = Spring.StiffnessMedium,
+                                )
+                            },
+                        ),
                     shape = CircleShape,
+                    colors = ButtonDefaults.filledTonalButtonColors(
+                        containerColor = applyContainer,
+                        contentColor = applyContent,
+                    ),
                     contentPadding = PaddingValues(horizontal = 14.dp, vertical = 14.dp),
                     enabled = actionState.active == null && !offline,
                 ) {
-                    Icon(Icons.Rounded.Wallpaper, contentDescription = null)
-                    Spacer(Modifier.width(8.dp))
-                    Text(stringResource(R.string.action_apply))
+                    AnimatedContent(
+                        targetState = applyPhase,
+                        transitionSpec = {
+                            if (liteMode) {
+                                fadeIn(tween(120)) togetherWith fadeOut(tween(90))
+                            } else {
+                                (
+                                    fadeIn(tween(160)) +
+                                        scaleIn(tween(160), initialScale = 0.9f)
+                                    ) togetherWith fadeOut(tween(100))
+                            }
+                        },
+                        label = "applyPhase",
+                    ) { phase ->
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            when (phase) {
+                                ApplyPhase.Idle -> {
+                                    Icon(Icons.Rounded.Wallpaper, contentDescription = null)
+                                    Spacer(Modifier.width(8.dp))
+                                    Text(stringResource(R.string.action_apply))
+                                }
+
+                                ApplyPhase.Loading -> {
+                                    CircularProgressIndicator(
+                                        modifier = Modifier.size(18.dp),
+                                        strokeWidth = 2.dp,
+                                        color = applyContent,
+                                    )
+                                    Spacer(Modifier.width(8.dp))
+                                    Text(stringResource(R.string.apply_button_loading))
+                                }
+
+                                ApplyPhase.Done -> {
+                                    Icon(Icons.Rounded.Check, contentDescription = null)
+                                    Spacer(Modifier.width(8.dp))
+                                    Text(stringResource(R.string.apply_button_done))
+                                }
+                            }
+                        }
+                    }
                 }
                 FilledIconButton(
                     onClick = onShare,
@@ -611,6 +716,7 @@ fun DetailScreen(
             onDismiss = { showApplySheet = false },
             onPick = { target ->
                 showApplySheet = false
+                applyPhase = ApplyPhase.Loading
                 onSetWallpaper(target)
             },
         )

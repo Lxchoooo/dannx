@@ -24,6 +24,8 @@
     <string name="apply_both">Both screens</string>
     <string name="apply_both_hint">Home and lock</string>
     <string name="apply_in_progress">Applying the wallpaper…</string>
+    <string name="apply_button_loading">Applying…</string>
+    <string name="apply_button_done">Applied</string>
     <string name="apply_in_progress_hint">Large images may take a moment.</string>
     <string name="action_cancel">Cancel</string>
     <string name="action_open">Open</string>

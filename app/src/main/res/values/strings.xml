@@ -24,6 +24,8 @@
     <string name="apply_both">Ambas pantallas</string>
     <string name="apply_both_hint">Inicio y bloqueo</string>
     <string name="apply_in_progress">Aplicando el fondo…</string>
+    <string name="apply_button_loading">Aplicando…</string>
+    <string name="apply_button_done">Aplicado</string>
     <string name="apply_in_progress_hint" tools:ignore="Typos">Puede tardar un momento con imágenes grandes.</string>
     <string name="action_cancel">Cancelar</string>
     <string name="action_open">Abrir</string>
