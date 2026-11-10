@@ -46,6 +46,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
+import androidx.compose.material.icons.automirrored.rounded.Redo
+import androidx.compose.material.icons.automirrored.rounded.Undo
 import androidx.compose.material.icons.rounded.BlurOn
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Crop
@@ -196,6 +198,8 @@ fun WallpaperEditorScreen(
                 onFilterIntensity = editorViewModel::updateFilterIntensity,
                 onBlurChange = editorViewModel::updateBlur,
                 onShowOriginalChange = editorViewModel::setShowOriginal,
+                onUndo = editorViewModel::undo,
+                onRedo = editorViewModel::redo,
                 onReset = editorViewModel::reset,
                 onApply = { showTargetSheet = true },
             )
@@ -331,6 +335,8 @@ private fun EditorBody(
     onFilterIntensity: (Float) -> Unit,
     onBlurChange: (Float) -> Unit,
     onShowOriginalChange: (Boolean) -> Unit,
+    onUndo: () -> Unit,
+    onRedo: () -> Unit,
     onReset: () -> Unit,
     onApply: () -> Unit,
 ) {
@@ -457,9 +463,21 @@ private fun EditorBody(
         ) {
             EditorTopControls(
                 resetEnabled = !state.applying,
+                undoEnabled = state.canUndo && !state.applying,
+                redoEnabled = state.canRedo && !state.applying,
                 onBack = {
                     onShowOriginalChange(false)
                     onBack()
+                },
+                onUndo = {
+                    onShowOriginalChange(false)
+                    revealControls()
+                    onUndo()
+                },
+                onRedo = {
+                    onShowOriginalChange(false)
+                    revealControls()
+                    onRedo()
                 },
                 onReset = {
                     onShowOriginalChange(false)
@@ -677,7 +695,11 @@ private fun BoxScope.HomePreviewOverlay() {
 @Composable
 private fun EditorTopControls(
     resetEnabled: Boolean,
+    undoEnabled: Boolean,
+    redoEnabled: Boolean,
     onBack: () -> Unit,
+    onUndo: () -> Unit,
+    onRedo: () -> Unit,
     onReset: () -> Unit,
 ) {
     Row(
@@ -693,6 +715,20 @@ private fun EditorTopControls(
             onClick = onBack,
         )
         Spacer(Modifier.weight(1f))
+        FloatingIconButton(
+            icon = Icons.AutoMirrored.Rounded.Undo,
+            contentDescription = stringResource(R.string.editor_undo),
+            enabled = undoEnabled,
+            onClick = onUndo,
+        )
+        Spacer(Modifier.width(8.dp))
+        FloatingIconButton(
+            icon = Icons.AutoMirrored.Rounded.Redo,
+            contentDescription = stringResource(R.string.editor_redo),
+            enabled = redoEnabled,
+            onClick = onRedo,
+        )
+        Spacer(Modifier.width(8.dp))
         FloatingIconButton(
             icon = Icons.Rounded.Refresh,
             contentDescription = stringResource(R.string.editor_reset),

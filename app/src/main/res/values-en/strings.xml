@@ -421,6 +421,8 @@
     <string name="editor_zoom">Zoom %1$d%%</string>
     <string name="editor_center">Center</string>
     <string name="editor_reset">Reset</string>
+    <string name="editor_undo">Undo</string>
+    <string name="editor_redo">Redo</string>
     <string name="editor_brightness">Brightness</string>
     <string name="editor_contrast">Contrast</string>
     <string name="editor_saturation">Saturation</string>

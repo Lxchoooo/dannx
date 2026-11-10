@@ -2,6 +2,7 @@ package com.dannx.walls.ui.editor
 
 import android.app.Application
 import android.graphics.Bitmap
+import android.os.SystemClock
 import androidx.compose.runtime.Immutable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
@@ -32,6 +33,8 @@ internal data class EditorUiState(
     val grain: Bitmap? = null,
     val thumbs: List<EditorFilterThumb> = emptyList(),
     val settings: EditorSettings = EditorSettings(),
+    val canUndo: Boolean = false,
+    val canRedo: Boolean = false,
     val showOriginal: Boolean = false,
     val applying: Boolean = false,
     val applyProgress: Int = 0,
@@ -57,6 +60,12 @@ internal class WallpaperEditorViewModel(
     private var blurLevelsJob: Job? = null
     private var applyJob: Job? = null
     private var sourceFile: File? = null
+
+    // Historial liviano: solo valores de EditorSettings, nunca bitmaps.
+    private val undoStack = ArrayDeque<EditorSettings>()
+    private val redoStack = ArrayDeque<EditorSettings>()
+    private var lastHistoryKey: String? = null
+    private var lastHistoryAt = 0L
 
     init {
         load()
@@ -136,47 +145,33 @@ internal class WallpaperEditorViewModel(
     }
 
     fun updateCrop(crop: EditorCrop) {
-        _state.update { current ->
-            current.copy(settings = current.settings.copy(crop = crop))
-        }
+        applySettings("crop") { it.copy(crop = crop) }
     }
 
     fun updateAdjustments(adjustments: EditorAdjustments) {
-        _state.update { current ->
-            current.copy(settings = current.settings.copy(adjustments = adjustments))
-        }
+        applySettings("adjust") { it.copy(adjustments = adjustments) }
     }
 
     fun selectFilter(preset: FilterPreset) {
-        _state.update { current ->
+        applySettings("filter:${preset.id}") { settings ->
             val intensity = when {
                 preset.id == "original" -> 0f
-                current.settings.filterIntensity > 0f -> current.settings.filterIntensity
+                settings.filterIntensity > 0f -> settings.filterIntensity
                 else -> 0.65f
             }
-            current.copy(
-                settings = current.settings.copy(
-                    filterId = preset.id,
-                    filterIntensity = intensity,
-                ),
+            settings.copy(
+                filterId = preset.id,
+                filterIntensity = intensity,
             )
         }
     }
 
     fun updateFilterIntensity(value: Float) {
-        _state.update { current ->
-            current.copy(
-                settings = current.settings.copy(
-                    filterIntensity = value.coerceIn(0f, 1f),
-                ),
-            )
-        }
+        applySettings("intensity") { it.copy(filterIntensity = value.coerceIn(0f, 1f)) }
     }
 
     fun updateBlur(value: Float) {
-        _state.update { current ->
-            current.copy(settings = current.settings.copy(blur = value.coerceIn(0f, 1f)))
-        }
+        applySettings("blur") { it.copy(blur = value.coerceIn(0f, 1f)) }
         // La pila se calcula una sola vez: mover el slider ya no hace trabajo.
         ensureBlurLevels()
     }
@@ -185,14 +180,74 @@ internal class WallpaperEditorViewModel(
         _state.update { it.copy(showOriginal = show) }
     }
 
+    fun undo() {
+        val previous = undoStack.removeLastOrNull() ?: return
+        val current = _state.value
+        redoStack.addLast(current.settings)
+        resetHistoryMerge()
+        _state.value = current.copy(
+            settings = previous,
+            canUndo = undoStack.isNotEmpty(),
+            canRedo = true,
+            applyError = null,
+        )
+    }
+
+    fun redo() {
+        val next = redoStack.removeLastOrNull() ?: return
+        val current = _state.value
+        if (undoStack.size >= MAX_HISTORY) undoStack.removeFirst()
+        undoStack.addLast(current.settings)
+        resetHistoryMerge()
+        _state.value = current.copy(
+            settings = next,
+            canUndo = true,
+            canRedo = redoStack.isNotEmpty(),
+            applyError = null,
+        )
+    }
+
     fun reset() {
+        applySettings("reset") { EditorSettings() }
         _state.update {
             it.copy(
-                settings = EditorSettings(),
                 showOriginal = false,
                 applyError = null,
             )
         }
+    }
+
+    /**
+     * Aplica un cambio de ajustes y guarda el estado anterior para deshacer.
+     * Los cambios seguidos del mismo tipo (arrastrar un slider, hacer zoom)
+     * se agrupan en una sola entrada para no llenar el historial.
+     */
+    private fun applySettings(
+        historyKey: String,
+        transform: (EditorSettings) -> EditorSettings,
+    ) {
+        val current = _state.value
+        val next = transform(current.settings)
+        if (next == current.settings) return
+        val now = SystemClock.elapsedRealtime()
+        val merge = historyKey == lastHistoryKey && now - lastHistoryAt < HISTORY_MERGE_MS
+        if (!merge) {
+            if (undoStack.size >= MAX_HISTORY) undoStack.removeFirst()
+            undoStack.addLast(current.settings)
+        }
+        redoStack.clear()
+        lastHistoryKey = historyKey
+        lastHistoryAt = now
+        _state.value = current.copy(
+            settings = next,
+            canUndo = true,
+            canRedo = false,
+        )
+    }
+
+    private fun resetHistoryMerge() {
+        lastHistoryKey = null
+        lastHistoryAt = 0L
     }
 
     fun apply(target: WallpaperTarget) {
@@ -347,6 +402,8 @@ internal class WallpaperEditorViewModel(
 
     companion object {
         private const val MAX_CACHED_SOURCES = 3
+        private const val MAX_HISTORY = 30
+        private const val HISTORY_MERGE_MS = 700L
 
         fun factory(
             application: Application,
