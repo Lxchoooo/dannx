@@ -98,6 +98,49 @@ docs/          # capturas y assets de documentación
 Mirá [CONTRIBUTING.es.md](CONTRIBUTING.es.md) para el setup completo, el estilo
 de código y la checklist de pull requests.
 
+## 🏗 Arquitectura
+
+```mermaid
+flowchart LR
+    UI["UI en Compose\nfeed · detalle · editor · estudio"] --> VM["MainViewModel\nun solo UiState"]
+    VM --> Catalog["Cliente del catálogo\nlectura, búsqueda, contenido propio"]
+    VM --> Store["Almacenamiento del teléfono"]
+    Catalog --> Remote["Catálogo remoto\ny entrega de imágenes"]
+    Store --> Disk[("Disco del teléfono")]
+```
+
+- **UI**: pantallas y componentes en Compose. Solo leen `UiState` y devuelven
+  eventos; ninguna pantalla habla con la red por su cuenta.
+- **ViewModel**: mantiene el único `UiState`, combina filtros, paginación y la
+  tarjeta del día, y decide cuándo refrescar, cachear o caer al feed demo.
+- **Cliente del catálogo**: lecturas paginadas (30 por página), búsqueda y
+  filtros resueltos del lado remoto, más las acciones de contenido propio que
+  usa Estudio.
+- **Almacenamiento del teléfono**: favoritos, colecciones, búsquedas recientes,
+  ajustes y la caché del feed (hasta 400 fondos) para abrir con contenido sin
+  conexión.
+- **Capa de imágenes**: Coil pide cada imagen al tamaño que se dibuja. El modo
+  lite baja la resolución, no precarga y quita las transiciones.
+- **Actualizaciones**: la comprobación y la descarga de versiones usan el mismo
+  cliente; el instalador se abre por el sistema.
+
+## ♿ Accesibilidad
+
+- TalkBack anuncia cada tarjeta como una sola frase (título, categoría, autor)
+  y los controles exponen su estado, por ejemplo favorito activado o no.
+- Cada objetivo táctil mide al menos 48 dp, incluidos los botones de favorito y
+  compartir sobre las imágenes.
+- El texto escala con el tamaño de fuente del sistema; las etiquetas se
+  acomodan en varias líneas en vez de recortarse.
+- Los temas claro y oscuro están ajustados para el contraste, y el color
+  dinámico sigue la paleta del sistema en Android 12+.
+- El modo lite también reduce el movimiento: transiciones más cortas o
+  inexistentes, sin escala al presionar y sin fundido entre imágenes.
+- Las imágenes decorativas quedan fuera del árbol de accesibilidad; las que
+  aportan información tienen descripción. Por ahora la verificación es manual
+  con TalkBack y fuentes grandes — las pruebas instrumentadas están en la hoja
+  de ruta.
+
 ## 🗺 Hoja de ruta
 
 Todo lo siguiente está **planeado** y todavía no existe:

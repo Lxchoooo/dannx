@@ -97,6 +97,46 @@ docs/          # screenshots and documentation assets
 See [CONTRIBUTING.md](CONTRIBUTING.md) for the full development setup, code
 style and pull request checklist.
 
+## 🏗 Architecture
+
+```mermaid
+flowchart LR
+    UI["Compose UI\nfeed · detail · editor · studio"] --> VM["MainViewModel\nsingle UiState"]
+    VM --> Catalog["Catalog client\nread, search, own content"]
+    VM --> Store["On-device store"]
+    Catalog --> Remote["Remote catalog\nand image delivery"]
+    Store --> Disk[("Phone storage")]
+```
+
+- **UI**: Compose screens and reusable components. They only read `UiState`
+  and send events back; no screen talks to the network directly.
+- **ViewModel**: holds the single `UiState`, merges filters, pagination and the
+  daily card, and decides when to refresh, cache or fall back to the demo feed.
+- **Catalog client**: paged reads (30 per page), search and filters resolved
+  remotely, plus the owner content actions used by Studio.
+- **On-device store**: favourites, collections, recent searches, settings and
+  the feed cache (up to 400 wallpapers) so the app opens with content offline.
+- **Image layer**: Coil requests sized to what is drawn. Lite mode lowers
+  resolution, skips preloading and drops transitions.
+- **Updates**: version checks and downloads reuse the same catalog client; the
+  installer is opened through the system.
+
+## ♿ Accessibility
+
+- TalkBack announces each card as a single sentence (title, category,
+  author), and controls expose their state, such as favourite on or off.
+- Every interactive target is at least 48 dp, including the favourite and
+  share buttons over images.
+- Text scales with the system font size; layouts wrap labels instead of
+  clipping them.
+- Light and dark themes are tuned for contrast, and dynamic colour follows the
+  system palette on Android 12+.
+- Lite mode also reduces motion: shorter or no transitions, no press scaling
+  and no image crossfade.
+- Decorative images are left out of the accessibility tree; images that carry
+  meaning have a description. Checking is manual with TalkBack and large fonts
+  for now — instrumented checks are on the roadmap.
+
 ## 🗺 Roadmap
 
 The following are **planned** and not available yet:
