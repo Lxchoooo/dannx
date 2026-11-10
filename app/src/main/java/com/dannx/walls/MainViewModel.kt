@@ -1053,8 +1053,15 @@ class MainViewModel(
 
     fun setQuery(value: String) {
         savedState[KEY_QUERY] = value
+        if (value == _state.value.query) return
         _state.update { it.copy(query = value) }
         filterJob?.cancel()
+        // Borrar todo vuelve al feed principal al instante, sin esperar.
+        if (value.isBlank()) {
+            filterJob = null
+            reloadFeed()
+            return
+        }
         filterJob = viewModelScope.launch {
             delay(SEARCH_DEBOUNCE_MS)
             if (_state.value.query == value) reloadFeed()
@@ -3310,7 +3317,7 @@ class MainViewModel(
         private const val KEY_CATEGORY = "category"
         private const val KEY_TAG = "tag"
         private const val KEY_UPLOAD_URI = "upload_uri"
-        private const val SEARCH_DEBOUNCE_MS = 350L
+        private const val SEARCH_DEBOUNCE_MS = 300L
         private const val REFRESH_WINDOW_MS = 5 * 60 * 1000L
 
         fun factory(application: Application): ViewModelProvider.Factory = viewModelFactory {
