@@ -43,8 +43,8 @@ import androidx.compose.material.icons.rounded.Wallpaper
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
-import androidx.compose.material3.LinearWavyProgressIndicator
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.Icon
@@ -57,6 +57,9 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.carousel.HorizontalMultiBrowseCarousel
 import androidx.compose.material3.carousel.rememberCarouselState
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.material3.pulltorefresh.PullToRefreshDefaults
+import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -114,7 +117,7 @@ import kotlinx.coroutines.withTimeoutOrNull
 /** Segundos que hay que mantener presionado el título para la puerta secreta. */
 private const val SECRET_HOLD_MS = 9_000L
 
-@OptIn(ExperimentalMaterial3ExpressiveApi::class)
+@OptIn(ExperimentalMaterial3ExpressiveApi::class, ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
     state: UiState,
@@ -148,7 +151,17 @@ fun HomeScreen(
     val context = LocalContext.current
     val liteMode = LocalLiteMode.current
     val gridState = rememberLazyGridState()
+    val pullState = rememberPullToRefreshState()
     var lastRandomId by rememberSaveable { mutableStateOf<String?>(null) }
+    // Aviso sutil al terminar una recarga manual.
+    val haptics = LocalHapticFeedback.current
+    var wasRefreshing by remember { mutableStateOf(false) }
+    LaunchedEffect(state.refreshing) {
+        if (wasRefreshing && !state.refreshing) {
+            haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+        }
+        wasRefreshing = state.refreshing
+    }
     // Balanceo suave del dado de "Sorpréndeme". En lite queda quieto.
     val surpriseWiggle = if (liteMode) {
         0f
@@ -223,468 +236,493 @@ fun HomeScreen(
         min(HeroHeight.toPx(), LocalWindowInfo.current.containerSize.height * 0.55f).toDp()
     }
 
-    LazyVerticalGrid(
-        columns = GridCells.Fixed(columns),
-        state = gridState,
+    PullToRefreshBox(
+        isRefreshing = state.refreshing,
+        onRefresh = onRefresh,
+        state = pullState,
         modifier = Modifier
             .fillMaxSize()
             .statusBarsPadding(),
-        contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 10.dp, bottom = 28.dp),
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
-        item(span = { GridItemSpan(maxLineSpan) }) {
-            Column(Modifier.fillMaxWidth()) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Column(Modifier.weight(1f)) {
-                        // Puerta secreta: mantener presionado el título unos
-                        // segundos sin mover el dedo abre la puerta del Estudio.
-                        val haptics = LocalHapticFeedback.current
+        indicator = {
+            if (liteMode) {
+                if (state.refreshing) {
+                    Surface(
+                        modifier = Modifier
+                            .align(Alignment.TopCenter)
+                            .padding(top = 8.dp),
+                        shape = CircleShape,
+                        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                        tonalElevation = 3.dp,
+                    ) {
                         Text(
-                            text = "DannX",
-                            style = MaterialTheme.typography.displayLarge,
-                            color = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.pointerInput(onOpenStudio) {
-                                awaitEachGesture {
-                                    val down = awaitFirstDown()
-                                    val slop = viewConfiguration.touchSlop
-                                    val deadline = down.uptimeMillis + SECRET_HOLD_MS
-                                    var lastUptime = down.uptimeMillis
-                                    var triggered = false
-                                    var canceled = false
-                                    while (!canceled && !triggered) {
-                                        val remaining = deadline - lastUptime
-                                        val event =
-                                            withTimeoutOrNull(remaining) { awaitPointerEvent() }
-                                        if (event == null) {
-                                            // Llegó la hora y el dedo sigue quieto.
-                                            triggered = true
-                                            break
-                                        }
-                                        val change = event.changes.firstOrNull() ?: continue
-                                        lastUptime = change.uptimeMillis
-                                        val position = change.position
-                                        val dx = position.x - down.position.x
-                                        val dy = position.y - down.position.y
-                                        if (dx * dx + dy * dy > slop * slop) {
-                                            canceled = true
-                                            break
-                                        }
-                                        if (!change.pressed) {
-                                            canceled = true
-                                            break
-                                        }
-                                    }
-                                    if (triggered) {
-                                        haptics.performHapticFeedback(
-                                            HapticFeedbackType.LongPress,
-                                        )
-                                        onOpenStudio()
-                                    }
-                                }
-                            },
-                        )
-                        Text(
-                            text = tagline,
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-                    FilledTonalIconButton(onClick = onOpenSettings) {
-                        Icon(
-                            Icons.Rounded.Settings,
-                            contentDescription = stringResource(R.string.action_settings),
-                        )
-                    }
-                    Spacer(Modifier.width(8.dp))
-                    FilledTonalIconButton(onClick = onRefresh) {
-                        Icon(
-                            Icons.Rounded.Refresh,
-                            contentDescription = stringResource(R.string.action_refresh_feed),
+                            text = stringResource(R.string.feed_refreshing),
+                            style = MaterialTheme.typography.labelMedium,
+                            modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
                         )
                     }
                 }
-                Spacer(Modifier.height(18.dp))
-                OutlinedTextField(
-                    value = state.query,
-                    onValueChange = onQueryChange,
-                    modifier = Modifier.fillMaxWidth(),
-                    placeholder = { Text(stringResource(R.string.home_search_hint)) },
-                    leadingIcon = {
-                        Icon(Icons.Rounded.Search, contentDescription = null)
-                    },
-                    trailingIcon = {
-                        if (state.query.isNotEmpty()) {
-                            IconButton(onClick = { onQueryChange("") }) {
-                                Icon(
-                                    Icons.Rounded.Close,
-                                    contentDescription = stringResource(R.string.home_clear_search),
+            } else {
+                PullToRefreshDefaults.Indicator(
+                    state = pullState,
+                    isRefreshing = state.refreshing,
+                    modifier = Modifier.align(Alignment.TopCenter),
+                )
+            }
+        },
+    ) {
+        LazyVerticalGrid(
+            columns = GridCells.Fixed(columns),
+            state = gridState,
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 10.dp, bottom = 28.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            item(span = { GridItemSpan(maxLineSpan) }) {
+                Column(Modifier.fillMaxWidth()) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Column(Modifier.weight(1f)) {
+                            // Puerta secreta: mantener presionado el título unos
+                            // segundos sin mover el dedo abre la puerta del Estudio.
+                            val haptics = LocalHapticFeedback.current
+                            Text(
+                                text = "DannX",
+                                style = MaterialTheme.typography.displayLarge,
+                                color = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.pointerInput(onOpenStudio) {
+                                    awaitEachGesture {
+                                        val down = awaitFirstDown()
+                                        val slop = viewConfiguration.touchSlop
+                                        val deadline = down.uptimeMillis + SECRET_HOLD_MS
+                                        var lastUptime = down.uptimeMillis
+                                        var triggered = false
+                                        var canceled = false
+                                        while (!canceled && !triggered) {
+                                            val remaining = deadline - lastUptime
+                                            val event =
+                                                withTimeoutOrNull(remaining) { awaitPointerEvent() }
+                                            if (event == null) {
+                                                // Llegó la hora y el dedo sigue quieto.
+                                                triggered = true
+                                                break
+                                            }
+                                            val change = event.changes.firstOrNull() ?: continue
+                                            lastUptime = change.uptimeMillis
+                                            val position = change.position
+                                            val dx = position.x - down.position.x
+                                            val dy = position.y - down.position.y
+                                            if (dx * dx + dy * dy > slop * slop) {
+                                                canceled = true
+                                                break
+                                            }
+                                            if (!change.pressed) {
+                                                canceled = true
+                                                break
+                                            }
+                                        }
+                                        if (triggered) {
+                                            haptics.performHapticFeedback(
+                                                HapticFeedbackType.LongPress,
+                                            )
+                                            onOpenStudio()
+                                        }
+                                    }
+                                },
+                            )
+                            Text(
+                                text = tagline,
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                        FilledTonalIconButton(onClick = onOpenSettings) {
+                            Icon(
+                                Icons.Rounded.Settings,
+                                contentDescription = stringResource(R.string.action_settings),
+                            )
+                        }
+                        Spacer(Modifier.width(8.dp))
+                        FilledTonalIconButton(onClick = onRefresh) {
+                            Icon(
+                                Icons.Rounded.Refresh,
+                                contentDescription = stringResource(R.string.action_refresh_feed),
+                            )
+                        }
+                    }
+                    Spacer(Modifier.height(18.dp))
+                    OutlinedTextField(
+                        value = state.query,
+                        onValueChange = onQueryChange,
+                        modifier = Modifier.fillMaxWidth(),
+                        placeholder = { Text(stringResource(R.string.home_search_hint)) },
+                        leadingIcon = {
+                            Icon(Icons.Rounded.Search, contentDescription = null)
+                        },
+                        trailingIcon = {
+                            if (state.query.isNotEmpty()) {
+                                IconButton(onClick = { onQueryChange("") }) {
+                                    Icon(
+                                        Icons.Rounded.Close,
+                                        contentDescription = stringResource(R.string.home_clear_search),
+                                    )
+                                }
+                            }
+                        },
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                        keyboardActions = KeyboardActions(onSearch = { onSearchSubmit() }),
+                        shape = CircleShape,
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                            unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                            focusedBorderColor = MaterialTheme.colorScheme.primary,
+                            unfocusedBorderColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                        ),
+                    )
+                    if (state.query.isBlank() && state.recentSearches.isNotEmpty()) {
+                        Spacer(Modifier.height(10.dp))
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Text(
+                                text = stringResource(R.string.home_recent_searches),
+                                style = MaterialTheme.typography.labelLarge,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.weight(1f),
+                            )
+                            TextButton(onClick = onClearRecentSearches) {
+                                Text(stringResource(R.string.home_clear_recent_searches))
+                            }
+                        }
+                        LazyRow(
+                            contentPadding = PaddingValues(end = 20.dp),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        ) {
+                            items(state.recentSearches, key = { "recent-$it" }) { query ->
+                                AssistChip(
+                                    onClick = {
+                                        onQueryChange(query)
+                                        onSearchSubmit()
+                                    },
+                                    label = { Text(query) },
+                                    shape = CircleShape,
                                 )
                             }
                         }
-                    },
-                    singleLine = true,
-                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-                    keyboardActions = KeyboardActions(onSearch = { onSearchSubmit() }),
-                    shape = CircleShape,
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-                        unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-                        focusedBorderColor = MaterialTheme.colorScheme.primary,
-                        unfocusedBorderColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-                    ),
-                )
-                if (state.query.isBlank() && state.recentSearches.isNotEmpty()) {
-                    Spacer(Modifier.height(10.dp))
-                    Row(
+                    }
+                    Spacer(Modifier.height(14.dp))
+                }
+            }
+
+            if (state.appSettings.bannerEnabled && state.appSettings.bannerText.isNotBlank()) {
+                item(span = { GridItemSpan(maxLineSpan) }) {
+                    Surface(
+                        shape = MaterialTheme.shapes.large,
+                        color = MaterialTheme.colorScheme.tertiaryContainer,
                         modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Text(
-                            text = stringResource(R.string.home_recent_searches),
-                            style = MaterialTheme.typography.labelLarge,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.weight(1f),
+                            text = state.appSettings.bannerText,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onTertiaryContainer,
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
                         )
-                        TextButton(onClick = onClearRecentSearches) {
-                            Text(stringResource(R.string.home_clear_recent_searches))
-                        }
                     }
-                    LazyRow(
-                        contentPadding = PaddingValues(end = 20.dp),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    ) {
-                        items(state.recentSearches, key = { "recent-$it" }) { query ->
+                }
+            }
+
+            item(span = { GridItemSpan(maxLineSpan) }) {
+                LazyRow(
+                    contentPadding = PaddingValues(end = 20.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    if (filtered.isNotEmpty()) {
+                        item(key = "random-wallpaper") {
                             AssistChip(
                                 onClick = {
-                                    onQueryChange(query)
-                                    onSearchSubmit()
+                                    val candidates = filtered
+                                        .filterNot { it.id == lastRandomId }
+                                        .ifEmpty { filtered }
+                                    val picked = candidates.random()
+                                    lastRandomId = picked.id
+                                    onRandomWallpaper(picked)
                                 },
-                                label = { Text(query) },
+                                label = { Text(stringResource(R.string.action_random_wallpaper)) },
+                                leadingIcon = {
+                                    Icon(
+                                        Icons.Rounded.Casino,
+                                        contentDescription = null,
+                                        modifier = Modifier.graphicsLayer {
+                                            rotationZ = surpriseWiggle
+                                        },
+                                    )
+                                },
                                 shape = CircleShape,
                             )
                         }
                     }
-                }
-                Spacer(Modifier.height(14.dp))
-            }
-        }
-
-        if (state.appSettings.bannerEnabled && state.appSettings.bannerText.isNotBlank()) {
-            item(span = { GridItemSpan(maxLineSpan) }) {
-                Surface(
-                    shape = MaterialTheme.shapes.large,
-                    color = MaterialTheme.colorScheme.tertiaryContainer,
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    Text(
-                        text = state.appSettings.bannerText,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onTertiaryContainer,
-                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
-                    )
-                }
-            }
-        }
-
-        if (state.refreshing && state.wallpapers.isNotEmpty()) {
-            item(span = { GridItemSpan(maxLineSpan) }) {
-                LinearWavyProgressIndicator(
-                    modifier = Modifier.fillMaxWidth(),
-                )
-            }
-        }
-
-        item(span = { GridItemSpan(maxLineSpan) }) {
-            LazyRow(
-                contentPadding = PaddingValues(end = 20.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                if (filtered.isNotEmpty()) {
-                    item(key = "random-wallpaper") {
-                        AssistChip(
+                    items(count = categories.size, key = { index -> "category-$index" }) { index ->
+                        val value = categories[index]
+                        val label = when (value) {
+                            CategoryAll -> stringResource(R.string.filter_all)
+                            CategoryFeatured -> stringResource(R.string.filter_featured)
+                            else -> value
+                        }
+                        val selected = (state.category ?: CategoryAll) == value
+                        FilterChip(
+                            selected = selected,
                             onClick = {
-                                val candidates = filtered
-                                    .filterNot { it.id == lastRandomId }
-                                    .ifEmpty { filtered }
-                                val picked = candidates.random()
-                                lastRandomId = picked.id
-                                onRandomWallpaper(picked)
+                                onCategoryChange(if (value == CategoryAll) null else value)
                             },
-                            label = { Text(stringResource(R.string.action_random_wallpaper)) },
-                            leadingIcon = {
-                                Icon(
-                                    Icons.Rounded.Casino,
-                                    contentDescription = null,
-                                    modifier = Modifier.graphicsLayer {
-                                        rotationZ = surpriseWiggle
-                                    },
-                                )
-                            },
+                            label = { Text(label) },
                             shape = CircleShape,
                         )
                     }
                 }
-                items(count = categories.size, key = { index -> "category-$index" }) { index ->
-                    val value = categories[index]
-                    val label = when (value) {
-                        CategoryAll -> stringResource(R.string.filter_all)
-                        CategoryFeatured -> stringResource(R.string.filter_featured)
-                        else -> value
-                    }
-                    val selected = (state.category ?: CategoryAll) == value
-                    FilterChip(
-                        selected = selected,
-                        onClick = {
-                            onCategoryChange(if (value == CategoryAll) null else value)
-                        },
-                        label = { Text(label) },
-                        shape = CircleShape,
-                    )
-                }
             }
-        }
 
-        if (availableTags.isNotEmpty()) {
-            item(span = { GridItemSpan(maxLineSpan) }) {
-                Column {
-                    Text(
-                        text = stringResource(R.string.home_tags_title),
-                        style = MaterialTheme.typography.labelLarge,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                    Spacer(Modifier.height(4.dp))
-                    LazyRow(
-                        contentPadding = PaddingValues(end = 20.dp),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    ) {
-                        item(key = "all-tags") {
-                            FilterChip(
-                                selected = state.tag == null,
-                                onClick = { onTagChange(null) },
-                                label = { Text(stringResource(R.string.filter_all_tags)) },
-                                shape = CircleShape,
-                            )
-                        }
-                        items(availableTags, key = { "tag-$it" }) { tag ->
-                            FilterChip(
-                                selected = state.tag == tag,
-                                onClick = {
-                                    onTagChange(if (state.tag == tag) null else tag)
-                                },
-                                label = { Text("#$tag") },
-                                shape = CircleShape,
-                            )
-                        }
-                    }
-                }
-            }
-        }
-
-        if (plainFeed && state.dailyWallpaper != null) {
-            item(key = "daily", span = { GridItemSpan(maxLineSpan) }) {
-                val daily = state.dailyWallpaper
-                if (daily != null) {
-                    HomeDailyCard(
-                        wallpaper = daily,
-                        onTap = { onOpenWallpaper(daily) },
-                    )
-                }
-            }
-        }
-
-        if (state.isDemo) {
-            item(span = { GridItemSpan(maxLineSpan) }) {
-                Surface(
-                    shape = MaterialTheme.shapes.large,
-                    color = MaterialTheme.colorScheme.secondaryContainer,
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    Text(
-                        text = stringResource(R.string.home_demo_hint),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSecondaryContainer,
-                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
-                    )
-                }
-            }
-        }
-
-        if (showHero) {
-            item(span = { GridItemSpan(maxLineSpan) }) {
-                Column {
-                    Spacer(Modifier.height(6.dp))
-                    HorizontalMultiBrowseCarousel(
-                        state = carouselState,
-                        preferredItemWidth = heroHeight * 0.72f,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(heroHeight),
-                        itemSpacing = 12.dp,
-                        minSmallItemWidth = 42.dp,
-                        maxSmallItemWidth = 84.dp,
-                    ) { page ->
-                        val wallpaper = featured[page]
-                        FeaturedCard(
-                            wallpaper = wallpaper,
-                            isFavorite = wallpaper.id in favorites,
-                            onClick = { onOpenWallpaper(wallpaper) },
-                            onToggleFavorite = { onToggleFavorite(wallpaper.id) },
-                            heroHeight = heroHeight,
-                            modifier = Modifier.fillMaxSize(),
+            if (availableTags.isNotEmpty()) {
+                item(span = { GridItemSpan(maxLineSpan) }) {
+                    Column {
+                        Text(
+                            text = stringResource(R.string.home_tags_title),
+                            style = MaterialTheme.typography.labelLarge,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
-                    }
-                }
-            }
-        }
-
-        item(span = { GridItemSpan(maxLineSpan) }) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 10.dp, bottom = 2.dp),
-                verticalAlignment = Alignment.Bottom,
-            ) {
-                Text(
-                    text = if (state.query.isBlank()) {
-                        stringResource(R.string.home_section_explore)
-                    } else {
-                        stringResource(R.string.home_section_results)
-                    },
-                    style = MaterialTheme.typography.headlineMedium,
-                    modifier = Modifier.weight(1f),
-                )
-                Text(
-                    text = pluralStringResource(
-                        R.plurals.wallpapers_count,
-                        filtered.size,
-                        filtered.size,
-                    ),
-                    style = MaterialTheme.typography.labelLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-        }
-
-        if (state.offline) {
-            item(span = { GridItemSpan(maxLineSpan) }) {
-                OfflineBanner()
-            }
-        }
-
-        when {
-            state.feed is LoadState.Loading && state.wallpapers.isEmpty() -> {
-                item(span = { GridItemSpan(maxLineSpan) }) {
-                    FeedSkeleton()
-                }
-            }
-
-            state.feed is LoadState.Error && state.wallpapers.isEmpty() -> {
-                item(span = { GridItemSpan(maxLineSpan) }) {
-                    ErrorState(
-                        message = (state.feed as LoadState.Error).message,
-                        onRetry = onRefresh,
-                    )
-                }
-            }
-
-            state.wallpapers.isEmpty() -> {
-                item(span = { GridItemSpan(maxLineSpan) }) {
-                    EmptyState(
-                        title = stringResource(R.string.state_empty_feed_title),
-                        message = stringResource(R.string.state_empty_feed_body),
-                    )
-                }
-            }
-
-            filtered.isEmpty() -> {
-                item(span = { GridItemSpan(maxLineSpan) }) {
-                    EmptyState(
-                        title = stringResource(R.string.state_empty_filter_title),
-                        message = stringResource(R.string.state_empty_filter_body),
-                        icon = Icons.Rounded.SearchOff,
-                        actionLabel = stringResource(R.string.state_clear_filters),
-                        onAction = onClearFilters,
-                    )
-                }
-            }
-        }
-
-        if (filtered.isNotEmpty()) {
-            itemsIndexed(
-                items = filtered,
-                key = { _, wallpaper -> wallpaper.id },
-                contentType = { _, _ -> "wall" },
-            ) { index, wallpaper ->
-                StaggeredAppear(
-                    index = index,
-                    resetKey = "${state.query}|${state.category}|${state.tag}",
-                ) {
-                    WallpaperCard(
-                        wallpaper = wallpaper,
-                        isFavorite = wallpaper.id in state.favorites,
-                        onClick = { onOpenWallpaper(wallpaper) },
-                        onToggleFavorite = { onToggleFavorite(wallpaper.id) },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .aspectRatio(9f / 16f),
-                    )
-                }
-            }
-
-            when {
-                state.loadingMore -> {
-                    item(span = { GridItemSpan(maxLineSpan) }) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = 14.dp),
-                            horizontalArrangement = Arrangement.Center,
-                            verticalAlignment = Alignment.CenterVertically,
+                        Spacer(Modifier.height(4.dp))
+                        LazyRow(
+                            contentPadding = PaddingValues(end = 20.dp),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
                         ) {
-                            CircularProgressIndicator(Modifier.size(20.dp))
-                            Spacer(Modifier.width(10.dp))
-                            Text(
-                                text = stringResource(R.string.feed_loading_more),
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                        }
-                    }
-                }
-
-                state.loadMoreError != null -> {
-                    item(span = { GridItemSpan(maxLineSpan) }) {
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = 8.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                        ) {
-                            Text(
-                                text = state.loadMoreError.orEmpty(),
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.error,
-                                textAlign = TextAlign.Center,
-                            )
-                            TextButton(onClick = onLoadMore) {
-                                Text(stringResource(R.string.action_retry))
+                            item(key = "all-tags") {
+                                FilterChip(
+                                    selected = state.tag == null,
+                                    onClick = { onTagChange(null) },
+                                    label = { Text(stringResource(R.string.filter_all_tags)) },
+                                    shape = CircleShape,
+                                )
+                            }
+                            items(availableTags, key = { "tag-$it" }) { tag ->
+                                FilterChip(
+                                    selected = state.tag == tag,
+                                    onClick = {
+                                        onTagChange(if (state.tag == tag) null else tag)
+                                    },
+                                    label = { Text("#$tag") },
+                                    shape = CircleShape,
+                                )
                             }
                         }
                     }
                 }
+            }
 
-                !state.hasMore -> {
-                    item(span = { GridItemSpan(maxLineSpan) }) {
+            if (plainFeed && state.dailyWallpaper != null) {
+                item(key = "daily", span = { GridItemSpan(maxLineSpan) }) {
+                    val daily = state.dailyWallpaper
+                    if (daily != null) {
+                        HomeDailyCard(
+                            wallpaper = daily,
+                            onTap = { onOpenWallpaper(daily) },
+                        )
+                    }
+                }
+            }
+
+            if (state.isDemo) {
+                item(span = { GridItemSpan(maxLineSpan) }) {
+                    Surface(
+                        shape = MaterialTheme.shapes.large,
+                        color = MaterialTheme.colorScheme.secondaryContainer,
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
                         Text(
-                            text = stringResource(R.string.feed_no_more),
+                            text = stringResource(R.string.home_demo_hint),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSecondaryContainer,
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
+                        )
+                    }
+                }
+            }
+
+            if (showHero) {
+                item(span = { GridItemSpan(maxLineSpan) }) {
+                    Column {
+                        Spacer(Modifier.height(6.dp))
+                        HorizontalMultiBrowseCarousel(
+                            state = carouselState,
+                            preferredItemWidth = heroHeight * 0.72f,
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(vertical = 12.dp),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            textAlign = TextAlign.Center,
+                                .height(heroHeight),
+                            itemSpacing = 12.dp,
+                            minSmallItemWidth = 42.dp,
+                            maxSmallItemWidth = 84.dp,
+                        ) { page ->
+                            val wallpaper = featured[page]
+                            FeaturedCard(
+                                wallpaper = wallpaper,
+                                isFavorite = wallpaper.id in favorites,
+                                onClick = { onOpenWallpaper(wallpaper) },
+                                onToggleFavorite = { onToggleFavorite(wallpaper.id) },
+                                heroHeight = heroHeight,
+                                modifier = Modifier.fillMaxSize(),
+                            )
+                        }
+                    }
+                }
+            }
+
+            item(span = { GridItemSpan(maxLineSpan) }) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 10.dp, bottom = 2.dp),
+                    verticalAlignment = Alignment.Bottom,
+                ) {
+                    Text(
+                        text = if (state.query.isBlank()) {
+                            stringResource(R.string.home_section_explore)
+                        } else {
+                            stringResource(R.string.home_section_results)
+                        },
+                        style = MaterialTheme.typography.headlineMedium,
+                        modifier = Modifier.weight(1f),
+                    )
+                    Text(
+                        text = pluralStringResource(
+                            R.plurals.wallpapers_count,
+                            filtered.size,
+                            filtered.size,
+                        ),
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+
+            if (state.offline) {
+                item(span = { GridItemSpan(maxLineSpan) }) {
+                    OfflineBanner()
+                }
+            }
+
+            when {
+                state.feed is LoadState.Loading && state.wallpapers.isEmpty() -> {
+                    item(span = { GridItemSpan(maxLineSpan) }) {
+                        FeedSkeleton()
+                    }
+                }
+
+                state.feed is LoadState.Error && state.wallpapers.isEmpty() -> {
+                    item(span = { GridItemSpan(maxLineSpan) }) {
+                        ErrorState(
+                            message = (state.feed as LoadState.Error).message,
+                            onRetry = onRefresh,
                         )
+                    }
+                }
+
+                state.wallpapers.isEmpty() -> {
+                    item(span = { GridItemSpan(maxLineSpan) }) {
+                        EmptyState(
+                            title = stringResource(R.string.state_empty_feed_title),
+                            message = stringResource(R.string.state_empty_feed_body),
+                        )
+                    }
+                }
+
+                filtered.isEmpty() -> {
+                    item(span = { GridItemSpan(maxLineSpan) }) {
+                        EmptyState(
+                            title = stringResource(R.string.state_empty_filter_title),
+                            message = stringResource(R.string.state_empty_filter_body),
+                            icon = Icons.Rounded.SearchOff,
+                            actionLabel = stringResource(R.string.state_clear_filters),
+                            onAction = onClearFilters,
+                        )
+                    }
+                }
+            }
+
+            if (filtered.isNotEmpty()) {
+                itemsIndexed(
+                    items = filtered,
+                    key = { _, wallpaper -> wallpaper.id },
+                    contentType = { _, _ -> "wall" },
+                ) { index, wallpaper ->
+                    StaggeredAppear(
+                        index = index,
+                        resetKey = "${state.query}|${state.category}|${state.tag}",
+                    ) {
+                        WallpaperCard(
+                            wallpaper = wallpaper,
+                            isFavorite = wallpaper.id in state.favorites,
+                            onClick = { onOpenWallpaper(wallpaper) },
+                            onToggleFavorite = { onToggleFavorite(wallpaper.id) },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .aspectRatio(9f / 16f),
+                        )
+                    }
+                }
+
+                when {
+                    state.loadingMore -> {
+                        item(span = { GridItemSpan(maxLineSpan) }) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 14.dp),
+                                horizontalArrangement = Arrangement.Center,
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                CircularProgressIndicator(Modifier.size(20.dp))
+                                Spacer(Modifier.width(10.dp))
+                                Text(
+                                    text = stringResource(R.string.feed_loading_more),
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                        }
+                    }
+
+                    state.loadMoreError != null -> {
+                        item(span = { GridItemSpan(maxLineSpan) }) {
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 8.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                            ) {
+                                Text(
+                                    text = state.loadMoreError.orEmpty(),
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.error,
+                                    textAlign = TextAlign.Center,
+                                )
+                                TextButton(onClick = onLoadMore) {
+                                    Text(stringResource(R.string.action_retry))
+                                }
+                            }
+                        }
+                    }
+
+                    !state.hasMore -> {
+                        item(span = { GridItemSpan(maxLineSpan) }) {
+                            Text(
+                                text = stringResource(R.string.feed_no_more),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 12.dp),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                textAlign = TextAlign.Center,
+                            )
+                        }
                     }
                 }
             }

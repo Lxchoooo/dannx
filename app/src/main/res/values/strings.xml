@@ -98,6 +98,7 @@
     <string name="home_tagline">Wallpapers que se sienten tuyos.</string>
     <string name="action_refresh_feed">Actualizar feed</string>
     <string name="action_random_wallpaper">Sorprendeme</string>
+    <string name="feed_refreshing">Actualizando…</string>
     <string name="feed_loading_more">Cargando más fondos…</string>
     <string name="feed_no_more">No hay más fondos.</string>
     <string name="home_search_hint">Buscar fondos o tags</string>

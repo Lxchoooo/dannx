@@ -98,6 +98,7 @@
     <string name="home_tagline">Wallpapers that feel like yours.</string>
     <string name="action_refresh_feed">Refresh feed</string>
     <string name="action_random_wallpaper">Surprise me</string>
+    <string name="feed_refreshing">Refreshing…</string>
     <string name="feed_loading_more">Loading more wallpapers…</string>
     <string name="feed_no_more">No more wallpapers.</string>
     <string name="home_search_hint">Search wallpapers or tags</string>
