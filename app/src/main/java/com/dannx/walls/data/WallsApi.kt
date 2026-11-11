@@ -1436,7 +1436,7 @@ class WallsApi(
         build: (String) -> Request,
     ): String {
         val currentToken = prefs.accessToken ?: throw DannXError.SessionExpired
-        val first = runRequest(build(currentToken))
+        val first = client.runRequest(build(currentToken))
         if (first.code != 401) {
             return first.readBody(allowConflict)
         }
@@ -1445,30 +1445,12 @@ class WallsApi(
             prefs.clearSession()
             throw DannXError.SessionExpired
         }
-        val second = runRequest(build(renewed.token))
+        val second = client.runRequest(build(renewed.token))
         if (second.code == 401) {
             prefs.clearSession()
             throw DannXError.SessionExpired
         }
         return second.readBody(allowConflict)
-    }
-
-    private fun runRequest(request: Request): HttpResult =
-        client.newCall(request).execute().use { response ->
-            HttpResult(response.code, response.body?.string().orEmpty())
-        }
-
-    private fun HttpResult.readBody(allowConflict: Boolean = false): String {
-        if (code == 401) {
-            throw DannXError.SessionExpired
-        }
-        if (code == 409 && allowConflict) {
-            return body
-        }
-        if (code !in 200..299) {
-            throw errorFor(code, body)
-        }
-        return body
     }
 
     private suspend fun uploadObject(
@@ -1589,17 +1571,6 @@ class WallsApi(
             throw DannXError.Unexpected("Falta conectar el catálogo en la configuración del proyecto.")
         }
     }
-
-    private fun errorFor(code: Int, body: String): DannXError = when (code) {
-        401 -> DannXError.SessionExpired
-        403 -> DannXError.Forbidden
-        in 500..599 -> DannXError.Server(code)
-        else -> DannXError.Unexpected(
-            "El servidor respondió $code${if (body.isBlank()) "" else ": ${body.take(120)}"}",
-        )
-    }
-
-    private data class HttpResult(val code: Int, val body: String)
 
     companion object {
         const val MAX_BYTES = 25L * 1024 * 1024
