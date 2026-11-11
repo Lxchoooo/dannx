@@ -56,7 +56,9 @@ import java.time.LocalDate
 import java.util.Locale
 import java.util.UUID
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
@@ -69,6 +71,7 @@ import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
+import kotlinx.coroutines.withContext
 
 /**
  * El estado se expone por StateFlow, asi que la instancia es estable: marcarla
@@ -966,10 +969,12 @@ class MainViewModel(
                     }
                     var changed = false
                     resolved.forEach { (id, color) ->
+                        // Reinsertar mueve la entrada al final y conserva la
+                        // antigüedad real para el tope de la caché.
+                        colorCache.remove(id)
                         colorCache[id] = color
                         if (color != null) changed = true
                     }
-                    colorCacheStore.write(colorCache)
                     if (changed) {
                         _state.update {
                             it.copy(wallpaperColors = resolvedColors())
@@ -977,6 +982,10 @@ class MainViewModel(
                     }
                 }
             } finally {
+                val snapshot = colorCache.toMap()
+                withContext(NonCancellable + Dispatchers.IO) {
+                    runCatching { colorCacheStore.write(snapshot) }
+                }
                 _state.update { it.copy(classifyingColors = false) }
             }
         }
