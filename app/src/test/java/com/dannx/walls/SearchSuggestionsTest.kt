@@ -15,15 +15,19 @@ class SearchSuggestionsTest {
 
     @Test
     fun `tags and authors match ignoring case and accents`() {
-        val state = UiState(
-            wallpapers = listOf(
-                wallpaper(title = "Bosque", tags = listOf("Naturaleza"), author = "Ana"),
-                wallpaper(title = "Playa", tags = listOf("Verano"), author = "Natalia"),
-            ),
-            query = "NATU",
+        val items = listOf(
+            wallpaper(title = "Bosque", tags = listOf("Naturaleza"), author = "Ana"),
+            wallpaper(title = "Playa", tags = listOf("Verano"), author = "Néstor"),
         )
 
-        assertEquals(listOf("Naturaleza", "Natalia"), state.searchSuggestions)
+        assertEquals(
+            listOf("Naturaleza"),
+            UiState(wallpapers = items, query = "NATU").searchSuggestions,
+        )
+        assertEquals(
+            listOf("Néstor"),
+            UiState(wallpapers = items, query = "Nes").searchSuggestions,
+        )
     }
 
     @Test
