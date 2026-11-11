@@ -39,7 +39,7 @@ class ColorCachePrefs(context: Context) : ColorCacheStore {
 
     override fun write(colors: Map<String, WallpaperColor?>) {
         val payload = LinkedHashMap<String, String>()
-        colors.entries.takeLast(MAX_COLORS).forEach { (id, color) ->
+        colors.entries.toList().takeLast(MAX_COLORS).forEach { (id, color) ->
             payload[id] = color?.key ?: NONE
         }
         prefs.edit { putString(KEY_COLORS, json.encodeToString(payload)) }
