@@ -1,5 +1,6 @@
 package com.dannx.walls.ui.screens
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -62,10 +63,12 @@ fun FavoritesScreen(
     val selectedItems = remember(items, selectedIds) {
         items.filter { it.id in selectedSet }
     }
+    val allSelected = items.isNotEmpty() && items.all { it.id in selectedSet }
     fun clearSelection() {
         selectionMode = false
         selectedIds = emptyList()
     }
+    BackHandler(enabled = selectionMode) { clearSelection() }
     fun toggleSelection(id: String) {
         val updated = if (id in selectedSet) selectedIds - id else selectedIds + id
         selectedIds = updated
@@ -138,6 +141,18 @@ fun FavoritesScreen(
                             }
                         } else {
                             null
+                        },
+                        allSelected = allSelected,
+                        onToggleSelectAll = if (items.isEmpty()) {
+                            null
+                        } else {
+                            {
+                                selectedIds = if (allSelected) {
+                                    emptyList()
+                                } else {
+                                    items.map { it.id }
+                                }
+                            }
                         },
                     )
                 }

@@ -517,6 +517,8 @@
     <string name="home_search_suggestions">Sugerencias</string>
 
     <string name="selection_enter">Seleccionar</string>
+    <string name="selection_select_all">Seleccionar todo</string>
+    <string name="selection_deselect_all">Quitar selección</string>
     <string name="selection_hint">Tocá los fondos para seleccionar</string>
     <string name="selection_cancel">Cancelar</string>
     <string name="selection_download">Descargar</string>
@@ -534,9 +536,11 @@
     <string name="share_target_label" translatable="false">DannX</string>
     <string name="shared_image_title">Compartir a DannX</string>
     <string name="shared_image_body">Elegí dónde aplicar esta imagen.</string>
+    <string name="shared_image_body_many">Elegí dónde aplicar estas %1$d imágenes.</string>
     <string name="shared_image_preview">Vista previa de la imagen compartida</string>
     <string name="shared_image_apply">Aplicar fondo</string>
     <string name="shared_image_applying">Aplicando…</string>
     <string name="shared_image_applied">Fondo aplicado.</string>
+    <string name="shared_image_applied_many">%1$d de %2$d aplicadas.</string>
     <string name="shared_image_error">No se pudo abrir o aplicar esta imagen.</string>
 </resources>

@@ -443,7 +443,10 @@ class FakeActions : WallpaperActions {
     var savedUri: String? = null
     var appliedTarget: WallpaperTarget? = null
     var shared: Boolean = false
+    var sharedImageCount: Int = 0
     var failWith: Throwable? = null
+    var failForIds: Set<String> = emptySet()
+    val savedIds: MutableList<String> = mutableListOf()
     var beforeDownload: CompletableDeferred<Unit>? = null
     var beforeApply: CompletableDeferred<Unit>? = null
 
@@ -453,6 +456,10 @@ class FakeActions : WallpaperActions {
     ): String {
         beforeDownload?.await()
         failWith?.let { throw it }
+        if (wallpaper.id in failForIds) {
+            throw IllegalStateException("falló ${wallpaper.id}")
+        }
+        savedIds += wallpaper.id
         onProgress(50, 100)
         onProgress(100, 100)
         return savedUri ?: "content://media/test"
@@ -475,6 +482,12 @@ class FakeActions : WallpaperActions {
 
     override fun share(image: SharedImage, title: String) {
         shared = true
+        sharedImageCount = 1
+    }
+
+    override fun shareMany(images: List<SharedImage>, title: String) {
+        shared = true
+        sharedImageCount = images.size
     }
 
     override fun exists(uri: String): Boolean = true

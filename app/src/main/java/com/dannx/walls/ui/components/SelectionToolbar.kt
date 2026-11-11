@@ -5,9 +5,11 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.ClearAll
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.DeleteOutline
 import androidx.compose.material.icons.rounded.Download
+import androidx.compose.material.icons.rounded.SelectAll
 import androidx.compose.material.icons.rounded.Share
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -19,6 +21,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.dannx.walls.R
 
@@ -31,6 +36,8 @@ fun SelectionToolbar(
     onDownload: (() -> Unit)? = null,
     onShare: (() -> Unit)? = null,
     onRemove: (() -> Unit)? = null,
+    allSelected: Boolean = false,
+    onToggleSelectAll: (() -> Unit)? = null,
 ) {
     Surface(
         modifier = modifier.fillMaxWidth(),
@@ -51,8 +58,23 @@ fun SelectionToolbar(
                 style = MaterialTheme.typography.titleSmall,
                 modifier = Modifier
                     .weight(1f)
-                    .padding(start = 8.dp),
+                    .padding(start = 8.dp)
+                    .semantics { liveRegion = LiveRegionMode.Polite },
             )
+            if (onToggleSelectAll != null) {
+                IconButton(onClick = onToggleSelectAll) {
+                    Icon(
+                        if (allSelected) Icons.Rounded.ClearAll else Icons.Rounded.SelectAll,
+                        contentDescription = stringResource(
+                            if (allSelected) {
+                                R.string.selection_deselect_all
+                            } else {
+                                R.string.selection_select_all
+                            },
+                        ),
+                    )
+                }
+            }
             if (onDownload != null) {
                 IconButton(onClick = onDownload) {
                     Icon(

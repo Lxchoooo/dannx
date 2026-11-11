@@ -517,6 +517,8 @@
     <string name="home_search_suggestions">Suggestions</string>
 
     <string name="selection_enter">Select</string>
+    <string name="selection_select_all">Select all</string>
+    <string name="selection_deselect_all">Deselect all</string>
     <string name="selection_hint">Tap wallpapers to select</string>
     <string name="selection_cancel">Cancel</string>
     <string name="selection_download">Download</string>
@@ -534,9 +536,11 @@
     <string name="share_target_label" translatable="false">DannX</string>
     <string name="shared_image_title">Share to DannX</string>
     <string name="shared_image_body">Choose where to apply this image.</string>
+    <string name="shared_image_body_many">Choose where to apply these %1$d images.</string>
     <string name="shared_image_preview">Shared image preview</string>
     <string name="shared_image_apply">Apply wallpaper</string>
     <string name="shared_image_applying">Applying…</string>
     <string name="shared_image_applied">Wallpaper applied.</string>
+    <string name="shared_image_applied_many">%1$d of %2$d applied.</string>
     <string name="shared_image_error">Couldn\'t open or apply this image.</string>
 </resources>

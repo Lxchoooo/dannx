@@ -1210,6 +1210,60 @@ class MainViewModelTest {
         assertEquals(daily?.id, model.state.value.dailyWallpaper?.id)
     }
 
+    @Test
+    fun `removeFavorites drops several ids at once`() = runTest(dispatcher) {
+        val model = viewModel()
+        model.toggleFavorite("1")
+        model.toggleFavorite("2")
+        model.toggleFavorite("3")
+        assertEquals(setOf("1", "2", "3"), model.state.value.favorites)
+
+        model.removeFavorites(setOf("1", "3"))
+
+        assertEquals(setOf("2"), model.state.value.favorites)
+        assertTrue(model.state.value.message != null)
+    }
+
+    @Test
+    fun `downloadMany saves the available wallpapers and counts the failures`() =
+        runTest(dispatcher) {
+            val first = wallpaper("1")
+            val second = wallpaper("2")
+            actions.failForIds = setOf("2")
+            val model = viewModel()
+
+            model.downloadMany(listOf(first, second))
+            advanceUntilIdle()
+
+            assertEquals(listOf("1"), actions.savedIds)
+            assertEquals(setOf("1"), model.state.value.downloadedIds)
+            assertTrue(model.state.value.message != null)
+            assertNull(model.actionState.value.active)
+        }
+
+    @Test
+    fun `shareMany prepares and shares every wallpaper`() = runTest(dispatcher) {
+        val model = viewModel()
+
+        model.shareMany(listOf(wallpaper("1"), wallpaper("2")))
+        advanceUntilIdle()
+
+        assertTrue(actions.shared)
+        assertEquals(2, actions.sharedImageCount)
+    }
+
+    @Test
+    fun `shareMany reports a preparation failure`() = runTest(dispatcher) {
+        actions.failWith = IllegalStateException("sin archivo")
+        val model = viewModel()
+
+        model.shareMany(listOf(wallpaper("1")))
+        advanceUntilIdle()
+
+        assertFalse(actions.shared)
+        assertTrue(model.state.value.message != null)
+    }
+
     private fun wallpaper(id: String) = Wallpaper(
         id = id,
         title = "Fondo $id",
