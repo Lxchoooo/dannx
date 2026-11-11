@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -52,29 +53,34 @@ import com.dannx.walls.util.WallpaperFiles
 import com.dannx.walls.util.WallpaperTarget
 import kotlinx.coroutines.launch
 
-/** Recibe una imagen desde el menú Compartir de Android. */
+/** Recibe una o varias imágenes desde el menú Compartir de Android. */
 class SharedImageActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-        val imageUri = intent?.sharedImageUri()
+        val imageUris = intent?.sharedImageUris().orEmpty()
         setContent {
             DannXTheme {
-                SharedImageScreen(imageUri = imageUri, onClose = { finish() })
+                SharedImageScreen(imageUris = imageUris, onClose = { finish() })
             }
         }
     }
 }
 
+private sealed interface ApplyResult {
+    data class Done(val applied: Int, val total: Int) : ApplyResult
+    data object Failed : ApplyResult
+}
+
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
-private fun SharedImageScreen(imageUri: Uri?, onClose: () -> Unit) {
+private fun SharedImageScreen(imageUris: List<Uri>, onClose: () -> Unit) {
     val context = LocalContext.current
     val files = remember(context) { WallpaperFiles(context) }
     val scope = rememberCoroutineScope()
     var target by rememberSaveable { mutableStateOf(WallpaperTarget.BOTH) }
     var applying by remember { mutableStateOf(false) }
-    var result by remember { mutableStateOf<Int?>(null) }
+    var result by remember { mutableStateOf<ApplyResult?>(null) }
 
     Scaffold(
         topBar = {
@@ -100,7 +106,7 @@ private fun SharedImageScreen(imageUri: Uri?, onClose: () -> Unit) {
                 .padding(horizontal = 20.dp, vertical = 16.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
-            if (imageUri == null) {
+            if (imageUris.isEmpty()) {
                 Text(
                     text = stringResource(R.string.shared_image_error),
                     style = MaterialTheme.typography.bodyLarge,
@@ -110,17 +116,13 @@ private fun SharedImageScreen(imageUri: Uri?, onClose: () -> Unit) {
                     Text(stringResource(R.string.action_close))
                 }
             } else {
-                AsyncImage(
-                    model = imageUri,
-                    contentDescription = stringResource(R.string.shared_image_preview),
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .aspectRatio(9f / 16f)
-                        .clip(RoundedCornerShape(24.dp)),
-                )
+                SharedImagePreview(imageUris)
                 Text(
-                    text = stringResource(R.string.shared_image_body),
+                    text = if (imageUris.size > 1) {
+                        stringResource(R.string.shared_image_body_many, imageUris.size)
+                    } else {
+                        stringResource(R.string.shared_image_body)
+                    },
                     style = MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -146,10 +148,10 @@ private fun SharedImageScreen(imageUri: Uri?, onClose: () -> Unit) {
                         result = null
                         scope.launch {
                             result = runCatching {
-                                files.setAsWallpaper(imageUri, target)
+                                files.setAsWallpaper(imageUris, target)
                             }.fold(
-                                onSuccess = { R.string.shared_image_applied },
-                                onFailure = { R.string.shared_image_error },
+                                onSuccess = { ApplyResult.Done(it, imageUris.size) },
+                                onFailure = { ApplyResult.Failed },
                             )
                             applying = false
                         }
@@ -170,11 +172,24 @@ private fun SharedImageScreen(imageUri: Uri?, onClose: () -> Unit) {
                         Text(stringResource(R.string.shared_image_apply))
                     }
                 }
-                result?.let { message ->
+                result?.let { outcome ->
+                    val success = outcome is ApplyResult.Done &&
+                        outcome.applied == outcome.total
                     Text(
-                        text = stringResource(message),
+                        text = when (outcome) {
+                            is ApplyResult.Done -> if (outcome.total > 1) {
+                                stringResource(
+                                    R.string.shared_image_applied_many,
+                                    outcome.applied,
+                                    outcome.total,
+                                )
+                            } else {
+                                stringResource(R.string.shared_image_applied)
+                            }
+                            ApplyResult.Failed -> stringResource(R.string.shared_image_error)
+                        },
                         style = MaterialTheme.typography.bodyMedium,
-                        color = if (message == R.string.shared_image_applied) {
+                        color = if (success) {
                             MaterialTheme.colorScheme.primary
                         } else {
                             MaterialTheme.colorScheme.error
@@ -188,18 +203,64 @@ private fun SharedImageScreen(imageUri: Uri?, onClose: () -> Unit) {
     }
 }
 
+@Composable
+private fun SharedImagePreview(imageUris: List<Uri>) {
+    val description = stringResource(R.string.shared_image_preview)
+    if (imageUris.size == 1) {
+        AsyncImage(
+            model = imageUris.first(),
+            contentDescription = description,
+            contentScale = ContentScale.Crop,
+            modifier = Modifier
+                .fillMaxWidth()
+                .aspectRatio(9f / 16f)
+                .clip(RoundedCornerShape(24.dp)),
+        )
+    } else {
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            imageUris.take(3).forEach { uri ->
+                AsyncImage(
+                    model = uri,
+                    contentDescription = description,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier
+                        .weight(1f)
+                        .aspectRatio(9f / 16f)
+                        .clip(RoundedCornerShape(16.dp)),
+                )
+            }
+        }
+    }
+}
+
 private fun targetLabel(target: WallpaperTarget): Int = when (target) {
     WallpaperTarget.SYSTEM -> R.string.apply_system
     WallpaperTarget.LOCK -> R.string.apply_lock
     WallpaperTarget.BOTH -> R.string.apply_both
 }
 
-private fun Intent.sharedImageUri(): Uri? {
-    if (action != Intent.ACTION_SEND) return null
-    return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+private fun Intent.sharedImageUris(): List<Uri> {
+    val uris = when (action) {
+        Intent.ACTION_SEND -> listOfNotNull(streamUri())
+        Intent.ACTION_SEND_MULTIPLE -> streamUris()
+        Intent.ACTION_VIEW -> listOfNotNull(data)
+        else -> emptyList()
+    }
+    return uris.distinct()
+}
+
+private fun Intent.streamUri(): Uri? =
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
         getParcelableExtra(Intent.EXTRA_STREAM, Uri::class.java)
     } else {
         @Suppress("DEPRECATION")
         getParcelableExtra(Intent.EXTRA_STREAM)
     }
-}
+
+private fun Intent.streamUris(): List<Uri> =
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+        getParcelableArrayListExtra(Intent.EXTRA_STREAM, Uri::class.java).orEmpty()
+    } else {
+        @Suppress("DEPRECATION")
+        getParcelableArrayListExtra<Uri>(Intent.EXTRA_STREAM).orEmpty()
+    }

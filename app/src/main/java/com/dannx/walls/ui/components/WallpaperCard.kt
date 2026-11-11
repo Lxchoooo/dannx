@@ -168,7 +168,13 @@ fun WallpaperCard(
                 append(wallpaper.title)
             } else {
                 append(wallpaper.title.substring(0, start))
-                withStyle(SpanStyle(color = Color(0xFFFFD54F), fontWeight = FontWeight.Bold)) {
+                withStyle(
+                    SpanStyle(
+                        color = Color.Black,
+                        background = Color(0xFFFFD54F),
+                        fontWeight = FontWeight.Bold,
+                    ),
+                ) {
                     append(wallpaper.title.substring(start, start + query.length))
                 }
                 append(wallpaper.title.substring(start + query.length))

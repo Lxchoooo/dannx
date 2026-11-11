@@ -24,6 +24,7 @@ import com.dannx.walls.data.WallpaperActions
 import java.io.File
 import java.io.IOException
 import java.util.concurrent.TimeUnit
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
@@ -335,6 +336,31 @@ class WallpaperFiles(
             } finally {
                 temp.delete()
             }
+        }
+
+    /**
+     * Aplica varias imágenes compartidas en orden. Devuelve cuántas se
+     * aplicaron; si ninguna se pudo aplicar, propaga el primer error.
+     */
+    suspend fun setAsWallpaper(uris: List<Uri>, target: WallpaperTarget): Int =
+        withContext(Dispatchers.IO) {
+            if (uris.isEmpty()) throw IOException("No hay imágenes para aplicar.")
+            var applied = 0
+            var failure: Throwable? = null
+            uris.forEach { uri ->
+                try {
+                    setAsWallpaper(uri, target)
+                    applied += 1
+                } catch (error: CancellationException) {
+                    throw error
+                } catch (error: Exception) {
+                    if (failure == null) failure = error
+                }
+            }
+            if (applied == 0) {
+                throw failure ?: IOException("No se pudo aplicar la imagen.")
+            }
+            applied
         }
 
     /**
