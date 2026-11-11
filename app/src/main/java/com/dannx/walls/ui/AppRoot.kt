@@ -58,6 +58,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
@@ -67,6 +68,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import androidx.annotation.StringRes
+import com.dannx.walls.BuildConfig
 import com.dannx.walls.LoadState
 import com.dannx.walls.MainViewModel
 import com.dannx.walls.MessageAction
@@ -86,6 +88,8 @@ import com.dannx.walls.ui.screens.OnboardingScreen
 import com.dannx.walls.ui.screens.SettingsScreen
 import com.dannx.walls.ui.screens.StudioScreen
 import com.dannx.walls.ui.theme.LocalLiteMode
+import com.dannx.walls.ui.update.UpdateState
+import com.dannx.walls.ui.update.UpdateViewModel
 import com.dannx.walls.util.WallpaperFiles
 
 private data class TopLevelTab(
@@ -136,6 +140,15 @@ private fun MainApp(
     val actionState by viewModel.actionState.collectAsStateWithLifecycle()
     val navController = rememberNavController()
     val context = LocalContext.current
+    val application = context.applicationContext as android.app.Application
+    val updateViewModel: UpdateViewModel = viewModel(
+        factory = UpdateViewModel.factory(application),
+    )
+    val updateState by updateViewModel.state.collectAsStateWithLifecycle()
+    val updateAvailable = updateState is UpdateState.Available
+    LaunchedEffect(Unit) {
+        updateViewModel.checkInBackground(BuildConfig.VERSION_NAME)
+    }
     val wallpaperFiles = remember(context) { WallpaperFiles(context) }
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = backStackEntry?.destination?.route
@@ -432,6 +445,7 @@ private fun MainApp(
                             }
                         },
                         onOpenSettings = { navController.navigate("settings") },
+                        updateAvailable = updateAvailable,
                         onSearchSubmit = viewModel::rememberCurrentSearch,
                         onClearRecentSearches = viewModel::clearRecentSearches,
                         onLoadMore = viewModel::loadMore,
@@ -459,6 +473,9 @@ private fun MainApp(
                         },
                         onToggleFavorite = viewModel::toggleFavorite,
                         onExplore = { navController.navigateTopLevel("home") },
+                        onDownloadMany = viewModel::downloadMany,
+                        onShareMany = viewModel::shareMany,
+                        onRemoveFavorites = viewModel::removeFavorites,
                     )
                 }
             }
@@ -524,6 +541,14 @@ private fun MainApp(
                                 viewModel.clearCollectionDetail()
                                 navController.navigateTopLevel("home")
                             },
+                            onDownloadMany = viewModel::downloadMany,
+                            onShareMany = viewModel::shareMany,
+                            onRemoveMany = { ids ->
+                                viewModel.setCollectionWallpapers(
+                                    data.collection.id,
+                                    data.collection.wallpaperIds.filterNot { it in ids },
+                                )
+                            },
                         )
                     }
 
@@ -539,6 +564,7 @@ private fun MainApp(
             composable("settings") {
                 SettingsScreen(
                     state = state,
+                    updateViewModel = updateViewModel,
                     onBack = { navController.popBackStack() },
                     onThemeModeChange = viewModel::setThemeMode,
                     onLiteModeChange = viewModel::setLiteMode,

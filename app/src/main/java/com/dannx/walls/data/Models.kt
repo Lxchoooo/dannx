@@ -108,7 +108,7 @@ val DefaultCategories = listOf(
 
 private val accents = "\\p{M}+".toRegex()
 
-private fun normalize(value: String): String =
+internal fun normalizeSearch(value: String): String =
     Normalizer.normalize(value.trim().lowercase(Locale.ROOT), Normalizer.Form.NFD)
         .replace(accents, "")
 
@@ -151,7 +151,7 @@ fun filterWallpapers(
     category: String?,
     tag: String? = null,
 ): List<Wallpaper> {
-    val term = normalize(query)
+    val term = normalizeSearch(query)
     return items.filter { wallpaper ->
         val matchesCategory = when (category) {
             null, CategoryAll, "Todos" -> true
@@ -161,10 +161,10 @@ fun filterWallpapers(
         val matchesTag = tag == null ||
             wallpaper.tags.any { it.equals(tag, ignoreCase = true) }
         val matchesQuery = term.isBlank() ||
-            normalize(wallpaper.title).contains(term) ||
-            normalize(wallpaper.category).contains(term) ||
-            normalize(wallpaper.author).contains(term) ||
-            wallpaper.tags.any { normalize(it).contains(term) }
+            normalizeSearch(wallpaper.title).contains(term) ||
+            normalizeSearch(wallpaper.category).contains(term) ||
+            normalizeSearch(wallpaper.author).contains(term) ||
+            wallpaper.tags.any { normalizeSearch(it).contains(term) }
         matchesCategory && matchesTag && matchesQuery
     }
 }

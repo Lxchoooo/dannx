@@ -10,6 +10,7 @@ import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.BitmapRegionDecoder
 import android.graphics.Rect
+import android.net.Uri
 import android.os.Environment
 import android.provider.MediaStore
 import android.util.DisplayMetrics
@@ -311,6 +312,32 @@ class WallpaperFiles(
     }
 
     /**
+     * Aplica una imagen que llegó desde otra app. Se copia a un temporal para
+     * poder recortarla por regiones sin cargar la foto completa en memoria.
+     */
+    suspend fun setAsWallpaper(uri: Uri, target: WallpaperTarget): WallpaperTarget =
+        withContext(Dispatchers.IO) {
+            val size = wallpaperTargetSize(context)
+            val folder = File(context.cacheDir, "wallpaper-tmp").apply { mkdirs() }
+            val temp = File(folder, "shared-${System.currentTimeMillis()}.img")
+            try {
+                val input = context.contentResolver.openInputStream(uri)
+                    ?: throw IOException("No se pudo abrir la imagen compartida.")
+                input.use { source ->
+                    temp.outputStream().use { output -> source.copyTo(output) }
+                }
+                val bitmap = decodeCroppedBitmap(temp, size.x, size.y)
+                try {
+                    applier.apply(bitmap, target)
+                } finally {
+                    bitmap.recycle()
+                }
+            } finally {
+                temp.delete()
+            }
+        }
+
+    /**
      * Aplica un bitmap ya editado, sin volver a descargarlo ni recortarlo.
      * El editor genera la imagen final en segundo plano y la entrega acá.
      */
@@ -378,6 +405,28 @@ class WallpaperFiles(
             putExtra(Intent.EXTRA_STREAM, uri)
             putExtra(Intent.EXTRA_TITLE, title)
             clipData = ClipData.newRawUri("DannX", uri)
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        }
+        val chooser = Intent.createChooser(send, context.getString(R.string.share_chooser_title)).apply {
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            if (context !is Activity) {
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+        }
+        context.startActivity(chooser)
+    }
+
+    override fun shareMany(images: List<SharedImage>, title: String) {
+        if (images.isEmpty()) return
+        val uris = images.map { it.uri.toUri() }
+        val clip = ClipData.newRawUri("DannX", uris.first()).apply {
+            uris.drop(1).forEach { addItem(ClipData.Item(it)) }
+        }
+        val send = Intent(Intent.ACTION_SEND_MULTIPLE).apply {
+            type = "image/*"
+            putParcelableArrayListExtra(Intent.EXTRA_STREAM, ArrayList(uris))
+            putExtra(Intent.EXTRA_TITLE, title)
+            clipData = clip
             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
         }
         val chooser = Intent.createChooser(send, context.getString(R.string.share_chooser_title)).apply {

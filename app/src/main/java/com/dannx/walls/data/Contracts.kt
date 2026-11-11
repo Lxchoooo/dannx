@@ -207,4 +207,11 @@ interface WallpaperActions {
     suspend fun prepareShare(wallpaper: Wallpaper): SharedImage
     fun share(image: SharedImage, title: String)
     fun exists(uri: String): Boolean
+
+    suspend fun prepareShareMany(wallpapers: List<Wallpaper>): List<SharedImage> =
+        wallpapers.map { prepareShare(it) }
+
+    fun shareMany(images: List<SharedImage>, title: String) {
+        images.firstOrNull()?.let { share(it, title) }
+    }
 }

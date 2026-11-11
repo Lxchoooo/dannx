@@ -24,7 +24,7 @@ HSPLcom/dannx/walls/data/FeedCache;->writeWallpapers(Ljava/util/List;)V
 HSPLcom/dannx/walls/data/ModelsKt;->filterWallpapers(Ljava/util/List;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)Ljava/util/List;
 HSPLcom/dannx/walls/data/ModelsKt;->collectTags(Ljava/util/List;)Ljava/util/List;
 HSPLcom/dannx/walls/data/ModelsKt;->parseTags(Ljava/lang/String;)Ljava/util/List;
-HSPLcom/dannx/walls/data/ModelsKt;->normalize(Ljava/lang/String;)Ljava/lang/String;
+HSPLcom/dannx/walls/data/ModelsKt;->normalizeSearch(Ljava/lang/String;)Ljava/lang/String;
 
 # --- App: archivos ---
 HSPLcom/dannx/walls/util/WallpaperFiles;-><init>(Landroid/content/Context;)V

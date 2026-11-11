@@ -47,6 +47,8 @@ import androidx.compose.material.icons.rounded.SearchOff
 import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material.icons.rounded.Wallpaper
 import androidx.compose.material3.AssistChip
+import androidx.compose.material3.Badge
+import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
@@ -90,6 +92,9 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -147,6 +152,7 @@ fun HomeScreen(
     },
     onOpenStudio: () -> Unit = {},
     onOpenSettings: () -> Unit = {},
+    updateAvailable: Boolean = false,
     onSearchSubmit: () -> Unit = {},
     onClearRecentSearches: () -> Unit = {},
     onLoadMore: () -> Unit = {},
@@ -241,6 +247,7 @@ fun HomeScreen(
     val tagline = state.appSettings.tagline.ifBlank {
         stringResource(R.string.home_tagline)
     }
+    val updateLabel = stringResource(R.string.settings_update_available)
     /** Sin búsqueda ni filtro: condición para el hero y la tarjeta del día. */
     val plainFeed = state.query.isBlank() && state.category == null &&
         state.tag == null && state.color == null
@@ -320,7 +327,9 @@ fun HomeScreen(
                                 text = stringResource(R.string.app_name),
                                 style = MaterialTheme.typography.displayLarge,
                                 color = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.pointerInput(onOpenStudio) {
+                                modifier = Modifier
+                                    .semantics { heading() }
+                                    .pointerInput(onOpenStudio) {
                                     awaitEachGesture {
                                         val down = awaitFirstDown()
                                         val slop = viewConfiguration.touchSlop
@@ -366,11 +375,26 @@ fun HomeScreen(
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                         }
-                        FilledTonalIconButton(onClick = onOpenSettings) {
-                            Icon(
-                                Icons.Rounded.Settings,
-                                contentDescription = stringResource(R.string.action_settings),
-                            )
+                        BadgedBox(
+                            badge = {
+                                if (updateAvailable) {
+                                    Badge()
+                                }
+                            },
+                        ) {
+                            FilledTonalIconButton(
+                                onClick = onOpenSettings,
+                                modifier = Modifier.semantics {
+                                    if (updateAvailable) {
+                                        stateDescription = updateLabel
+                                    }
+                                },
+                            ) {
+                                Icon(
+                                    Icons.Rounded.Settings,
+                                    contentDescription = stringResource(R.string.action_settings),
+                                )
+                            }
                         }
                         Spacer(Modifier.width(8.dp))
                         FilledTonalIconButton(onClick = onRefresh) {
@@ -459,6 +483,35 @@ fun HomeScreen(
                                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     )
                                 }
+                            }
+                        }
+                    }
+                    if (
+                        searchFocused &&
+                        state.query.isNotBlank() &&
+                        state.searchSuggestions.isNotEmpty()
+                    ) {
+                        Spacer(Modifier.height(8.dp))
+                        Text(
+                            text = stringResource(R.string.home_search_suggestions),
+                            style = MaterialTheme.typography.labelLarge,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        Spacer(Modifier.height(4.dp))
+                        LazyRow(
+                            contentPadding = PaddingValues(end = 20.dp),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        ) {
+                            items(state.searchSuggestions, key = { "suggestion-$it" }) { suggestion ->
+                                AssistChip(
+                                    onClick = {
+                                        onQueryChange(suggestion)
+                                        onSearchSubmit()
+                                        focusManager.clearFocus()
+                                    },
+                                    label = { Text(suggestion) },
+                                    shape = CircleShape,
+                                )
                             }
                         }
                     }
@@ -780,6 +833,7 @@ fun HomeScreen(
                             isFavorite = wallpaper.id in state.favorites,
                             onClick = { onOpenWallpaper(wallpaper) },
                             onToggleFavorite = { onToggleFavorite(wallpaper.id) },
+                            highlightQuery = state.query.takeIf { it.isNotBlank() },
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .aspectRatio(9f / 16f),

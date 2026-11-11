@@ -1,6 +1,5 @@
 package com.dannx.walls.ui.screens
 
-import android.app.Application
 import android.content.Context
 import android.content.Intent
 import android.os.Build
@@ -44,10 +43,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.viewmodel.compose.viewModel
 import com.dannx.walls.BuildConfig
 import com.dannx.walls.R
 import com.dannx.walls.UiState
@@ -66,6 +66,7 @@ import com.dannx.walls.util.openUrl
 @Composable
 fun SettingsScreen(
     state: UiState,
+    updateViewModel: UpdateViewModel,
     onBack: () -> Unit,
     onThemeModeChange: (ThemeMode) -> Unit,
     onLiteModeChange: (Boolean) -> Unit,
@@ -77,10 +78,6 @@ fun SettingsScreen(
     onSignOut: () -> Unit,
 ) {
     val context = LocalContext.current
-    val application = context.applicationContext as Application
-    val updateViewModel: UpdateViewModel = viewModel(
-        factory = UpdateViewModel.factory(application),
-    )
     val updateState by updateViewModel.state.collectAsStateWithLifecycle()
     LaunchedEffect(Unit) {
         onRefreshCacheSize()
@@ -89,7 +86,12 @@ fun SettingsScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(stringResource(R.string.settings_title)) },
+                title = {
+                    Text(
+                        text = stringResource(R.string.settings_title),
+                        modifier = Modifier.semantics { heading() },
+                    )
+                },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(

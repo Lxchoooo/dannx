@@ -3,7 +3,6 @@ package com.dannx.walls
 import android.app.Application
 import android.net.Uri
 import android.util.Log
-import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.Stable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.SavedStateHandle
@@ -12,7 +11,6 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
-import com.dannx.walls.data.AdminSession
 import com.dannx.walls.data.AppCache
 import com.dannx.walls.data.AppCacheStore
 import com.dannx.walls.data.AppSettings
@@ -21,6 +19,8 @@ import com.dannx.walls.data.AppearanceStore
 import com.dannx.walls.data.BulkTagLimit
 import com.dannx.walls.data.CategoryAll
 import com.dannx.walls.data.CategoryFeatured
+import com.dannx.walls.data.ColorCachePrefs
+import com.dannx.walls.data.ColorCacheStore
 import com.dannx.walls.data.CoilImageCache
 import com.dannx.walls.data.CoilWallpaperColorResolver
 import com.dannx.walls.data.Connectivity
@@ -32,6 +32,7 @@ import com.dannx.walls.data.InMemoryAppearanceStore
 import com.dannx.walls.data.LOCAL_COLLECTION_OWNER
 import com.dannx.walls.data.LOCAL_COLLECTION_PREFIX
 import com.dannx.walls.data.LocalStore
+import com.dannx.walls.data.NoColorCacheStore
 import com.dannx.walls.data.Prefs
 import com.dannx.walls.data.StudioEditException
 import com.dannx.walls.data.TagsLimit
@@ -45,8 +46,6 @@ import com.dannx.walls.data.WallpaperColorResolver
 import com.dannx.walls.data.WallpaperFilter
 import com.dannx.walls.data.WallpapersRepository
 import com.dannx.walls.data.WallsApi
-import com.dannx.walls.data.collectTags
-import com.dannx.walls.data.filterWallpapers
 import com.dannx.walls.data.isLocal
 import com.dannx.walls.util.WallpaperFiles
 import com.dannx.walls.util.WallpaperTarget
@@ -71,201 +70,6 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
 
-enum class UiAction {
-    DOWNLOAD,
-    APPLY,
-    SHARE,
-}
-
-sealed interface MessageAction {
-    val label: String
-
-    data class OpenFile(override val label: String, val uri: String) : MessageAction
-
-    data class RetryDownload(
-        override val label: String,
-        val wallpaperId: String,
-    ) : MessageAction
-}
-
-data class DownloadPrompt(
-    val wallpaperId: String,
-    val uri: String,
-)
-
-/**
- * Colección resuelta para su pantalla de detalle, con sus fondos completos.
- */
-@Immutable
-data class CollectionDetailData(
-    val collection: WallpaperCollection,
-    val wallpapers: List<Wallpaper>,
-)
-
-/**
- * Cierre de una edición de tags en bloque: el tag tocado, si fue alta o baja,
- * cuántos fondos quedaron bien y lista de los que fallaron para reintentos.
- */
-data class BulkTagResult(
-    val tag: String,
-    val add: Boolean,
-    val saved: Int,
-    val failed: List<String>,
-)
-
-/**
- * Estado de una fuente de datos remota: cargando, con contenido, vacía o con
- * error. Reemplaza los booleanos sueltos de carga y error.
- */
-sealed interface LoadState<out T> {
-    data object Loading : LoadState<Nothing>
-    data class Content<T>(val data: T) : LoadState<T>
-    data object Empty : LoadState<Nothing>
-    data class Error(val message: String, val kind: ErrorKind) : LoadState<Nothing>
-}
-
-enum class ErrorKind {
-    OFFLINE,
-    SERVER,
-    SESSION,
-    PERMISSION,
-    UNEXPECTED,
-}
-
-/**
- * Estado de las acciones en curso (descargar, aplicar, compartir). Vive
- * aparte del estado general para que el progreso no recomponga toda la app.
- */
-@Immutable
-data class ActionState(
-    val active: UiAction? = null,
-    val progress: Int? = null,
-)
-
-@Immutable
-data class UiState(
-    val feed: LoadState<List<Wallpaper>> = LoadState.Loading,
-    val collections: LoadState<List<WallpaperCollection>> = LoadState.Loading,
-    val refreshing: Boolean = false,
-    val loadingMore: Boolean = false,
-    val hasMore: Boolean = true,
-    val loadMoreError: String? = null,
-    val wallpapers: List<Wallpaper> = emptyList(),
-    val adminWallpapers: List<Wallpaper> = emptyList(),
-    val trashWallpapers: List<Wallpaper> = emptyList(),
-    val categories: List<WallpaperCategory> = emptyList(),
-    val collectionItems: List<WallpaperCollection> = emptyList(),
-    val detailWallpaperId: String? = null,
-    val detailWallpaper: LoadState<Wallpaper>? = null,
-    val detailCollectionId: String? = null,
-    val detailCollection: LoadState<CollectionDetailData>? = null,
-    val query: String = "",
-    val recentSearches: List<String> = emptyList(),
-    val category: String? = null,
-    val tag: String? = null,
-    /** Color elegido en el feed; null = sin filtro de color. */
-    val color: WallpaperColor? = null,
-    /** Color resuelto por fondo. Se completa al usar el filtro. */
-    val wallpaperColors: Map<String, WallpaperColor> = emptyMap(),
-    val classifyingColors: Boolean = false,
-    val favorites: Set<String> = emptySet(),
-    val session: AdminSession? = null,
-    val isDemo: Boolean = true,
-    val uploading: Boolean = false,
-    val onboardingDone: Boolean = false,
-    val collectionBusy: Boolean = false,
-    val studioBusy: Boolean = false,
-    /** Fondo elegido para hoy en este teléfono; null = tarjeta oculta. */
-    val dailyWallpaper: Wallpaper? = null,
-    /**
-     * Contadores que avisan una sola vez que una acción terminó bien, para el
-     * tacto de confirmación (aplicar fondo, crear colección).
-     */
-    val applyTick: Int = 0,
-    val collectionCreatedTick: Int = 0,
-    /** Edición en bloque de tags: (fondos editados, total). */
-    val bulkProgress: Pair<Int, Int>? = null,
-    val bulkResult: BulkTagResult? = null,
-    val uploadSuccessCount: Int = 0,
-    val authBusy: Boolean = false,
-    val message: String? = null,
-    val messageAction: MessageAction? = null,
-    val downloadedIds: Set<String> = emptySet(),
-    val downloadPrompt: DownloadPrompt? = null,
-    val offline: Boolean = false,
-    val selectedUploadUri: String? = null,
-    val themeMode: ThemeMode = ThemeMode.SYSTEM,
-    val liteMode: Boolean = false,
-    val openEditorOnApply: Boolean = true,
-    /** Espacio que ocupa la caché local, en bytes. */
-    val cacheSizeBytes: Long = 0L,
-    val appSettings: AppSettings = AppSettings(),
-) {
-    val filtered: List<Wallpaper>
-        get() = filterWallpapers(wallpapers, query, category, tag)
-            .filterNot { it.isDeleted }
-            .filter { color == null || wallpaperColors[it.id] == color }
-            .let { items ->
-                if (category == CategoryFeatured) {
-                    items.sortedBy { it.featuredPosition }
-                } else {
-                    items
-                }
-            }
-
-    val featured: List<Wallpaper>
-        get() = wallpapers
-            .filter { it.featured && !it.isDeleted }
-            .sortedBy { it.featuredPosition }
-
-    val favoriteWallpapers: List<Wallpaper>
-        get() = wallpapers.filter { it.id in favorites && !it.isDeleted }
-
-    val availableTags: List<String>
-        get() = collectTags(wallpapers)
-
-    val myCollections: List<WallpaperCollection>
-        get() = if (isDemo) {
-            collectionItems
-        } else {
-            val id = session?.userId.orEmpty()
-            collectionItems.filter { it.isLocal || (id.isNotBlank() && it.ownerId == id) }
-        }
-
-    val studioWallpapers: List<Wallpaper>
-        get() = if (isDemo) {
-            (wallpapers + adminWallpapers).distinctBy { it.id }
-        } else {
-            adminWallpapers
-        }
-
-    val categoryOptions: List<WallpaperCategory>
-        get() = categories.ifEmpty {
-            wallpapers.map { it.category }
-                .filter { it.isNotBlank() }
-                .distinctBy { it.lowercase() }
-                .mapIndexed { index, name ->
-                    WallpaperCategory(id = "", name = name, position = index)
-                }
-        }
-
-    val categoryNames: List<String>
-        get() = wallpapers.filterNot { it.isDeleted }
-            .map { categoryNameFor(it) }
-            .filter { it.isNotBlank() }
-            .distinctBy { it.lowercase() }
-            .sorted()
-
-    fun categoryNameFor(wallpaper: Wallpaper): String =
-        categories.firstOrNull { it.id == wallpaper.categoryId }?.name
-            ?: wallpaper.category
-
-    fun canEdit(collection: WallpaperCollection): Boolean =
-        isDemo || collection.isLocal ||
-            (session != null && session.userId == collection.ownerId)
-
-}
-
 /**
  * El estado se expone por StateFlow, asi que la instancia es estable: marcarla
  * evita que Compose recomponga la app entera cuando cambia un dato.
@@ -283,6 +87,7 @@ class MainViewModel(
     private val strings: StringResolver = StringResolver { _, _ -> "" },
     private val now: () -> Long = System::currentTimeMillis,
     private val colorResolver: WallpaperColorResolver? = null,
+    private val colorCacheStore: ColorCacheStore = NoColorCacheStore,
 ) : ViewModel() {
     private var actionJob: Job? = null
     private var actionToken = 0
@@ -292,7 +97,7 @@ class MainViewModel(
     private var filterJob: Job? = null
     private var colorJob: Job? = null
     /** null = se intentó y no se pudo resolver; evita reintentos infinitos. */
-    private val colorCache = mutableMapOf<String, WallpaperColor?>()
+    private val colorCache = colorCacheStore.read().toMutableMap()
     private var lastFeedRefreshAt: Long? = null
     private var detailJob: Job? = null
     private var detailToken = 0
@@ -1164,6 +969,7 @@ class MainViewModel(
                         colorCache[id] = color
                         if (color != null) changed = true
                     }
+                    colorCacheStore.write(colorCache)
                     if (changed) {
                         _state.update {
                             it.copy(wallpaperColors = resolvedColors())
@@ -1189,6 +995,18 @@ class MainViewModel(
 
     fun toggleFavorite(id: String) {
         _state.update { it.copy(favorites = prefs.toggleFavorite(id)) }
+    }
+
+    fun removeFavorites(ids: Set<String>) {
+        if (ids.isEmpty()) return
+        prefs.removeFavorites(ids)
+        _state.update {
+            it.copy(
+                favorites = it.favorites - ids,
+                message = strings.get(R.string.msg_favorites_removed),
+                messageAction = null,
+            )
+        }
     }
 
     fun signIn(email: String, password: String) {
@@ -3013,6 +2831,79 @@ class MainViewModel(
         }
     }
 
+    fun downloadMany(wallpapers: List<Wallpaper>) {
+        if (wallpapers.isEmpty()) return
+        val token = beginAction(UiAction.DOWNLOAD, progress = 0)
+        actionJob = viewModelScope.launch {
+            var saved = 0
+            var failed = 0
+            val savedIds = mutableSetOf<String>()
+            try {
+                wallpapers.forEachIndexed { index, wallpaper ->
+                    try {
+                        val uri = actions.saveToGallery(wallpaper) { done, total ->
+                            val itemProgress = if (total > 0) {
+                                done.toFloat() / total
+                            } else {
+                                0f
+                            }
+                            val percent = (((index + itemProgress) / wallpapers.size) * 100)
+                                .toInt()
+                                .coerceIn(0, 100)
+                            if (token == actionToken) {
+                                _actionState.update { it.copy(progress = percent) }
+                            }
+                        }
+                        prefs.rememberDownload(wallpaper.id, uri)
+                        savedIds += wallpaper.id
+                        saved += 1
+                    } catch (error: CancellationException) {
+                        throw error
+                    } catch (_: Exception) {
+                        failed += 1
+                    }
+                }
+                if (token != actionToken) return@launch
+                finishAction(token)
+                _state.update {
+                    it.copy(
+                        downloadedIds = it.downloadedIds + savedIds,
+                        message = strings.get(R.string.msg_saved_many, saved, failed),
+                        messageAction = null,
+                    )
+                }
+            } catch (error: CancellationException) {
+                finishAction(token)
+                throw error
+            }
+        }
+    }
+
+    fun shareMany(wallpapers: List<Wallpaper>) {
+        if (wallpapers.isEmpty()) return
+        val token = beginAction(UiAction.SHARE)
+        actionJob = viewModelScope.launch {
+            try {
+                val images = actions.prepareShareMany(wallpapers)
+                actions.shareMany(images, strings.get(R.string.selection_share))
+                finishAction(token)
+            } catch (error: CancellationException) {
+                finishAction(token)
+                throw error
+            } catch (_: Exception) {
+                finishAction(token)
+                if (token == actionToken) {
+                    _state.update {
+                        it.copy(
+                            message = strings.get(R.string.msg_share_many_failed),
+                            messageAction = null,
+                        )
+                    }
+                }
+            }
+        }
+    }
+
     fun setWallpaper(wallpaper: Wallpaper, target: WallpaperTarget) {
         val token = beginAction(UiAction.APPLY)
         actionJob = viewModelScope.launch {
@@ -3452,6 +3343,7 @@ class MainViewModel(
                     appearance = AppearancePrefs(application),
                     strings = application.stringResolver(),
                     colorResolver = CoilWallpaperColorResolver(application),
+                    colorCacheStore = ColorCachePrefs(application),
                 )
             }
         }

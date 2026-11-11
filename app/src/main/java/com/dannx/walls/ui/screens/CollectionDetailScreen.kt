@@ -38,6 +38,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -46,6 +48,7 @@ import com.dannx.walls.UiState
 import com.dannx.walls.data.Wallpaper
 import com.dannx.walls.data.WallpaperCollection
 import com.dannx.walls.ui.components.EmptyState
+import com.dannx.walls.ui.components.SelectionToolbar
 import com.dannx.walls.ui.components.WallpaperCard
 
 @Composable
@@ -59,10 +62,26 @@ fun CollectionDetailScreen(
     onRemove: (String) -> Unit,
     onDelete: () -> Unit,
     onExplore: () -> Unit,
+    onDownloadMany: (List<Wallpaper>) -> Unit = {},
+    onShareMany: (List<Wallpaper>) -> Unit = {},
+    onRemoveMany: (Set<String>) -> Unit = {},
 ) {
     val total = collection.wallpaperIds.size
     val canEdit = state.canEdit(collection)
     var confirmDelete by rememberSaveable { mutableStateOf(false) }
+    var selectionMode by rememberSaveable { mutableStateOf(false) }
+    var selectedIds by rememberSaveable { mutableStateOf(emptyList<String>()) }
+    val selectedSet = selectedIds.toSet()
+    val selectedItems = items.filter { it.id in selectedSet }
+    fun clearSelection() {
+        selectionMode = false
+        selectedIds = emptyList()
+    }
+    fun toggleSelection(id: String) {
+        val updated = if (id in selectedSet) selectedIds - id else selectedIds + id
+        selectedIds = updated
+        if (updated.isEmpty()) selectionMode = false
+    }
 
     LazyVerticalGrid(
         columns = GridCells.Fixed(2),
@@ -84,6 +103,7 @@ fun CollectionDetailScreen(
                         Text(
                             text = collection.name,
                             style = MaterialTheme.typography.headlineMedium,
+                            modifier = Modifier.semantics { heading() },
                         )
                         Text(
                             text = if (items.size == total) {
@@ -104,6 +124,16 @@ fun CollectionDetailScreen(
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
+                    }
+                    if (items.isNotEmpty() && !selectionMode) {
+                        TextButton(
+                            onClick = {
+                                selectionMode = true
+                                selectedIds = emptyList()
+                            },
+                        ) {
+                            Text(stringResource(R.string.selection_enter))
+                        }
                     }
                     if (canEdit) {
                         FilledTonalIconButton(
@@ -133,6 +163,37 @@ fun CollectionDetailScreen(
                         color = MaterialTheme.colorScheme.primary,
                     )
                 }
+                if (selectionMode) {
+                    Spacer(Modifier.height(10.dp))
+                    SelectionToolbar(
+                        count = selectedIds.size,
+                        onCancel = { clearSelection() },
+                        onDownload = if (selectedItems.isNotEmpty()) {
+                            {
+                                onDownloadMany(selectedItems)
+                                clearSelection()
+                            }
+                        } else {
+                            null
+                        },
+                        onShare = if (selectedItems.isNotEmpty()) {
+                            {
+                                onShareMany(selectedItems)
+                                clearSelection()
+                            }
+                        } else {
+                            null
+                        },
+                        onRemove = if (canEdit && selectedIds.isNotEmpty()) {
+                            {
+                                onRemoveMany(selectedIds.toSet())
+                                clearSelection()
+                            }
+                        } else {
+                            null
+                        },
+                    )
+                }
                 Spacer(Modifier.height(14.dp))
             }
         }
@@ -157,17 +218,32 @@ fun CollectionDetailScreen(
                 key = { _, wallpaper -> wallpaper.id },
                 contentType = { _, _ -> "wall" },
             ) { _, wallpaper ->
+                val isSelected = wallpaper.id in selectedSet
                 Box {
                     WallpaperCard(
                         wallpaper = wallpaper,
                         isFavorite = wallpaper.id in state.favorites,
-                        onClick = { onOpenWallpaper(wallpaper) },
+                        onClick = {
+                            if (selectionMode) {
+                                toggleSelection(wallpaper.id)
+                            } else {
+                                onOpenWallpaper(wallpaper)
+                            }
+                        },
                         onToggleFavorite = { onToggleFavorite(wallpaper.id) },
+                        onLongClick = {
+                            if (!selectionMode) {
+                                selectionMode = true
+                                selectedIds = listOf(wallpaper.id)
+                            }
+                        },
+                        selected = isSelected,
+                        showFavorite = !selectionMode,
                         modifier = Modifier
                             .fillMaxWidth()
                             .aspectRatio(9f / 16f),
                     )
-                    if (canEdit) {
+                    if (canEdit && !selectionMode) {
                         FilledTonalIconButton(
                             onClick = { onRemove(wallpaper.id) },
                             modifier = Modifier

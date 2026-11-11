@@ -3,8 +3,11 @@ package com.dannx.walls.ui.components
 import android.content.Context
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Box
@@ -20,6 +23,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.Favorite
 import androidx.compose.material.icons.rounded.FavoriteBorder
 import androidx.compose.material3.FilledIconButton
@@ -47,10 +51,15 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
@@ -121,6 +130,7 @@ internal fun wallpaperThumbRequest(
         }
         .build()
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun WallpaperCard(
     wallpaper: Wallpaper,
@@ -128,6 +138,10 @@ fun WallpaperCard(
     onClick: () -> Unit,
     onToggleFavorite: () -> Unit,
     modifier: Modifier = Modifier,
+    selected: Boolean = false,
+    onLongClick: (() -> Unit)? = null,
+    showFavorite: Boolean = true,
+    highlightQuery: String? = null,
 ) {
     val interactionSource = remember { MutableInteractionSource() }
     val liteMode = LocalLiteMode.current
@@ -143,6 +157,24 @@ fun WallpaperCard(
         wallpaper.category,
         wallpaper.author,
     )
+    val longClickLabel = stringResource(R.string.selection_long_press)
+    val title = remember(wallpaper.title, highlightQuery) {
+        buildAnnotatedString {
+            val query = highlightQuery?.trim().orEmpty()
+            val start = if (query.isBlank()) -1 else {
+                wallpaper.title.indexOf(query, ignoreCase = true)
+            }
+            if (start < 0) {
+                append(wallpaper.title)
+            } else {
+                append(wallpaper.title.substring(0, start))
+                withStyle(SpanStyle(color = Color(0xFFFFD54F), fontWeight = FontWeight.Bold)) {
+                    append(wallpaper.title.substring(start, start + query.length))
+                }
+                append(wallpaper.title.substring(start + query.length))
+            }
+        }
+    }
     Box(
         modifier = modifier
             .graphicsLayer {
@@ -151,15 +183,32 @@ fun WallpaperCard(
             }
             .clip(MaterialTheme.shapes.extraLarge)
             .background(MaterialTheme.colorScheme.surfaceVariant)
+            .then(
+                if (selected) {
+                    Modifier.border(
+                        width = 3.dp,
+                        color = MaterialTheme.colorScheme.primary,
+                        shape = MaterialTheme.shapes.extraLarge,
+                    )
+                } else {
+                    Modifier
+                },
+            )
             // Una sola frase para TalkBack en cada tarjeta, en vez de leer
             // piezas sueltas.
             .semantics(mergeDescendants = true) {
                 contentDescription = description
                 role = Role.Button
+                this.selected = selected
             }
-            .clickable(interactionSource = interactionSource, indication = null) {
-                onClick()
-            },
+            .testTag("wallpaper-${wallpaper.id}")
+            .combinedClickable(
+                interactionSource = interactionSource,
+                indication = null,
+                onClick = onClick,
+                onLongClick = onLongClick,
+                onLongClickLabel = longClickLabel,
+            ),
     ) {
         WallpaperImage(wallpaper, isHero = false)
         val scrim = remember {
@@ -190,20 +239,38 @@ fun WallpaperCard(
                 fontWeight = FontWeight.Bold,
             )
             Text(
-                text = wallpaper.title,
+                text = title,
                 style = MaterialTheme.typography.titleMedium,
                 color = Color.White,
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
             )
         }
-        FavoriteButton(
-            isFavorite = isFavorite,
-            onClick = onToggleFavorite,
-            modifier = Modifier
-                .align(Alignment.TopEnd)
-                .padding(10.dp),
-        )
+        if (selected) {
+            Box(
+                modifier = Modifier
+                    .align(Alignment.Center)
+                    .size(52.dp)
+                    .background(Color.Black.copy(alpha = 0.5f), CircleShape),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    imageVector = Icons.Rounded.CheckCircle,
+                    contentDescription = null,
+                    tint = Color.White,
+                    modifier = Modifier.size(38.dp),
+                )
+            }
+        }
+        if (showFavorite) {
+            FavoriteButton(
+                isFavorite = isFavorite,
+                onClick = onToggleFavorite,
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(10.dp),
+            )
+        }
     }
 }
 
