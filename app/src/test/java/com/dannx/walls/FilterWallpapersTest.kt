@@ -71,4 +71,28 @@ class FilterWallpapersTest {
         assertEquals(listOf(items[0]), filterWallpapers(items, "aurora", "Naturaleza"))
         assertEquals(emptyList<Wallpaper>(), filterWallpapers(items, "aurora", "Ciudad"))
     }
+
+    @Test
+    fun `several tags combine as a union`() {
+        val filtered = filterWallpapers(
+            items = items,
+            query = "",
+            category = null,
+            tags = listOf("planeta", "noche"),
+        )
+
+        assertEquals(listOf(items[0], items[2], items[3]), filtered)
+    }
+
+    @Test
+    fun `several tags match any position inside the wallpaper`() {
+        val filtered = filterWallpapers(
+            items = items,
+            query = "",
+            category = null,
+            tags = listOf("luces"),
+        )
+
+        assertEquals(listOf(items[3]), filtered)
+    }
 }

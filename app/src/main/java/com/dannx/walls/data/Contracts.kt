@@ -19,11 +19,13 @@ data class WallpaperFilter(
     val query: String = "",
     val category: String? = null,
     val tag: String? = null,
+    /** Varias etiquetas a la vez; se combinan por unión. */
+    val tags: List<String> = emptyList(),
     val offset: Int = 0,
     val limit: Int = FEED_PAGE_SIZE,
 ) {
     val hasActiveFilters: Boolean
-        get() = query.isNotBlank() || category != null || tag != null
+        get() = query.isNotBlank() || category != null || tag != null || tags.isNotEmpty()
 }
 
 data class WallpaperPage(

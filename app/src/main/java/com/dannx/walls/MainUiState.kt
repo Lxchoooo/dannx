@@ -108,7 +108,8 @@ data class UiState(
     val query: String = "",
     val recentSearches: List<String> = emptyList(),
     val category: String? = null,
-    val tag: String? = null,
+    /** Etiquetas elegidas en Inicio. Se combinan por unión. */
+    val tags: Set<String> = emptySet(),
     /**
      * Etiquetas ya vistas en el feed, con su valor completo. Se conservan al
      * filtrar para que la fila de Inicio no pierda chips.
@@ -155,7 +156,7 @@ data class UiState(
     val appSettings: AppSettings = AppSettings(),
 ) {
     val filtered: List<Wallpaper>
-        get() = filterWallpapers(wallpapers, query, category, tag)
+        get() = filterWallpapers(wallpapers, query, category, tag, tags.toList())
             .filterNot { it.isDeleted }
             .filter { color == null || wallpaperColors[it.id] == color }
             .let { items ->
@@ -183,6 +184,16 @@ data class UiState(
     /** Nombre corto de la etiqueta elegida, aunque guarde varios hashtags. */
     val selectedTag: String?
         get() = tag?.let { primaryTag(listOf(it)) }
+
+    /** Primera etiqueta del conjunto; se conserva para quien espera una sola. */
+    val tag: String?
+        get() = tags.firstOrNull()
+
+    /** Si una etiqueta del inicio está dentro del filtro actual. */
+    fun isTagSelected(label: String): Boolean {
+        val clean = primaryTag(listOf(label)) ?: return false
+        return tags.any { primaryTag(listOf(it)).equals(clean, ignoreCase = true) }
+    }
 
     /**
      * Valor completo del primer tag que corresponde a una etiqueta del inicio.

@@ -12,6 +12,8 @@ import com.dannx.walls.data.mergeTagCatalog
 import com.dannx.walls.data.parseTags
 import com.dannx.walls.data.primaryTag
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class TagsTest {
@@ -109,7 +111,10 @@ class TagsTest {
             "url",
             tags = listOf("Cleopatra #queen #4k"),
         )
-        val state = UiState(wallpapers = listOf(wallpaper), tag = "Cleopatra #queen #4k")
+        val state = UiState(
+            wallpapers = listOf(wallpaper),
+            tags = setOf("Cleopatra #queen #4k"),
+        )
 
         assertEquals(listOf("Cleopatra"), state.availableTags)
         assertEquals("Cleopatra", state.selectedTag)
@@ -247,6 +252,15 @@ class TagsTest {
             listOf("Cleopatra" to 2, "queen" to 1),
             collectAllTags(wallpapers),
         )
+    }
+
+    @Test
+    fun `selected tags compare by label ignoring case`() {
+        val state = UiState(tags = setOf("Cleopatra #queen #4k"))
+
+        assertTrue(state.isTagSelected("cleopatra"))
+        assertFalse(state.isTagSelected("otra"))
+        assertEquals(1, state.tags.size)
     }
 
     @Test

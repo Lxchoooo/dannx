@@ -63,6 +63,7 @@ class FakeRepository : WallpapersRepository {
             query = filter.query,
             category = filter.category,
             tag = filter.tag,
+            tags = filter.tags,
         )
         val page = filtered.drop(filter.offset).take(filter.limit)
         return WallpaperPage(

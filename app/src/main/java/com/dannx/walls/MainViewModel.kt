@@ -122,7 +122,10 @@ class MainViewModel(
             query = savedState.get<String>(KEY_QUERY) ?: "",
             recentSearches = prefs.recentSearches(),
             category = savedState.get<String>(KEY_CATEGORY),
-            tag = savedState.get<String>(KEY_TAG),
+            tags = savedState.get<List<String>>(KEY_TAGS)?.toSet()
+                ?: savedState.get<String>(KEY_TAG)?.let { listOf(it) }?.toSet()
+                ?: emptySet(),
+            tagCatalog = savedState.get<List<String>>(KEY_TAG_CATALOG) ?: emptyList(),
             color = WallpaperColor.fromKey(savedState.get<String>(KEY_COLOR)),
             selectedUploadUri = savedState.get<String>(KEY_UPLOAD_URI),
             themeMode = appearance.themeMode(),
@@ -297,6 +300,11 @@ class MainViewModel(
                 } else {
                     fresh
                 }
+                val nextCatalog = if (filter.hasActiveFilters) {
+                    mergeTagCatalog(current.tagCatalog, items)
+                } else {
+                    collectTagValues(items)
+                }
                 if (!filter.hasActiveFilters) {
                     cacheFeed(items)
                 }
@@ -325,11 +333,7 @@ class MainViewModel(
                         tagCategories = tagCategoryRules,
                         collectionItems = collections,
                         appSettings = appSettings,
-                        tagCatalog = if (filter.hasActiveFilters) {
-                            mergeTagCatalog(it.tagCatalog, items)
-                        } else {
-                            collectTagValues(items)
-                        },
+                        tagCatalog = nextCatalog,
                         isDemo = !api.isConfigured,
                         offline = false,
                         refreshing = false,
@@ -339,6 +343,7 @@ class MainViewModel(
                     )
                 }
                 lastFeedRefreshAt = now()
+                storeTagCatalog(nextCatalog)
                 if (_state.value.color != null) classifyPendingColors()
                 if (preserveFeed) {
                     pruneLocalCollections()
@@ -890,6 +895,7 @@ class MainViewModel(
             query = query,
             category = category,
             tag = tag,
+            tags = tags.toList(),
             offset = offset,
         )
 
@@ -942,9 +948,33 @@ class MainViewModel(
         reloadFeed()
     }
 
-    fun setTag(value: String?) {
-        savedState[KEY_TAG] = value
-        _state.update { it.copy(tag = value) }
+    /**
+     * Activa o desactiva una etiqueta del inicio. Varias etiquetas se combinan
+     * por unión; `null` limpia el filtro.
+     */
+    fun toggleTag(value: String?) {
+        val clean = value?.trim()?.takeIf { it.isNotBlank() }
+        val label = clean?.let { primaryTag(listOf(it)) }
+        val current = _state.value.tags
+        val next: Set<String> = when {
+            clean == null || label == null -> emptySet()
+            else -> {
+                val exists = current.any {
+                    primaryTag(listOf(it)).equals(label, ignoreCase = true)
+                }
+                if (exists) {
+                    current.filterNot {
+                        primaryTag(listOf(it)).equals(label, ignoreCase = true)
+                    }.toSet()
+                } else {
+                    current + clean
+                }
+            }
+        }
+        savedState[KEY_TAGS] = ArrayList(next)
+        savedState[KEY_TAG] = next.firstOrNull()
+        if (next == current) return
+        _state.update { it.copy(tags = next) }
         filterJob?.cancel()
         reloadFeed()
     }
@@ -2637,7 +2667,19 @@ class MainViewModel(
     private fun UiState.withTagCatalog(): UiState {
         val items = (wallpapers + adminWallpapers).distinctBy { it.id }
         val catalog = collectTagValues(items)
-        return if (catalog == tagCatalog) this else copy(tagCatalog = catalog)
+        if (catalog == tagCatalog) return this
+        storeTagCatalog(catalog)
+        return copy(tagCatalog = catalog)
+    }
+
+    /**
+     * Guarda el catálogo de etiquetas para que las chips sigan ahí si Android
+     * cierra el proceso con un filtro activo.
+     */
+    private fun storeTagCatalog(catalog: List<String>) {
+        if (savedState.get<List<String>>(KEY_TAG_CATALOG) != catalog) {
+            savedState[KEY_TAG_CATALOG] = ArrayList(catalog)
+        }
     }
 
     fun createCollection(
@@ -3475,6 +3517,8 @@ class MainViewModel(
         private const val KEY_QUERY = "query"
         private const val KEY_CATEGORY = "category"
         private const val KEY_TAG = "tag"
+        private const val KEY_TAGS = "tags"
+        private const val KEY_TAG_CATALOG = "tag_catalog"
         private const val KEY_COLOR = "color"
         private const val KEY_UPLOAD_URI = "upload_uri"
         private const val SEARCH_DEBOUNCE_MS = 300L

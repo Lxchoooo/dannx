@@ -166,7 +166,7 @@ fun HomeScreen(
         state.wallpapers,
         state.query,
         state.category,
-        state.tag,
+        state.tags,
         state.color,
         state.wallpaperColors,
     ) {
@@ -230,7 +230,7 @@ fun HomeScreen(
         }
         precached = true
     }
-    LaunchedEffect(gridState, state.query, state.category, state.tag, state.color) {
+    LaunchedEffect(gridState, state.query, state.category, state.tags, state.color) {
         // El filtro por color trabaja con lo que ya está cargado, así que no
         // tiene sentido seguir pidiendo páginas mientras está activo.
         if (state.color != null) return@LaunchedEffect
@@ -250,7 +250,7 @@ fun HomeScreen(
     val updateLabel = stringResource(R.string.settings_update_available)
     /** Sin búsqueda ni filtro: condición para el hero y la tarjeta del día. */
     val plainFeed = state.query.isBlank() && state.category == null &&
-        state.tag == null && state.color == null
+        state.tags.isEmpty() && state.color == null
     val showHero = plainFeed && featured.isNotEmpty()
     val categories = remember(state.wallpapers, state.categories) {
         val names = state.categories.map { it.name }
@@ -637,25 +637,17 @@ fun HomeScreen(
                         ) {
                             item(key = "all-tags") {
                                 FilterChip(
-                                    selected = state.tag == null,
+                                    selected = state.tags.isEmpty(),
                                     onClick = { onTagChange(null) },
                                     label = { Text(stringResource(R.string.filter_all_tags)) },
                                     shape = CircleShape,
                                 )
                             }
                             items(availableTags, key = { "tag-$it" }) { tag ->
-                                val selected = state.selectedTag
-                                    ?.equals(tag, ignoreCase = true) == true
                                 FilterChip(
-                                    selected = selected,
+                                    selected = state.isTagSelected(tag),
                                     onClick = {
-                                        onTagChange(
-                                            if (selected) {
-                                                null
-                                            } else {
-                                                state.tagFilterValue(tag) ?: tag
-                                            },
-                                        )
+                                        onTagChange(state.tagFilterValue(tag) ?: tag)
                                     },
                                     label = { Text("#$tag") },
                                     shape = CircleShape,
@@ -834,7 +826,7 @@ fun HomeScreen(
                 ) { index, wallpaper ->
                     StaggeredAppear(
                         index = index,
-                        resetKey = "${state.query}|${state.category}|${state.tag}|${state.color?.key}",
+                        resetKey = "${state.query}|${state.category}|${state.tags.joinToString(",")}|${state.color?.key}",
                     ) {
                         WallpaperCard(
                             wallpaper = wallpaper,

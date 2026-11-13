@@ -422,11 +422,12 @@ class MainViewModelTest {
 
         model.setQuery("noche")
         model.setCategory("Ciudad")
-        model.setTag("luces")
+        model.toggleTag("luces")
 
         assertEquals("noche", saved.get<String>("query"))
         assertEquals("Ciudad", saved.get<String>("category"))
         assertEquals("luces", saved.get<String>("tag"))
+        assertEquals(listOf("luces"), saved.get<List<String>>("tags"))
     }
 
     @Test
@@ -1263,6 +1264,29 @@ class MainViewModelTest {
 
         assertFalse(actions.shared)
         assertTrue(model.state.value.message != null)
+    }
+
+    @Test
+    fun `toggling tags keeps several and sends them together`() = runTest(dispatcher) {
+        repository.wallpapers = listOf(wallpaper("1"))
+        val model = viewModel()
+        advanceUntilIdle()
+
+        model.toggleTag("noche")
+        advanceUntilIdle()
+        model.toggleTag("ciudad")
+        advanceUntilIdle()
+
+        assertEquals(setOf("noche", "ciudad"), model.state.value.tags)
+        assertEquals(listOf("noche", "ciudad"), repository.pageFilters.last().tags)
+
+        model.toggleTag("noche")
+        advanceUntilIdle()
+        assertEquals(setOf("ciudad"), model.state.value.tags)
+
+        model.toggleTag(null)
+        advanceUntilIdle()
+        assertEquals(emptySet<String>(), model.state.value.tags)
     }
 
     @Test

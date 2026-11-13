@@ -413,12 +413,12 @@ private fun MainApp(
                         onClearFilters = {
                             viewModel.setQuery("")
                             viewModel.setCategory(null)
-                            viewModel.setTag(null)
+                            viewModel.toggleTag(null)
                             viewModel.setColor(null)
                         },
                         onQueryChange = viewModel::setQuery,
                         onCategoryChange = viewModel::setCategory,
-                        onTagChange = viewModel::setTag,
+                        onTagChange = viewModel::toggleTag,
                         onColorChange = viewModel::setColor,
                         onRefresh = viewModel::refresh,
                         onOpenWallpaper = { wallpaper ->

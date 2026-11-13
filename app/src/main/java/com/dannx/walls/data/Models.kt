@@ -261,16 +261,24 @@ fun filterWallpapers(
     query: String,
     category: String?,
     tag: String? = null,
+    tags: List<String> = emptyList(),
 ): List<Wallpaper> {
     val term = normalizeSearch(query)
+    val wantedTags = tags.filter { it.isNotBlank() }
     return items.filter { wallpaper ->
         val matchesCategory = when (category) {
             null, CategoryAll, "Todos" -> true
             CategoryFeatured, "Destacados" -> wallpaper.featured
             else -> wallpaper.category.equals(category, ignoreCase = true)
         }
-        val matchesTag = tag == null ||
-            wallpaper.tags.firstOrNull()?.equals(tag, ignoreCase = true) == true
+        val wallpaperTags = allTags(wallpaper.tags)
+        val matchesTag = when {
+            wantedTags.isNotEmpty() -> wallpaperTags.any { value ->
+                wantedTags.any { it.equals(value, ignoreCase = true) }
+            }
+            else -> tag == null ||
+                wallpaper.tags.firstOrNull()?.equals(tag, ignoreCase = true) == true
+        }
         val matchesQuery = term.isBlank() ||
             normalizeSearch(wallpaper.title).contains(term) ||
             normalizeSearch(wallpaper.category).contains(term) ||

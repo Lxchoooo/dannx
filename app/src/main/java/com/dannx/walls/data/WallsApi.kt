@@ -54,6 +54,7 @@ class WallsApi(
                 query = filter.query,
                 category = filter.category,
                 tag = filter.tag,
+                tags = filter.tags,
             ).filterNot { it.isArchived || it.isDeleted }
             val page = items.drop(offset).take(limit)
             return@withContext WallpaperPage(
@@ -96,8 +97,20 @@ class WallsApi(
             CategoryFeatured, "Destacados" -> params += "featured=eq.true"
             else -> params += "category=eq.${encodeQueryValue(filter.category)}"
         }
-        filter.tag?.takeIf { it.isNotBlank() }?.let { tag ->
-            params += "tags=cs.{${encodeQueryValue(tag)}}"
+        val selectedTags = filter.tags.map { it.trim() }.filter { it.isNotBlank() }.distinct()
+        when {
+            // `ov` (overlaps) matchea cualquier fondo que tenga al menos una de
+            // las etiquetas, en un solo parámetro.
+            selectedTags.size > 1 -> {
+                val values = selectedTags.joinToString(",") { encodeQueryValue(it) }
+                params += "tags=ov.{$values}"
+            }
+            selectedTags.size == 1 -> {
+                params += "tags=cs.{${encodeQueryValue(selectedTags.first())}}"
+            }
+            else -> filter.tag?.takeIf { it.isNotBlank() }?.let { tag ->
+                params += "tags=cs.{${encodeQueryValue(tag)}}"
+            }
         }
         filter.query.trim().takeIf { it.isNotEmpty() }?.let { query ->
             val value = encodeQueryValue(query)
