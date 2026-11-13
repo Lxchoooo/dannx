@@ -35,6 +35,7 @@ import com.dannx.walls.data.LocalStore
 import com.dannx.walls.data.NoColorCacheStore
 import com.dannx.walls.data.Prefs
 import com.dannx.walls.data.StudioEditException
+import com.dannx.walls.data.TagCategory
 import com.dannx.walls.data.TagsLimit
 import com.dannx.walls.data.ThemeMode
 import com.dannx.walls.data.Wallpaper
@@ -281,6 +282,11 @@ class MainViewModel(
                 } else {
                     current.categories
                 }
+                val tagCategoryRules = if (reloadMeta) {
+                    loadTagCategoriesOrEmpty(current.tagCategories)
+                } else {
+                    current.tagCategories
+                }
                 val appSettings = if (reloadMeta) {
                     loadAppSettingsOrFallback(current.appSettings)
                 } else {
@@ -316,6 +322,7 @@ class MainViewModel(
                         },
                         wallpapers = items,
                         categories = categories,
+                        tagCategories = tagCategoryRules,
                         collectionItems = collections,
                         appSettings = appSettings,
                         tagCatalog = if (filter.hasActiveFilters) {
@@ -1435,6 +1442,16 @@ class MainViewModel(
                             w
                         }
                     },
+                    tagCategories = it.tagCategories.mapNotNull { rule ->
+                        when {
+                            rule.categoryId != categoryId -> rule
+                            target != null -> rule.copy(
+                                categoryId = target.id,
+                                categoryName = target.name,
+                            )
+                            else -> null
+                        }
+                    },
                     message = strings.get(R.string.msg_category_deleted, category.name),
                 )
             }
@@ -1464,6 +1481,16 @@ class MainViewModel(
                                 w.copy(categoryId = target.id, category = target.name)
                             } else {
                                 w
+                            }
+                        },
+                        tagCategories = it.tagCategories.mapNotNull { rule ->
+                            when {
+                                rule.categoryId != categoryId -> rule
+                                target != null -> rule.copy(
+                                    categoryId = target.id,
+                                    categoryName = target.name,
+                                )
+                                else -> null
                             }
                         },
                         message = strings.get(R.string.msg_category_deleted, category.name),
@@ -2422,12 +2449,34 @@ class MainViewModel(
         val category = categoryId
             ?.takeIf { it.isNotBlank() }
             ?.let { id -> _state.value.categories.firstOrNull { it.id == id } }
+        val previousRule = _state.value.tagCategories.firstOrNull { rule ->
+            rule.tag.equals(old, ignoreCase = true) ||
+                rule.displayTag.equals(old, ignoreCase = true)
+        }
         val targets = _state.value.studioWallpapers.filter { wallpaper ->
             allTags(wallpaper.tags).any { it.equals(old, ignoreCase = true) }
         }
-        if (targets.isEmpty()) return
         val renamed = !new.equals(old, ignoreCase = true)
         if (!renamed && category == null) return
+        if (targets.isEmpty() && category == null) return
+        // La regla se guarda aunque no haya fondos todavía: sirve para los que
+        // se publiquen después.
+        val ruleCategoryId = category?.id ?: previousRule?.categoryId
+        val ruleCategoryName = category?.name ?: previousRule?.categoryName.orEmpty()
+        val nextRules = if (ruleCategoryId.isNullOrBlank()) {
+            _state.value.tagCategories
+        } else {
+            _state.value.tagCategories
+                .filterNot { rule -> rule.tag.equals(new, ignoreCase = true) }
+                .let { rules ->
+                    rules + TagCategory(
+                        tag = new.lowercase(Locale.ROOT),
+                        displayTag = new,
+                        categoryId = ruleCategoryId,
+                        categoryName = ruleCategoryName,
+                    )
+                }
+        }
         val update: (Wallpaper) -> Wallpaper = { wallpaper ->
             val tags = allTags(wallpaper.tags)
                 .map { if (it.equals(old, ignoreCase = true)) new else it }
@@ -2446,6 +2495,7 @@ class MainViewModel(
                 it.copy(
                     wallpapers = it.wallpapers.map { w -> byId[w.id] ?: w },
                     adminWallpapers = it.adminWallpapers.map { w -> byId[w.id] ?: w },
+                    tagCategories = nextRules,
                 ).withTagCatalog().copy(
                     message = strings.get(
                         R.string.msg_tag_group_updated,
@@ -2460,7 +2510,11 @@ class MainViewModel(
             _state.update { it.copy(studioBusy = true) }
             try {
                 if (renamed) api.renameTag(old, new)
-                if (category != null) api.bulkSetCategory(targets.map { it.id }, category.id)
+                var applied = updated.size
+                if (!ruleCategoryId.isNullOrBlank()) {
+                    applied = maxOf(applied, api.setTagCategory(listOf(new), ruleCategoryId))
+                    if (renamed && previousRule != null) api.deleteTagCategory(old)
+                }
                 // Los valores guardados como varios hashtags no coinciden con
                 // el renombre exacto del servidor: se normalizan y se guardan.
                 targets.filter { allTags(it.tags) != it.tags }.forEach { wallpaper ->
@@ -2480,10 +2534,11 @@ class MainViewModel(
                 _state.update {
                     it.withTagCatalog().copy(
                         studioBusy = false,
+                        tagCategories = nextRules,
                         message = strings.get(
                             R.string.msg_tag_group_updated,
                             new,
-                            updated.size,
+                            applied,
                         ),
                     )
                 }
@@ -2495,6 +2550,42 @@ class MainViewModel(
 
     fun renameTag(oldTag: String, newTag: String) {
         updateTagGroup(oldTag, newTag, categoryId = null)
+    }
+
+    /**
+     * Quita la regla de una etiqueta sin tocar la categoría que ya tienen sus
+     * fondos: lo aplicado se queda como está.
+     */
+    fun clearTagRule(tag: String) {
+        val clean = tag.trim().trimStart('#').trim()
+        if (clean.isBlank()) return
+        val current = _state.value.tagCategories
+        val rules = current.filterNot { it.tag.equals(clean, ignoreCase = true) }
+        if (rules.size == current.size) return
+        if (_state.value.isDemo) {
+            _state.update {
+                it.copy(
+                    tagCategories = rules,
+                    message = strings.get(R.string.msg_tag_rule_cleared, clean),
+                )
+            }
+            return
+        }
+        viewModelScope.launch {
+            _state.update { it.copy(studioBusy = true) }
+            try {
+                api.deleteTagCategory(clean)
+                _state.update {
+                    it.copy(
+                        studioBusy = false,
+                        tagCategories = rules,
+                        message = strings.get(R.string.msg_tag_rule_cleared, clean),
+                    )
+                }
+            } catch (error: Exception) {
+                handleBulkFailure(error)
+            }
+        }
     }
 
     fun deleteTag(tag: String) {
@@ -2512,6 +2603,9 @@ class MainViewModel(
                 it.copy(
                     wallpapers = it.wallpapers.map(apply),
                     adminWallpapers = it.adminWallpapers.map(apply),
+                    tagCategories = it.tagCategories.filterNot { rule ->
+                        rule.tag.equals(clean, ignoreCase = true)
+                    },
                     message = strings.get(R.string.msg_tag_deleted, clean),
                 ).withTagCatalog()
             }
@@ -2521,11 +2615,15 @@ class MainViewModel(
             _state.update { it.copy(studioBusy = true) }
             try {
                 api.deleteTag(clean)
+                api.deleteTagCategory(clean)
                 _state.update {
                     it.copy(
                         studioBusy = false,
                         wallpapers = it.wallpapers.map(apply),
                         adminWallpapers = it.adminWallpapers.map(apply),
+                        tagCategories = it.tagCategories.filterNot { rule ->
+                            rule.tag.equals(clean, ignoreCase = true)
+                        },
                         message = strings.get(R.string.msg_tag_deleted, clean),
                     ).withTagCatalog()
                 }
@@ -3231,6 +3329,21 @@ class MainViewModel(
         } catch (error: CancellationException) {
             throw error
         } catch (error: DannXError.SessionExpired) {
+            throw error
+        } catch (error: Exception) {
+            fallback
+        }
+
+    /**
+     * Las reglas de etiquetas son auxiliares: si fallan, se conservan las que ya
+     * estaban y el feed sigue funcionando.
+     */
+    private suspend fun loadTagCategoriesOrEmpty(
+        fallback: List<TagCategory>,
+    ): List<TagCategory> =
+        try {
+            api.loadTagCategories()
+        } catch (error: CancellationException) {
             throw error
         } catch (error: Exception) {
             fallback

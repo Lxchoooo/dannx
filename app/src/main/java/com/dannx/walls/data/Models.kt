@@ -50,6 +50,18 @@ data class WallpaperCategory(
 )
 
 /**
+ * Regla guardada entre una etiqueta y una categoría. `tag` va en minúsculas y
+ * sin almohadilla; `displayTag` conserva el texto tal como se escribió.
+ */
+@Immutable
+data class TagCategory(
+    val tag: String,
+    val displayTag: String,
+    val categoryId: String,
+    val categoryName: String = "",
+)
+
+/**
  * Contenido editable de la portada. Si un texto queda vacío, la app usa el
  * valor localizado de siempre.
  */

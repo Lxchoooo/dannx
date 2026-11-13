@@ -659,6 +659,7 @@ private fun MainApp(
                         onReorderCollection = viewModel::reorderCollection,
                         onAddTag = viewModel::addTag,
                         onUpdateTagGroup = viewModel::updateTagGroup,
+                        onClearTagRule = viewModel::clearTagRule,
                         onDeleteTag = viewModel::deleteTag,
                         onOpenCollection = { collection ->
                             navController.navigate("collection/${collection.id}") {

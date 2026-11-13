@@ -136,6 +136,21 @@ interface WallpapersRepository {
     suspend fun deleteTag(tag: String)
 
     /**
+     * Reglas guardadas entre etiqueta y categoría. Se cargan junto con el feed
+     * para que el panel sepa qué etiquetas ya tienen categoría.
+     */
+    suspend fun loadTagCategories(): List<TagCategory> = emptyList()
+
+    /**
+     * Guarda la regla y recategoriza todos los fondos con esas etiquetas.
+     * Devuelve cuántos fondos cambiaron.
+     */
+    suspend fun setTagCategory(tags: List<String>, categoryId: String): Int = 0
+
+    /** Quita la regla sin tocar la categoría que ya tienen los fondos. */
+    suspend fun deleteTagCategory(tag: String) = Unit
+
+    /**
      * Fondo del día: cuenta los vivos (sin papelera ni archivados, aunque haya
      * sesión de administración) con conteo exacto y devuelve el wallpaper de
      * la posición pedida del listado por id ascendente. Devuelve null cuando

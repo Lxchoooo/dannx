@@ -1,6 +1,8 @@
 package com.dannx.walls
 
 import com.dannx.walls.data.Wallpaper
+import com.dannx.walls.data.TagCategory
+import com.dannx.walls.data.WallpaperCategory
 import com.dannx.walls.data.allTags
 import com.dannx.walls.data.collectAllTags
 import com.dannx.walls.data.collectTagValues
@@ -216,12 +218,11 @@ class TagsTest {
     fun `merging the catalog only adds new labels`() {
         val first = Wallpaper("1", "Uno", "Naturaleza", "url", tags = listOf("flores"))
         val second = Wallpaper("2", "Dos", "Ciudad", "url", tags = listOf("ciudad"))
-        val catalog = collectTagValues(listOf(first))
-
-        val merged = mergeTagCatalog(catalog, listOf(second))
+        val merged = mergeTagCatalog(collectTagValues(listOf(first)), listOf(second))
 
         assertEquals(listOf("flores", "ciudad"), merged)
-        assertEquals(catalog, mergeTagCatalog(merged, listOf(first)))
+        // Repetir el merge no agrega nada ni quita lo que ya estaba.
+        assertEquals(merged, mergeTagCatalog(merged, listOf(first)))
     }
 
     @Test
@@ -246,5 +247,37 @@ class TagsTest {
             listOf("Cleopatra" to 2, "queen" to 1),
             collectAllTags(wallpapers),
         )
+    }
+
+    @Test
+    fun `tag category rule is found regardless of case and hash`() {
+        val state = UiState(
+            categories = listOf(WallpaperCategory("cat-1", "Playa")),
+            tagCategories = listOf(
+                TagCategory("verano", "Verano", "cat-1", "Playa"),
+            ),
+        )
+
+        assertEquals("cat-1", state.tagCategory("Verano")?.categoryId)
+        assertEquals("cat-1", state.tagCategory("#verano")?.categoryId)
+        assertEquals(null, state.tagCategory("invierno"))
+    }
+
+    @Test
+    fun `category for tags uses the first tag that has a rule`() {
+        val state = UiState(
+            categories = listOf(
+                WallpaperCategory("cat-1", "Playa"),
+                WallpaperCategory("cat-2", "Noche"),
+            ),
+            tagCategories = listOf(
+                TagCategory("verano", "Verano", "cat-1", "Playa"),
+                TagCategory("noche", "noche", "cat-2", "Noche"),
+            ),
+        )
+
+        assertEquals("Playa", state.categoryForTags(listOf("otra", "verano", "noche"))?.name)
+        assertEquals(null, state.categoryForTags(listOf("otra")))
+        assertEquals(null, state.categoryForTags(emptyList()))
     }
 }

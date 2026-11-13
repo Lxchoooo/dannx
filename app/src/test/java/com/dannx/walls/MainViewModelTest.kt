@@ -4,6 +4,7 @@ import androidx.lifecycle.SavedStateHandle
 import com.dannx.walls.data.AdminSession
 import com.dannx.walls.data.DannXError
 import com.dannx.walls.data.Wallpaper
+import com.dannx.walls.data.WallpaperCategory
 import com.dannx.walls.data.WallpaperCollection
 import com.dannx.walls.data.isLocal
 import com.dannx.walls.util.StringResolver
@@ -1263,6 +1264,29 @@ class MainViewModelTest {
         assertFalse(actions.shared)
         assertTrue(model.state.value.message != null)
     }
+
+    @Test
+    fun `assigning a category to a tag keeps the rule and updates the wallpapers`() =
+        runTest(dispatcher) {
+            store.saveSession("admin@test", "token", null, "u1")
+            repository.session = AdminSession("admin@test", "token", "u1")
+            repository.categories = listOf(WallpaperCategory("cat-playa", "Playa"))
+            repository.wallpapers = listOf(
+                wallpaper("1").copy(tags = listOf("playa"), category = "Otra"),
+            )
+            val model = viewModel()
+            advanceUntilIdle()
+            model.loadStudio()
+            advanceUntilIdle()
+
+            model.updateTagGroup("playa", "playa", "cat-playa")
+            advanceUntilIdle()
+
+            val state = model.state.value
+            assertEquals("cat-playa", state.tagCategories.single().categoryId)
+            assertEquals("cat-playa", state.adminWallpapers.single().categoryId)
+            assertEquals("Playa", state.adminWallpapers.single().category)
+        }
 
     private fun wallpaper(id: String) = Wallpaper(
         id = id,

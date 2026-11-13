@@ -113,6 +113,7 @@ import com.dannx.walls.UiState
 import com.dannx.walls.BulkTagResult
 import com.dannx.walls.data.BulkTagLimit
 import com.dannx.walls.data.DefaultCategories
+import com.dannx.walls.data.TagCategory
 import com.dannx.walls.data.Wallpaper
 import com.dannx.walls.data.WallpaperCategory
 import com.dannx.walls.data.WallpaperCollection
@@ -767,8 +768,10 @@ internal fun TagEditDialog(
     tag: String,
     wallpapers: List<Wallpaper>,
     categories: List<WallpaperCategory>,
+    rule: TagCategory? = null,
     onDismiss: () -> Unit,
     onSave: (String, String?) -> Unit,
+    onClearRule: () -> Unit = {},
 ) {
     var next by remember(tag) { mutableStateOf(tag) }
     val matching = remember(tag, wallpapers) {
@@ -781,7 +784,9 @@ internal fun TagEditDialog(
             .distinct()
             .singleOrNull()
     }
-    var categoryId by remember(tag) { mutableStateOf(commonCategoryId) }
+    var categoryId by remember(tag, rule) {
+        mutableStateOf(rule?.categoryId ?: commonCategoryId)
+    }
     var categoryMenu by remember { mutableStateOf(false) }
     val count = matching.size
     val selectedCategory = categoryId?.let { id -> categories.firstOrNull { it.id == id } }
@@ -849,6 +854,25 @@ internal fun TagEditDialog(
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
+                val ruleName = rule?.categoryName
+                    ?.takeIf { it.isNotBlank() }
+                    ?: rule?.categoryId?.let { id ->
+                        categories.firstOrNull { it.id == id }?.name
+                    }
+                if (ruleName != null) {
+                    Spacer(Modifier.height(6.dp))
+                    Text(
+                        text = stringResource(R.string.studio_tag_rule_active, ruleName),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.primary,
+                    )
+                    TextButton(
+                        onClick = onClearRule,
+                        contentPadding = PaddingValues(horizontal = 0.dp),
+                    ) {
+                        Text(stringResource(R.string.studio_tag_rule_clear))
+                    }
+                }
             }
         },
         confirmButton = {

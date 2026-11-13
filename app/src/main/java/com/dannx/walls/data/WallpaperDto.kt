@@ -86,6 +86,25 @@ data class NewCategory(
 )
 
 @Serializable
+data class TagCategoryDto(
+    val tag: String = "",
+    @SerialName("display_tag") val displayTag: String = "",
+    @SerialName("category_id") val categoryId: String = "",
+    val categories: CategoryRefDto? = null,
+)
+
+@Serializable
+data class SetTagCategoryPayload(
+    @SerialName("p_tags") val tags: List<String>,
+    @SerialName("p_category_id") val categoryId: String,
+)
+
+@Serializable
+data class DeleteTagCategoryPayload(
+    @SerialName("p_tag") val tag: String,
+)
+
+@Serializable
 data class CollectionUpdate(
     val name: String,
     val description: String,
@@ -319,6 +338,13 @@ fun CategoryDto.toCategory(): WallpaperCategory = WallpaperCategory(
     id = id,
     name = name.ifBlank { "Sin categoría" },
     position = position,
+)
+
+fun TagCategoryDto.toTagCategory(): TagCategory = TagCategory(
+    tag = tag,
+    displayTag = displayTag.ifBlank { tag },
+    categoryId = categoryId,
+    categoryName = categories?.name.orEmpty(),
 )
 
 fun CollectionDto.toCollection(items: List<CollectionItemDto>): WallpaperCollection =

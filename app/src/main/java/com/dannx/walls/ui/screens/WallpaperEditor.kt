@@ -68,10 +68,12 @@ import androidx.compose.ui.unit.dp
 import com.dannx.walls.ErrorKind
 import com.dannx.walls.R
 import com.dannx.walls.data.StudioEditException
+import com.dannx.walls.data.TagCategory
 import com.dannx.walls.data.TagsLimit
 import com.dannx.walls.data.Wallpaper
 import com.dannx.walls.data.WallpaperCategory
 import com.dannx.walls.data.parseTags
+import com.dannx.walls.data.primaryTag
 import com.dannx.walls.kind
 import com.dannx.walls.ui.components.StatefulImage
 import com.dannx.walls.ui.components.wallpaperThumbRequest
@@ -143,6 +145,7 @@ private class TagDragState(private val info: () -> LazyListLayoutInfo?) {
 internal fun WallpaperEditorSheet(
     wallpaper: Wallpaper,
     categories: List<WallpaperCategory>,
+    rules: List<TagCategory> = emptyList(),
     onSave: suspend (
         wallpaperId: String,
         title: String,
@@ -197,6 +200,20 @@ internal fun WallpaperEditorSheet(
         if (saving) return
         if (dirty) askDiscard = true else onDismiss()
     }
+
+    // Categoría que propone la regla de la etiqueta principal, si el
+    // administrador todavía no eligió una a mano.
+    fun categoryFromRules(nextTags: List<String>): WallpaperCategory? =
+        nextTags.asSequence()
+            .mapNotNull { primaryTag(listOf(it)) }
+            .mapNotNull { label ->
+                rules.firstOrNull {
+                    it.tag.equals(label, ignoreCase = true) ||
+                        it.displayTag.equals(label, ignoreCase = true)
+                }
+            }
+            .mapNotNull { rule -> categories.firstOrNull { it.id == rule.categoryId } }
+            .firstOrNull()
 
     fun runSave() {
         if (saving || !dirty) return
@@ -304,9 +321,15 @@ internal fun WallpaperEditorSheet(
             EditorTagChips(
                 tags = tags,
                 enabled = !saving,
-                onChange = {
-                    tags = it
+                onChange = { next ->
+                    tags = next
                     errorText = null
+                    if (categoryId == wallpaper.categoryId) {
+                        categoryFromRules(next)?.let { suggested ->
+                            categoryName = suggested.name
+                            categoryId = suggested.id
+                        }
+                    }
                 },
             )
             Spacer(Modifier.height(8.dp))

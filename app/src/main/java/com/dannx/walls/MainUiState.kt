@@ -4,6 +4,7 @@ import androidx.compose.runtime.Immutable
 import com.dannx.walls.data.AdminSession
 import com.dannx.walls.data.AppSettings
 import com.dannx.walls.data.CategoryFeatured
+import com.dannx.walls.data.TagCategory
 import com.dannx.walls.data.ThemeMode
 import com.dannx.walls.data.Wallpaper
 import com.dannx.walls.data.WallpaperCategory
@@ -113,6 +114,8 @@ data class UiState(
      * filtrar para que la fila de Inicio no pierda chips.
      */
     val tagCatalog: List<String> = emptyList(),
+    /** Reglas guardadas entre etiqueta y categoría. */
+    val tagCategories: List<TagCategory> = emptyList(),
     /** Color elegido en el feed; null = sin filtro de color. */
     val color: WallpaperColor? = null,
     /** Color resuelto por fondo. Se completa al usar el filtro. */
@@ -192,6 +195,25 @@ data class UiState(
         } ?: wallpapers.asSequence()
             .mapNotNull { it.tags.firstOrNull()?.trim() }
             .firstOrNull { primaryTag(listOf(it)).equals(label, ignoreCase = true) }
+
+    /** Regla guardada para una etiqueta del inicio, si tiene una. */
+    fun tagCategory(label: String): TagCategory? {
+        val clean = primaryTag(listOf(label)) ?: return null
+        return tagCategories.firstOrNull {
+            it.tag.equals(clean, ignoreCase = true) ||
+                it.displayTag.equals(clean, ignoreCase = true)
+        }
+    }
+
+    /** Categoría que propone la regla de la etiqueta principal de un fondo. */
+    fun categoryForTags(tags: List<String>): WallpaperCategory? {
+        val rule = tags.asSequence()
+            .mapNotNull { primaryTag(listOf(it)) }
+            .mapNotNull { tagCategory(it) }
+            .firstOrNull()
+            ?: return null
+        return categories.firstOrNull { it.id == rule.categoryId }
+    }
 
     /** Etiquetas y autores que coinciden con lo que se está escribiendo. */
     val searchSuggestions: List<String>

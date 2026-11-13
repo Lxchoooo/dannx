@@ -409,6 +409,9 @@
     <string name="studio_edit_tag_title">Edit tag</string>
     <string name="studio_tag_category">Category for these wallpapers</string>
     <string name="studio_tag_category_none">No change</string>
+    <string name="studio_tag_rule_active">This tag already assigns “%1$s” to every wallpaper that uses it.</string>
+    <string name="studio_tag_rule_clear">Remove rule</string>
+    <string name="studio_tag_rule_badge">Category: %1$s</string>
     <string name="studio_new_name">New name</string>
     <plurals name="tag_group_count">
         <item quantity="one">%d wallpaper with this tag</item>
@@ -502,6 +505,7 @@
     <string name="msg_tag_renamed">Tag “%1$s” renamed to “%2$s”.</string>
     <string name="msg_tag_group_updated">Tag “%1$s” updated in %2$d wallpapers.</string>
     <string name="msg_tag_deleted">Tag “%1$s” deleted.</string>
+    <string name="msg_tag_rule_cleared">Rule for “%1$s” removed.</string>
     <string name="msg_collection_created">Collection “%1$s” created.</string>
     <string name="msg_already_in_collection">It\'s already in %1$s.</string>
     <string name="msg_saved_in_collection">Saved to %1$s.</string>

@@ -179,6 +179,7 @@ fun StudioScreen(
     onReorderCollection: (String, List<String>) -> Unit = { _, _ -> },
     onAddTag: (String, List<String>) -> Unit = { _, _ -> },
     onUpdateTagGroup: (String, String, String?) -> Unit = { _, _, _ -> },
+    onClearTagRule: (String) -> Unit = {},
     onDeleteTag: (String) -> Unit = {},
     onOpenCollection: (WallpaperCollection) -> Unit = {},
 ) {
@@ -510,6 +511,7 @@ fun StudioScreen(
         WallpaperEditorSheet(
             wallpaper = wallpaper,
             categories = state.categories,
+            rules = state.tagCategories,
             onSave = onUpdateWallpaperNow,
             onDismiss = { editWallpaper = null },
         )
@@ -703,9 +705,14 @@ fun StudioScreen(
             tag = tag,
             wallpapers = state.studioWallpapers,
             categories = state.categories,
+            rule = state.tagCategory(tag),
             onDismiss = { tagEdit = null },
             onSave = { next, categoryId ->
                 onUpdateTagGroup(tag, next, categoryId)
+                tagEdit = null
+            },
+            onClearRule = {
+                onClearTagRule(tag)
                 tagEdit = null
             },
         )
@@ -1242,6 +1249,7 @@ private fun PublishPanel(
     val myCollections = state.myCollections
     var title by rememberSaveable { mutableStateOf("") }
     var selectedCategoryId by rememberSaveable { mutableStateOf(categories.firstOrNull()?.id.orEmpty()) }
+    var categoryTouched by rememberSaveable { mutableStateOf(false) }
     var tagsText by rememberSaveable { mutableStateOf("") }
     var selectedCollectionId by rememberSaveable { mutableStateOf("") }
     val haptics = LocalHapticFeedback.current
@@ -1260,6 +1268,18 @@ private fun PublishPanel(
             onSelectUploadUri(null)
             title = ""
             tagsText = ""
+            categoryTouched = false
+        }
+    }
+
+    // Si la etiqueta principal ya tiene una categoría asignada y el
+    // administrador no eligió otra a mano, se propone esa.
+    val tagRuleCategory = remember(tagsText, state.tagCategories) {
+        state.categoryForTags(parseTags(tagsText))
+    }
+    LaunchedEffect(tagRuleCategory?.id, categoryTouched) {
+        if (!categoryTouched && tagRuleCategory != null) {
+            selectedCategoryId = tagRuleCategory.id
         }
     }
 
@@ -1352,7 +1372,10 @@ private fun PublishPanel(
                 items(categories, key = { it.id.ifBlank { it.name } }) { option ->
                     FilterChip(
                         selected = selectedCategory?.name == option.name,
-                        onClick = { selectedCategoryId = option.id },
+                        onClick = {
+                            selectedCategoryId = option.id
+                            categoryTouched = true
+                        },
                         label = { Text(option.name) },
                         shape = CircleShape,
                     )
@@ -2312,6 +2335,10 @@ private fun TagsPanel(
         return
     }
     counts.sortedBy { it.first.lowercase() }.forEach { (tag, count) ->
+        val ruleName = state.tagCategory(tag)?.let { rule ->
+            rule.categoryName.takeIf { it.isNotBlank() }
+                ?: state.categories.firstOrNull { it.id == rule.categoryId }?.name
+        }
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -2331,6 +2358,13 @@ private fun TagsPanel(
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
+                if (ruleName != null) {
+                    Text(
+                        text = stringResource(R.string.studio_tag_rule_badge, ruleName),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.primary,
+                    )
+                }
             }
             IconButton(onClick = { onEdit(tag) }) {
                 Icon(

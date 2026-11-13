@@ -1119,6 +1119,63 @@ class WallsApi(
     }
 
     /**
+     * Reglas etiqueta→categoría. Es información auxiliar: si la migración
+     * todavía no está aplicada o la lectura falla, la app sigue sin reglas en
+     * lugar de romper el feed.
+     */
+    override suspend fun loadTagCategories(): List<TagCategory> =
+        withContext(Dispatchers.IO) {
+            if (!isConfigured) return@withContext emptyList()
+            try {
+                getList<TagCategoryDto>(
+                    "tag_categories?select=tag,display_tag,category_id,categories(name)",
+                ).map { it.toTagCategory() }
+            } catch (error: CancellationException) {
+                throw error
+            } catch (error: Exception) {
+                Log.w("DannX", "No se pudieron leer las reglas de etiquetas", error)
+                emptyList()
+            }
+        }
+
+    override suspend fun setTagCategory(
+        tags: List<String>,
+        categoryId: String,
+    ): Int = withContext(Dispatchers.IO) {
+        if (!isConfigured) return@withContext 0
+        val clean = tags
+            .map { it.trim().trimStart('#').trim().take(40) }
+            .filter { it.isNotBlank() }
+            .distinctBy { it.lowercase() }
+        if (clean.isEmpty() || categoryId.isBlank()) return@withContext 0
+        try {
+            callRpcScalar(
+                "set_tag_category",
+                json.encodeToString(SetTagCategoryPayload(clean, categoryId)),
+            ).trim().trim('"').toIntOrNull() ?: 0
+        } catch (error: DannXError) {
+            if (!error.isMissingRpc()) throw error
+            0
+        }
+    }
+
+    override suspend fun deleteTagCategory(tag: String) {
+        if (!isConfigured) return
+        withContext(Dispatchers.IO) {
+            val clean = tag.trim().trimStart('#').trim()
+            if (clean.isBlank()) return@withContext
+            try {
+                callRpc(
+                    "delete_tag_category",
+                    json.encodeToString(DeleteTagCategoryPayload(clean)),
+                )
+            } catch (error: DannXError) {
+                if (!error.isMissingRpc()) throw error
+            }
+        }
+    }
+
+    /**
      * Compatibilidad mientras la migración del Estudio no esté aplicada.
      */
     private suspend fun addTagSequential(tag: String, wallpaperIds: List<String>) {
@@ -1339,6 +1396,22 @@ class WallsApi(
                     .header("apikey", anonKey)
                     .header("Authorization", "Bearer $token")
                     .header("Prefer", "return=minimal")
+                    .post(payload.toRequestBody(JSON_MEDIA))
+                    .build()
+            },
+        )
+
+    /**
+     * RPC que devuelve un escalar (un conteo, por ejemplo). Sin la cabecera
+     * `return=minimal` para que PostgREST incluya el valor en el cuerpo.
+     */
+    private suspend fun callRpcScalar(name: String, payload: String): String =
+        executeAuthorized(
+            build = { token ->
+                Request.Builder()
+                    .url("$baseUrl/rest/v1/rpc/$name")
+                    .header("apikey", anonKey)
+                    .header("Authorization", "Bearer $token")
                     .post(payload.toRequestBody(JSON_MEDIA))
                     .build()
             },

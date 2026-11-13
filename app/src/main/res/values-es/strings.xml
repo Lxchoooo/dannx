@@ -409,6 +409,9 @@
     <string name="studio_edit_tag_title">Editar etiqueta</string>
     <string name="studio_tag_category">Categoría para estos fondos</string>
     <string name="studio_tag_category_none">Sin cambios</string>
+    <string name="studio_tag_rule_active">Esta etiqueta ya asigna “%1$s” a todos los fondos que la usan.</string>
+    <string name="studio_tag_rule_clear">Quitar regla</string>
+    <string name="studio_tag_rule_badge">Categoría: %1$s</string>
     <string name="studio_new_name">Nombre nuevo</string>
     <plurals name="tag_group_count">
         <item quantity="one">%d fondo con esta etiqueta</item>
@@ -502,6 +505,7 @@
     <string name="msg_tag_renamed">Etiqueta “%1$s” renombrada a “%2$s”.</string>
     <string name="msg_tag_group_updated">Etiqueta “%1$s” actualizada en %2$d fondos.</string>
     <string name="msg_tag_deleted">Etiqueta “%1$s” eliminada.</string>
+    <string name="msg_tag_rule_cleared">Regla de “%1$s” quitada.</string>
     <string name="msg_collection_created">Colección “%1$s” creada.</string>
     <string name="msg_already_in_collection">Ya está en %1$s.</string>
     <string name="msg_saved_in_collection">Guardado en %1$s.</string>
