@@ -1290,6 +1290,27 @@ class MainViewModelTest {
     }
 
     @Test
+    fun `renaming a tag to an existing one merges both labels`() = runTest(dispatcher) {
+        store.saveSession("admin@test", "token", null, "u1")
+        repository.session = AdminSession("admin@test", "token", "u1")
+        repository.wallpapers = listOf(
+            wallpaper("1").copy(tags = listOf("playa")),
+            wallpaper("2").copy(tags = listOf("Playa", "sol")),
+        )
+        val model = viewModel()
+        advanceUntilIdle()
+        model.loadStudio()
+        advanceUntilIdle()
+
+        model.updateTagGroup("playa", "Playa", null)
+        advanceUntilIdle()
+
+        val tags = model.state.value.adminWallpapers.associate { it.id to it.tags }
+        assertEquals(listOf("Playa"), tags["1"])
+        assertEquals(listOf("Playa", "sol"), tags["2"])
+    }
+
+    @Test
     fun `assigning a category to a tag keeps the rule and updates the wallpapers`() =
         runTest(dispatcher) {
             store.saveSession("admin@test", "token", null, "u1")

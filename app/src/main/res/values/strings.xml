@@ -419,6 +419,7 @@
     <string name="studio_tag_rule_active">This tag already assigns “%1$s” to every wallpaper that uses it.</string>
     <string name="studio_tag_rule_clear">Remove rule</string>
     <string name="studio_tag_rule_badge">Category: %1$s</string>
+    <string name="studio_tag_merge_hint">Both tags will be merged into “%1$s”.</string>
     <string name="studio_new_name">New name</string>
     <plurals name="tag_group_count">
         <item quantity="one">%d wallpaper with this tag</item>

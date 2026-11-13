@@ -854,6 +854,27 @@ internal fun TagEditDialog(
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
+                val mergeTarget = remember(next, wallpapers, tag) {
+                    val wanted = next.trim()
+                    if (wanted.isBlank()) {
+                        null
+                    } else {
+                        wallpapers.asSequence()
+                            .flatMap { allTags(it.tags).asSequence() }
+                            .firstOrNull { label ->
+                                label.equals(wanted, ignoreCase = true) &&
+                                    !label.equals(tag, ignoreCase = true)
+                            }
+                    }
+                }
+                if (mergeTarget != null) {
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        text = stringResource(R.string.studio_tag_merge_hint, mergeTarget),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.secondary,
+                    )
+                }
                 val ruleName = rule?.categoryName
                     ?.takeIf { it.isNotBlank() }
                     ?: rule?.categoryId?.let { id ->

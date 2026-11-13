@@ -419,6 +419,7 @@
     <string name="studio_tag_rule_active">Esta etiqueta ya asigna “%1$s” a todos los fondos que la usan.</string>
     <string name="studio_tag_rule_clear">Quitar regla</string>
     <string name="studio_tag_rule_badge">Categoría: %1$s</string>
+    <string name="studio_tag_merge_hint">Las dos etiquetas se unirán en “%1$s”.</string>
     <string name="studio_new_name">Nombre nuevo</string>
     <plurals name="tag_group_count">
         <item quantity="one">%d fondo con esta etiqueta</item>
