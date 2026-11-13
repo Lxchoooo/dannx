@@ -71,6 +71,7 @@ import com.dannx.walls.data.StudioEditException
 import com.dannx.walls.data.TagsLimit
 import com.dannx.walls.data.Wallpaper
 import com.dannx.walls.data.WallpaperCategory
+import com.dannx.walls.data.parseTags
 import com.dannx.walls.kind
 import com.dannx.walls.ui.components.StatefulImage
 import com.dannx.walls.ui.components.wallpaperThumbRequest
@@ -80,6 +81,7 @@ import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.coroutines.launch
 
 private const val TAG_MAX_LENGTH = 24
+private const val TAG_INPUT_MAX_LENGTH = 240
 private const val TITLE_MAX_LENGTH = 120
 private const val AUTHOR_MAX_LENGTH = 60
 
@@ -493,7 +495,13 @@ private fun EditorTagChips(
         )
         Spacer(Modifier.height(4.dp))
         val cleanDraft = draft.trim().trimStart('#').trim().take(TAG_MAX_LENGTH)
-        val duplicate = tags.any { it.equals(cleanDraft, ignoreCase = true) }
+        val additions = parseTags(draft)
+            .map { it.take(TAG_MAX_LENGTH) }
+            .filterNot { candidate ->
+                tags.any { it.equals(candidate, ignoreCase = true) }
+            }
+            .take((TagsLimit - tags.size).coerceAtLeast(0))
+        val duplicate = tags.size < TagsLimit && additions.isEmpty() && cleanDraft.isNotBlank()
         LazyRow(
             state = listState,
             horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -532,7 +540,7 @@ private fun EditorTagChips(
         Row(verticalAlignment = Alignment.CenterVertically) {
             OutlinedTextField(
                 value = draft,
-                onValueChange = { draft = it.take(TAG_MAX_LENGTH) },
+                onValueChange = { draft = it.take(TAG_INPUT_MAX_LENGTH) },
                 placeholder = { Text(stringResource(R.string.editor_tag_hint)) },
                 singleLine = true,
                 enabled = enabled && tags.size < TagsLimit,
@@ -543,7 +551,7 @@ private fun EditorTagChips(
                             Text(stringResource(R.string.editor_tags_limit, TagsLimit))
                         cleanDraft.isNotBlank() && duplicate ->
                             Text(stringResource(R.string.editor_tag_duplicate))
-                        draft.length >= TAG_MAX_LENGTH ->
+                        parseTags(draft).any { it.length > TAG_MAX_LENGTH } ->
                             Text(stringResource(R.string.editor_tag_length))
                         else -> {}
                     }
@@ -553,15 +561,12 @@ private fun EditorTagChips(
             Spacer(Modifier.width(8.dp))
             IconButton(
                 onClick = {
-                    if (cleanDraft.isNotBlank() && !duplicate && tags.size < TagsLimit) {
-                        onChange(tags + cleanDraft)
+                    if (additions.isNotEmpty() && tags.size < TagsLimit) {
+                        onChange(tags + additions)
                         draft = ""
                     }
                 },
-                enabled = enabled &&
-                    cleanDraft.isNotBlank() &&
-                    !duplicate &&
-                    tags.size < TagsLimit,
+                enabled = enabled && additions.isNotEmpty() && tags.size < TagsLimit,
             ) {
                 Icon(
                     imageVector = Icons.Rounded.Add,

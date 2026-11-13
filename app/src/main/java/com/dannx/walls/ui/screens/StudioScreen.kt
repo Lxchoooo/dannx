@@ -114,6 +114,7 @@ import com.dannx.walls.data.DefaultCategories
 import com.dannx.walls.data.Wallpaper
 import com.dannx.walls.data.WallpaperCategory
 import com.dannx.walls.data.WallpaperCollection
+import com.dannx.walls.data.collectAllTags
 import com.dannx.walls.data.parseTags
 
 private enum class StudioSection(
@@ -177,7 +178,7 @@ fun StudioScreen(
     onSetCollectionWallpapers: (String, List<String>) -> Unit = { _, _ -> },
     onReorderCollection: (String, List<String>) -> Unit = { _, _ -> },
     onAddTag: (String, List<String>) -> Unit = { _, _ -> },
-    onRenameTag: (String, String) -> Unit = { _, _ -> },
+    onUpdateTagGroup: (String, String, String?) -> Unit = { _, _, _ -> },
     onDeleteTag: (String) -> Unit = {},
     onOpenCollection: (WallpaperCollection) -> Unit = {},
 ) {
@@ -192,7 +193,7 @@ fun StudioScreen(
     var collectionToDelete by remember { mutableStateOf<WallpaperCollection?>(null) }
     var collectionWalls by remember { mutableStateOf<WallpaperCollection?>(null) }
     var collectionOrder by remember { mutableStateOf<WallpaperCollection?>(null) }
-    var tagRename by remember { mutableStateOf<String?>(null) }
+    var tagEdit by remember { mutableStateOf<String?>(null) }
     var tagToDelete by remember { mutableStateOf<String?>(null) }
     var showTagCreate by remember { mutableStateOf(false) }
     var showArchivedWalls by rememberSaveable { mutableStateOf(false) }
@@ -465,7 +466,7 @@ fun StudioScreen(
                         TagsPanel(
                             state = state,
                             onCreate = { showTagCreate = true },
-                            onRename = { tagRename = it },
+                            onEdit = { tagEdit = it },
                             onDelete = { tagToDelete = it },
                         )
                     }
@@ -697,13 +698,15 @@ fun StudioScreen(
             },
         )
     }
-    tagRename?.let { tag ->
-        TagRenameDialog(
+    tagEdit?.let { tag ->
+        TagEditDialog(
             tag = tag,
-            onDismiss = { tagRename = null },
-            onSave = { next ->
-                onRenameTag(tag, next)
-                tagRename = null
+            wallpapers = state.studioWallpapers,
+            categories = state.categories,
+            onDismiss = { tagEdit = null },
+            onSave = { next, categoryId ->
+                onUpdateTagGroup(tag, next, categoryId)
+                tagEdit = null
             },
         )
     }
@@ -2272,23 +2275,11 @@ private fun TagPreviewChips(tags: List<String>) {
 private fun TagsPanel(
     state: UiState,
     onCreate: () -> Unit,
-    onRename: (String) -> Unit,
+    onEdit: (String) -> Unit,
     onDelete: (String) -> Unit,
 ) {
     val counts = remember(state.studioWallpapers) {
-        val result = linkedMapOf<String, Pair<String, Int>>()
-        state.studioWallpapers.forEach { wallpaper ->
-            wallpaper.tags.forEach { tag ->
-                val key = tag.lowercase()
-                val previous = result[key]
-                result[key] = if (previous == null) {
-                    tag to 1
-                } else {
-                    previous.first to previous.second + 1
-                }
-            }
-        }
-        result.values.toList()
+        collectAllTags(state.studioWallpapers)
     }
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -2341,10 +2332,10 @@ private fun TagsPanel(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
-            IconButton(onClick = { onRename(tag) }) {
+            IconButton(onClick = { onEdit(tag) }) {
                 Icon(
                     Icons.Rounded.Edit,
-                    contentDescription = stringResource(R.string.studio_rename),
+                    contentDescription = stringResource(R.string.studio_edit_tag),
                 )
             }
             IconButton(onClick = { onDelete(tag) }) {

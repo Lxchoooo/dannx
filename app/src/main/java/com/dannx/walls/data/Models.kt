@@ -114,11 +114,23 @@ internal fun normalizeSearch(value: String): String =
 
 private val adjacentHashtags = Regex("\\s+(?=#)")
 
-fun parseTags(value: String): List<String> =
-    value.split(',', ';', '\n')
-        .flatMap { it.split(adjacentHashtags) }
+/**
+ * Separa un valor guardado que junta varios hashtags ("#playa #sol") en
+ * etiquetas individuales. No corta nombres con espacios que no son hashtags.
+ */
+fun splitTagValue(value: String): List<String> =
+    value.split(adjacentHashtags)
         .map { it.trim().trimStart('#').trim() }
         .filter { it.isNotEmpty() }
+
+/** Todas las etiquetas de un fondo, con los valores compuestos ya separados. */
+fun allTags(tags: List<String>): List<String> =
+    tags.flatMap(::splitTagValue)
+        .distinctBy { it.lowercase(Locale.ROOT) }
+
+fun parseTags(value: String): List<String> =
+    value.split(',', ';', '\n')
+        .flatMap(::splitTagValue)
         .distinctBy { it.lowercase(Locale.ROOT) }
         .take(12)
 
@@ -163,6 +175,73 @@ fun collectTags(items: List<Wallpaper>): List<String> {
                 .thenBy { it.first.lowercase(Locale.ROOT) },
         )
         .map { it.first }
+}
+
+/**
+ * Valor completo del primer tag de cada fondo, sin repetir etiqueta y ordenado
+ * por uso. Conserva el texto original para que el filtro del servidor siga
+ * encontrando los tags viejos que guardan varios hashtags juntos.
+ */
+fun collectTagValues(items: List<Wallpaper>): List<String> {
+    val counts = linkedMapOf<String, Pair<String, Int>>()
+    items.forEach { wallpaper ->
+        val raw = wallpaper.tags.asSequence()
+            .map { it.trim() }
+            .firstOrNull { it.isNotEmpty() }
+            ?: return@forEach
+        val label = primaryTag(listOf(raw)) ?: return@forEach
+        val key = label.lowercase(Locale.ROOT)
+        val previous = counts[key]
+        counts[key] = if (previous == null) {
+            raw to 1
+        } else {
+            previous.first to previous.second + 1
+        }
+    }
+    return counts.values
+        .sortedWith(
+            compareByDescending<Pair<String, Int>> { it.second }
+                .thenBy { it.first.lowercase(Locale.ROOT) },
+        )
+        .map { it.first }
+}
+
+/**
+ * Suma al catálogo las etiquetas nuevas que trajo una página o un filtro, sin
+ * quitar las que ya estaban: así la fila de Inicio no pierde chips cuando el
+ * feed se reduce a una sola etiqueta.
+ */
+fun mergeTagCatalog(catalog: List<String>, items: List<Wallpaper>): List<String> {
+    val merged = catalog.toMutableList()
+    val labels = merged
+        .mapNotNull { primaryTag(listOf(it))?.lowercase(Locale.ROOT) }
+        .toMutableSet()
+    collectTagValues(items).forEach { raw ->
+        val label = primaryTag(listOf(raw))?.lowercase(Locale.ROOT) ?: return@forEach
+        if (labels.add(label)) merged += raw
+    }
+    return merged
+}
+
+/** Etiquetas del Estudio con cuántos fondos las usan, ya separadas. */
+fun collectAllTags(items: List<Wallpaper>): List<Pair<String, Int>> {
+    val counts = linkedMapOf<String, Pair<String, Int>>()
+    items.forEach { wallpaper ->
+        allTags(wallpaper.tags).forEach { tag ->
+            val key = tag.lowercase(Locale.ROOT)
+            val previous = counts[key]
+            counts[key] = if (previous == null) {
+                tag to 1
+            } else {
+                previous.first to previous.second + 1
+            }
+        }
+    }
+    return counts.values
+        .sortedWith(
+            compareByDescending<Pair<String, Int>> { it.second }
+                .thenBy { it.first.lowercase(Locale.ROOT) },
+        )
 }
 
 fun filterWallpapers(

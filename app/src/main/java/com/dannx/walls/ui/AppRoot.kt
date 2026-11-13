@@ -658,7 +658,7 @@ private fun MainApp(
                         onSetCollectionWallpapers = viewModel::setCollectionWallpapers,
                         onReorderCollection = viewModel::reorderCollection,
                         onAddTag = viewModel::addTag,
-                        onRenameTag = viewModel::renameTag,
+                        onUpdateTagGroup = viewModel::updateTagGroup,
                         onDeleteTag = viewModel::deleteTag,
                         onOpenCollection = { collection ->
                             navController.navigate("collection/${collection.id}") {

@@ -172,7 +172,7 @@ fun HomeScreen(
     ) {
         state.filtered
     }
-    val availableTags = remember(state.wallpapers) { state.availableTags }
+    val availableTags = remember(state.tagCatalog, state.wallpapers) { state.availableTags }
     val context = LocalContext.current
     val liteMode = LocalLiteMode.current
     val focusManager = LocalFocusManager.current

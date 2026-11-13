@@ -1,8 +1,12 @@
 package com.dannx.walls
 
 import com.dannx.walls.data.Wallpaper
+import com.dannx.walls.data.allTags
+import com.dannx.walls.data.collectAllTags
+import com.dannx.walls.data.collectTagValues
 import com.dannx.walls.data.collectTags
 import com.dannx.walls.data.filterWallpapers
+import com.dannx.walls.data.mergeTagCatalog
 import com.dannx.walls.data.parseTags
 import com.dannx.walls.data.primaryTag
 import org.junit.Assert.assertEquals
@@ -187,5 +191,60 @@ class TagsTest {
         )
         val filtered = filterWallpapers(listOf(wallpaper), "noche", null)
         assertEquals(listOf(wallpaper), filtered)
+    }
+
+    @Test
+    fun `tag catalog keeps every label when the feed is filtered`() {
+        val cleopatra = Wallpaper(
+            "1",
+            "Cleopatra",
+            "Abstracto",
+            "url",
+            tags = listOf("Cleopatra #queen #4k"),
+        )
+        val flores = Wallpaper("2", "Flores", "Naturaleza", "url", tags = listOf("flores"))
+        val catalog = collectTagValues(listOf(cleopatra, flores))
+
+        // El feed filtrado solo trae un fondo, pero las chips siguen completas.
+        val filteredState = UiState(wallpapers = listOf(cleopatra), tagCatalog = catalog)
+
+        assertEquals(listOf("Cleopatra", "flores"), filteredState.availableTags)
+        assertEquals("Cleopatra #queen #4k", filteredState.tagFilterValue("Cleopatra"))
+    }
+
+    @Test
+    fun `merging the catalog only adds new labels`() {
+        val first = Wallpaper("1", "Uno", "Naturaleza", "url", tags = listOf("flores"))
+        val second = Wallpaper("2", "Dos", "Ciudad", "url", tags = listOf("ciudad"))
+        val catalog = collectTagValues(listOf(first))
+
+        val merged = mergeTagCatalog(catalog, listOf(second))
+
+        assertEquals(listOf("flores", "ciudad"), merged)
+        assertEquals(catalog, mergeTagCatalog(merged, listOf(first)))
+    }
+
+    @Test
+    fun `all tags split composite values and keep a single label per wallpaper`() {
+        assertEquals(
+            listOf("Cleopatra", "queen", "4k"),
+            allTags(listOf("Cleopatra #queen #4k")),
+        )
+        assertEquals(
+            listOf("Dragon Ball", "anime"),
+            allTags(listOf("Dragon Ball", "anime", "Dragon Ball")),
+        )
+    }
+
+    @Test
+    fun `studio tag counts include composite tags`() {
+        val wallpapers = listOf(
+            Wallpaper("1", "Uno", "Naturaleza", "url", tags = listOf("Cleopatra #queen")),
+            Wallpaper("2", "Dos", "Ciudad", "url", tags = listOf("Cleopatra")),
+        )
+        assertEquals(
+            listOf("Cleopatra" to 2, "queen" to 1),
+            collectAllTags(wallpapers),
+        )
     }
 }

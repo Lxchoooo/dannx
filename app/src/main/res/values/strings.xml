@@ -380,7 +380,7 @@
     <string name="studio_categories_empty">There are no categories yet. Create the first one.</string>
     <string name="studio_rename">Rename</string>
     <string name="studio_create_tag">Create tag</string>
-    <string name="studio_tags_help_section">Tags are applied to the wallpapers you choose and can be renamed or merged.</string>
+    <string name="studio_tags_help_section">Tags are applied to the wallpapers you choose. You can rename one, assign it a category, or remove it from every wallpaper that has it.</string>
     <string name="studio_tags_empty">There are no tags yet.</string>
     <string name="studio_collections">Collections</string>
     <string name="studio_collections_help">Change each collection\'s name, visibility, and wallpapers.</string>
@@ -405,7 +405,15 @@
     <string name="studio_tag_name">Tag name</string>
     <string name="studio_apply_to">Apply to</string>
     <string name="studio_rename_tag">Rename tag</string>
+    <string name="studio_edit_tag">Edit tag</string>
+    <string name="studio_edit_tag_title">Edit tag</string>
+    <string name="studio_tag_category">Category for these wallpapers</string>
+    <string name="studio_tag_category_none">No change</string>
     <string name="studio_new_name">New name</string>
+    <plurals name="tag_group_count">
+        <item quantity="one">%d wallpaper with this tag</item>
+        <item quantity="other">%d wallpapers with this tag</item>
+    </plurals>
     <plurals name="studio_archived_count">
         <item quantity="one">%d archived</item>
         <item quantity="other">%d archived</item>
@@ -492,6 +500,7 @@
     <string name="msg_tag_applied">Tag “%1$s” applied.</string>
     <string name="msg_tag_replace_required">Choose the tag you want to replace.</string>
     <string name="msg_tag_renamed">Tag “%1$s” renamed to “%2$s”.</string>
+    <string name="msg_tag_group_updated">Tag “%1$s” updated in %2$d wallpapers.</string>
     <string name="msg_tag_deleted">Tag “%1$s” deleted.</string>
     <string name="msg_collection_created">Collection “%1$s” created.</string>
     <string name="msg_already_in_collection">It\'s already in %1$s.</string>

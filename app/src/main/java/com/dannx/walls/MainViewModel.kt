@@ -46,7 +46,10 @@ import com.dannx.walls.data.WallpaperColorResolver
 import com.dannx.walls.data.WallpaperFilter
 import com.dannx.walls.data.WallpapersRepository
 import com.dannx.walls.data.WallsApi
+import com.dannx.walls.data.allTags
+import com.dannx.walls.data.collectTagValues
 import com.dannx.walls.data.isLocal
+import com.dannx.walls.data.mergeTagCatalog
 import com.dannx.walls.util.WallpaperFiles
 import com.dannx.walls.util.WallpaperTarget
 import com.dannx.walls.util.StringResolver
@@ -172,6 +175,7 @@ class MainViewModel(
                 },
                 wallpapers = cachedWallpapers,
                 collectionItems = cachedCollections,
+                tagCatalog = collectTagValues(cachedWallpapers),
                 offline = true,
                 loadingMore = false,
                 hasMore = false,
@@ -314,6 +318,11 @@ class MainViewModel(
                         categories = categories,
                         collectionItems = collections,
                         appSettings = appSettings,
+                        tagCatalog = if (filter.hasActiveFilters) {
+                            mergeTagCatalog(it.tagCatalog, items)
+                        } else {
+                            collectTagValues(items)
+                        },
                         isDemo = !api.isConfigured,
                         offline = false,
                         refreshing = false,
@@ -371,6 +380,11 @@ class MainViewModel(
                         },
                         wallpapers = fallbackWallpapers,
                         collectionItems = fallbackCollections,
+                        tagCatalog = if (it.tagCatalog.isEmpty()) {
+                            collectTagValues(fallbackWallpapers)
+                        } else {
+                            it.tagCatalog
+                        },
                         session = if (expired) null else it.session,
                         adminWallpapers = if (expired) emptyList() else it.adminWallpapers,
                         trashWallpapers = if (expired) emptyList() else it.trashWallpapers,
@@ -497,6 +511,7 @@ class MainViewModel(
                     it.copy(
                         feed = LoadState.Content(merged),
                         wallpapers = merged,
+                        tagCatalog = mergeTagCatalog(it.tagCatalog, fresh),
                         loadingMore = false,
                         hasMore = page.hasMore,
                         loadMoreError = null,
@@ -1152,6 +1167,7 @@ class MainViewModel(
                         wallpapers = updatedWallpapers,
                         adminWallpapers = listOf(created) +
                             it.adminWallpapers.filterNot { w -> w.id == created.id },
+                        tagCatalog = mergeTagCatalog(it.tagCatalog, listOf(created)),
                         collectionItems = collections,
                         collections = if (collections.isEmpty()) {
                             LoadState.Empty
@@ -1634,6 +1650,7 @@ class MainViewModel(
             state.copy(
                 wallpapers = state.wallpapers.map { byId[it.id] ?: it },
                 adminWallpapers = state.adminWallpapers.map { byId[it.id] ?: it },
+                tagCatalog = mergeTagCatalog(state.tagCatalog, updates),
                 detailWallpaper = detailWallpaper ?: state.detailWallpaper,
                 detailCollection = detailCollection ?: state.detailCollection,
             )
@@ -2390,35 +2407,51 @@ class MainViewModel(
         }
     }
 
-    fun renameTag(oldTag: String, newTag: String) {
-        val old = oldTag.trim()
-        val new = newTag.trim().take(40)
+    /**
+     * Cambia el nombre de una etiqueta y, si se elige una categoría, la aplica
+     * a todos los fondos que la tienen. Detecta también los tags viejos que
+     * guardan varios hashtags juntos y los separa al guardar.
+     */
+    fun updateTagGroup(oldTag: String, newTag: String, categoryId: String?) {
+        val old = oldTag.trim().trimStart('#').trim()
+        val new = newTag.trim().trimStart('#').trim().take(40)
         if (old.isBlank() || new.isBlank()) {
             _state.update { it.copy(message = strings.get(R.string.msg_tag_replace_required)) }
             return
         }
-        val rename: (List<String>) -> List<String> = { tags ->
-            tags.map { if (it.equals(old, ignoreCase = true)) new else it }
-                .distinctBy { it.lowercase() }
+        val category = categoryId
+            ?.takeIf { it.isNotBlank() }
+            ?.let { id -> _state.value.categories.firstOrNull { it.id == id } }
+        val targets = _state.value.studioWallpapers.filter { wallpaper ->
+            allTags(wallpaper.tags).any { it.equals(old, ignoreCase = true) }
         }
+        if (targets.isEmpty()) return
+        val renamed = !new.equals(old, ignoreCase = true)
+        if (!renamed && category == null) return
+        val update: (Wallpaper) -> Wallpaper = { wallpaper ->
+            val tags = allTags(wallpaper.tags)
+                .map { if (it.equals(old, ignoreCase = true)) new else it }
+                .distinctBy { it.lowercase(Locale.ROOT) }
+                .take(TagsLimit)
+            if (category == null) {
+                wallpaper.copy(tags = tags)
+            } else {
+                wallpaper.copy(tags = tags, category = category.name, categoryId = category.id)
+            }
+        }
+        val updated = targets.map(update)
         if (_state.value.isDemo) {
+            val byId = updated.associateBy { it.id }
             _state.update {
                 it.copy(
-                    wallpapers = it.wallpapers.map { w ->
-                        if (w.tags.any { t -> t.equals(old, ignoreCase = true) }) {
-                            w.copy(tags = rename(w.tags))
-                        } else {
-                            w
-                        }
-                    },
-                    adminWallpapers = it.adminWallpapers.map { w ->
-                        if (w.tags.any { t -> t.equals(old, ignoreCase = true) }) {
-                            w.copy(tags = rename(w.tags))
-                        } else {
-                            w
-                        }
-                    },
-                    message = strings.get(R.string.msg_tag_renamed, old, new),
+                    wallpapers = it.wallpapers.map { w -> byId[w.id] ?: w },
+                    adminWallpapers = it.adminWallpapers.map { w -> byId[w.id] ?: w },
+                ).withTagCatalog().copy(
+                    message = strings.get(
+                        R.string.msg_tag_group_updated,
+                        new,
+                        updated.size,
+                    ),
                 )
             }
             return
@@ -2426,25 +2459,32 @@ class MainViewModel(
         viewModelScope.launch {
             _state.update { it.copy(studioBusy = true) }
             try {
-                api.renameTag(old, new)
+                if (renamed) api.renameTag(old, new)
+                if (category != null) api.bulkSetCategory(targets.map { it.id }, category.id)
+                // Los valores guardados como varios hashtags no coinciden con
+                // el renombre exacto del servidor: se normalizan y se guardan.
+                targets.filter { allTags(it.tags) != it.tags }.forEach { wallpaper ->
+                    val next = update(wallpaper)
+                    api.updateWallpaper(
+                        wallpaperId = wallpaper.id,
+                        title = next.title,
+                        category = next.category,
+                        categoryId = next.categoryId,
+                        author = next.author,
+                        tags = next.tags,
+                        featured = next.featured,
+                        featuredPosition = next.featuredPosition,
+                    )
+                }
+                applyWallpaperUpdates(updated)
                 _state.update {
-                    it.copy(
+                    it.withTagCatalog().copy(
                         studioBusy = false,
-                        wallpapers = it.wallpapers.map { w ->
-                            if (w.tags.any { t -> t.equals(old, ignoreCase = true) }) {
-                                w.copy(tags = rename(w.tags))
-                            } else {
-                                w
-                            }
-                        },
-                        adminWallpapers = it.adminWallpapers.map { w ->
-                            if (w.tags.any { t -> t.equals(old, ignoreCase = true) }) {
-                                w.copy(tags = rename(w.tags))
-                            } else {
-                                w
-                            }
-                        },
-                        message = strings.get(R.string.msg_tag_renamed, old, new),
+                        message = strings.get(
+                            R.string.msg_tag_group_updated,
+                            new,
+                            updated.size,
+                        ),
                     )
                 }
             } catch (error: Exception) {
@@ -2453,31 +2493,27 @@ class MainViewModel(
         }
     }
 
+    fun renameTag(oldTag: String, newTag: String) {
+        updateTagGroup(oldTag, newTag, categoryId = null)
+    }
+
     fun deleteTag(tag: String) {
         val clean = tag.trim()
         if (clean.isBlank()) return
         val remove: (List<String>) -> List<String> = { tags ->
-            tags.filterNot { it.equals(clean, ignoreCase = true) }
+            allTags(tags).filterNot { it.equals(clean, ignoreCase = true) }
+        }
+        val apply: (Wallpaper) -> Wallpaper = { wallpaper ->
+            val next = remove(wallpaper.tags)
+            if (next == wallpaper.tags) wallpaper else wallpaper.copy(tags = next)
         }
         if (_state.value.isDemo) {
             _state.update {
                 it.copy(
-                    wallpapers = it.wallpapers.map { w ->
-                        if (w.tags.any { t -> t.equals(clean, ignoreCase = true) }) {
-                            w.copy(tags = remove(w.tags))
-                        } else {
-                            w
-                        }
-                    },
-                    adminWallpapers = it.adminWallpapers.map { w ->
-                        if (w.tags.any { t -> t.equals(clean, ignoreCase = true) }) {
-                            w.copy(tags = remove(w.tags))
-                        } else {
-                            w
-                        }
-                    },
+                    wallpapers = it.wallpapers.map(apply),
+                    adminWallpapers = it.adminWallpapers.map(apply),
                     message = strings.get(R.string.msg_tag_deleted, clean),
-                )
+                ).withTagCatalog()
             }
             return
         }
@@ -2488,27 +2524,22 @@ class MainViewModel(
                 _state.update {
                     it.copy(
                         studioBusy = false,
-                        wallpapers = it.wallpapers.map { w ->
-                            if (w.tags.any { t -> t.equals(clean, ignoreCase = true) }) {
-                                w.copy(tags = remove(w.tags))
-                            } else {
-                                w
-                            }
-                        },
-                        adminWallpapers = it.adminWallpapers.map { w ->
-                            if (w.tags.any { t -> t.equals(clean, ignoreCase = true) }) {
-                                w.copy(tags = remove(w.tags))
-                            } else {
-                                w
-                            }
-                        },
+                        wallpapers = it.wallpapers.map(apply),
+                        adminWallpapers = it.adminWallpapers.map(apply),
                         message = strings.get(R.string.msg_tag_deleted, clean),
-                    )
+                    ).withTagCatalog()
                 }
             } catch (error: Exception) {
                 handleBulkFailure(error)
             }
         }
+    }
+
+    /** Recalcula las etiquetas del inicio a partir de los fondos cargados. */
+    private fun UiState.withTagCatalog(): UiState {
+        val items = (wallpapers + adminWallpapers).distinctBy { it.id }
+        val catalog = collectTagValues(items)
+        return if (catalog == tagCatalog) this else copy(tagCatalog = catalog)
     }
 
     fun createCollection(

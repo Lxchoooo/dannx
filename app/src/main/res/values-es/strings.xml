@@ -380,7 +380,7 @@
     <string name="studio_categories_empty">Todavía no hay categorías. Creá la primera.</string>
     <string name="studio_rename">Renombrar</string>
     <string name="studio_create_tag">Crear etiqueta</string>
-    <string name="studio_tags_help_section">Las etiquetas se aplican a los fondos que elijas y se pueden renombrar o unir.</string>
+    <string name="studio_tags_help_section">Las etiquetas se aplican a los fondos que elijas. Podés renombrar una, asignarle una categoría o quitarla de todos los fondos que la tengan.</string>
     <string name="studio_tags_empty">Todavía no hay etiquetas.</string>
     <string name="studio_collections">Colecciones</string>
     <string name="studio_collections_help">Cambiá el nombre, la visibilidad y los fondos de cada colección.</string>
@@ -405,7 +405,15 @@
     <string name="studio_tag_name">Nombre de la etiqueta</string>
     <string name="studio_apply_to">Aplicar a</string>
     <string name="studio_rename_tag">Renombrar etiqueta</string>
+    <string name="studio_edit_tag">Editar etiqueta</string>
+    <string name="studio_edit_tag_title">Editar etiqueta</string>
+    <string name="studio_tag_category">Categoría para estos fondos</string>
+    <string name="studio_tag_category_none">Sin cambios</string>
     <string name="studio_new_name">Nombre nuevo</string>
+    <plurals name="tag_group_count">
+        <item quantity="one">%d fondo con esta etiqueta</item>
+        <item quantity="other">%d fondos con esta etiqueta</item>
+    </plurals>
     <plurals name="studio_archived_count">
         <item quantity="one">%d archivado</item>
         <item quantity="other">%d archivados</item>
@@ -492,6 +500,7 @@
     <string name="msg_tag_applied">Etiqueta “%1$s” aplicada.</string>
     <string name="msg_tag_replace_required">Elegí la etiqueta que querés reemplazar.</string>
     <string name="msg_tag_renamed">Etiqueta “%1$s” renombrada a “%2$s”.</string>
+    <string name="msg_tag_group_updated">Etiqueta “%1$s” actualizada en %2$d fondos.</string>
     <string name="msg_tag_deleted">Etiqueta “%1$s” eliminada.</string>
     <string name="msg_collection_created">Colección “%1$s” creada.</string>
     <string name="msg_already_in_collection">Ya está en %1$s.</string>

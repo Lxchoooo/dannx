@@ -72,6 +72,8 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
@@ -114,6 +116,7 @@ import com.dannx.walls.data.DefaultCategories
 import com.dannx.walls.data.Wallpaper
 import com.dannx.walls.data.WallpaperCategory
 import com.dannx.walls.data.WallpaperCollection
+import com.dannx.walls.data.allTags
 import com.dannx.walls.data.parseTags
 
 @Composable
@@ -760,27 +763,97 @@ internal fun TagCreateDialog(
 }
 
 @Composable
-internal fun TagRenameDialog(
+internal fun TagEditDialog(
     tag: String,
+    wallpapers: List<Wallpaper>,
+    categories: List<WallpaperCategory>,
     onDismiss: () -> Unit,
-    onSave: (String) -> Unit,
+    onSave: (String, String?) -> Unit,
 ) {
     var next by remember(tag) { mutableStateOf(tag) }
+    val matching = remember(tag, wallpapers) {
+        wallpapers.filter { wallpaper ->
+            allTags(wallpaper.tags).any { it.equals(tag, ignoreCase = true) }
+        }
+    }
+    val commonCategoryId = remember(matching) {
+        matching.mapNotNull { it.categoryId?.takeIf(String::isNotBlank) }
+            .distinct()
+            .singleOrNull()
+    }
+    var categoryId by remember(tag) { mutableStateOf(commonCategoryId) }
+    var categoryMenu by remember { mutableStateOf(false) }
+    val count = matching.size
+    val selectedCategory = categoryId?.let { id -> categories.firstOrNull { it.id == id } }
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.studio_rename_tag)) },
+        title = { Text(stringResource(R.string.studio_edit_tag_title)) },
         text = {
-            OutlinedTextField(
-                value = next,
-                onValueChange = { next = it },
-                label = { Text(stringResource(R.string.studio_new_name)) },
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth(),
-            )
+            Column {
+                OutlinedTextField(
+                    value = next,
+                    onValueChange = { next = it },
+                    label = { Text(stringResource(R.string.studio_new_name)) },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                Spacer(Modifier.height(10.dp))
+                Text(
+                    text = stringResource(R.string.studio_tag_category),
+                    style = MaterialTheme.typography.labelLarge,
+                )
+                Spacer(Modifier.height(4.dp))
+                Box {
+                    OutlinedButton(
+                        onClick = { categoryMenu = true },
+                        enabled = categories.isNotEmpty(),
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Text(
+                            text = selectedCategory?.name
+                                ?: stringResource(R.string.studio_tag_category_none),
+                            modifier = Modifier.weight(1f),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                        Icon(
+                            imageVector = Icons.Rounded.KeyboardArrowDown,
+                            contentDescription = null,
+                        )
+                    }
+                    DropdownMenu(
+                        expanded = categoryMenu,
+                        onDismissRequest = { categoryMenu = false },
+                    ) {
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.studio_tag_category_none)) },
+                            onClick = {
+                                categoryId = null
+                                categoryMenu = false
+                            },
+                        )
+                        categories.forEach { category ->
+                            DropdownMenuItem(
+                                text = { Text(category.name) },
+                                onClick = {
+                                    categoryId = category.id
+                                    categoryMenu = false
+                                },
+                            )
+                        }
+                    }
+                }
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    text = pluralStringResource(R.plurals.tag_group_count, count, count),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
         },
         confirmButton = {
             TextButton(
-                onClick = { onSave(next) },
+                onClick = { onSave(next, categoryId) },
                 enabled = next.isNotBlank(),
             ) {
                 Text(stringResource(R.string.action_save))

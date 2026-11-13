@@ -108,6 +108,11 @@ data class UiState(
     val recentSearches: List<String> = emptyList(),
     val category: String? = null,
     val tag: String? = null,
+    /**
+     * Etiquetas ya vistas en el feed, con su valor completo. Se conservan al
+     * filtrar para que la fila de Inicio no pierda chips.
+     */
+    val tagCatalog: List<String> = emptyList(),
     /** Color elegido en el feed; null = sin filtro de color. */
     val color: WallpaperColor? = null,
     /** Color resuelto por fondo. Se completa al usar el filtro. */
@@ -167,7 +172,10 @@ data class UiState(
         get() = wallpapers.filter { it.id in favorites && !it.isDeleted }
 
     val availableTags: List<String>
-        get() = collectTags(wallpapers)
+        get() = tagCatalog
+            .mapNotNull { primaryTag(listOf(it)) }
+            .distinctBy { it.lowercase(Locale.ROOT) }
+            .ifEmpty { collectTags(wallpapers) }
 
     /** Nombre corto de la etiqueta elegida, aunque guarde varios hashtags. */
     val selectedTag: String?
@@ -179,7 +187,9 @@ data class UiState(
      * hashtags juntos.
      */
     fun tagFilterValue(label: String): String? =
-        wallpapers.asSequence()
+        tagCatalog.firstOrNull {
+            primaryTag(listOf(it)).equals(label, ignoreCase = true)
+        } ?: wallpapers.asSequence()
             .mapNotNull { it.tags.firstOrNull()?.trim() }
             .firstOrNull { primaryTag(listOf(it)).equals(label, ignoreCase = true) }
 
