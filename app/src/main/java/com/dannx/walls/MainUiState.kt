@@ -13,6 +13,7 @@ import com.dannx.walls.data.collectTags
 import com.dannx.walls.data.filterWallpapers
 import com.dannx.walls.data.isLocal
 import com.dannx.walls.data.normalizeSearch
+import com.dannx.walls.data.primaryTag
 import java.util.Locale
 
 enum class UiAction {
@@ -167,6 +168,20 @@ data class UiState(
 
     val availableTags: List<String>
         get() = collectTags(wallpapers)
+
+    /** Nombre corto de la etiqueta elegida, aunque guarde varios hashtags. */
+    val selectedTag: String?
+        get() = tag?.let { primaryTag(listOf(it)) }
+
+    /**
+     * Valor completo del primer tag que corresponde a una etiqueta del inicio.
+     * Se usa al filtrar para no romper las etiquetas que ya guardan varios
+     * hashtags juntos.
+     */
+    fun tagFilterValue(label: String): String? =
+        wallpapers.asSequence()
+            .mapNotNull { it.tags.firstOrNull()?.trim() }
+            .firstOrNull { primaryTag(listOf(it)).equals(label, ignoreCase = true) }
 
     /** Etiquetas y autores que coinciden con lo que se está escribiendo. */
     val searchSuggestions: List<String>

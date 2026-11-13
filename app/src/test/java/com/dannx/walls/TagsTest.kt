@@ -4,6 +4,7 @@ import com.dannx.walls.data.Wallpaper
 import com.dannx.walls.data.collectTags
 import com.dannx.walls.data.filterWallpapers
 import com.dannx.walls.data.parseTags
+import com.dannx.walls.data.primaryTag
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
@@ -14,6 +15,18 @@ class TagsTest {
         assertEquals(
             listOf("anime", "Dragon Ball", "flores"),
             parseTags(" #anime, Dragon Ball; flores, ANIME "),
+        )
+    }
+
+    @Test
+    fun `parse tags separates several hashtags written together`() {
+        assertEquals(
+            listOf("Cleopatra", "queen", "4k", "art"),
+            parseTags("#Cleopatra #queen #4k #art"),
+        )
+        assertEquals(
+            listOf("Dragon Ball", "anime"),
+            parseTags("Dragon Ball #anime"),
         )
     }
 
@@ -42,6 +55,59 @@ class TagsTest {
             Wallpaper("2", "Dos", "Ciudad", "url", tags = listOf("CIELO")),
         )
         assertEquals(listOf("Cielo"), collectTags(wallpapers))
+    }
+
+    @Test
+    fun `several hashtags in one tag contribute only the first label`() {
+        val wallpaper = Wallpaper(
+            "1",
+            "Cleopatra",
+            "Abstracto",
+            "url",
+            tags = listOf("#Cleopatra #queen #4k #art #pharaona #texture"),
+        )
+        assertEquals(listOf("Cleopatra"), collectTags(listOf(wallpaper)))
+    }
+
+    @Test
+    fun `primary tag keeps spaces when they are not before another hashtag`() {
+        assertEquals("Dragon Ball", primaryTag(listOf("Dragon Ball")))
+        assertEquals("Dragon Ball", primaryTag(listOf("Dragon Ball #anime")))
+    }
+
+    @Test
+    fun `filtering by a later hashtag of the same tag does not match`() {
+        val wallpaper = Wallpaper(
+            "1",
+            "Cleopatra",
+            "Abstracto",
+            "url",
+            tags = listOf("Cleopatra #queen #4k"),
+        )
+        assertEquals(
+            listOf(wallpaper),
+            filterWallpapers(listOf(wallpaper), "", null, "Cleopatra #queen #4k"),
+        )
+        assertEquals(
+            emptyList<Wallpaper>(),
+            filterWallpapers(listOf(wallpaper), "", null, "queen"),
+        )
+    }
+
+    @Test
+    fun `home chip uses the first hashtag but keeps the full tag to filter`() {
+        val wallpaper = Wallpaper(
+            "1",
+            "Cleopatra",
+            "Abstracto",
+            "url",
+            tags = listOf("Cleopatra #queen #4k"),
+        )
+        val state = UiState(wallpapers = listOf(wallpaper), tag = "Cleopatra #queen #4k")
+
+        assertEquals(listOf("Cleopatra"), state.availableTags)
+        assertEquals("Cleopatra", state.selectedTag)
+        assertEquals("Cleopatra #queen #4k", state.tagFilterValue("Cleopatra"))
     }
 
     @Test

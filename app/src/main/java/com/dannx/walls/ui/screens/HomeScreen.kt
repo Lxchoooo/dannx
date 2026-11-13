@@ -644,10 +644,18 @@ fun HomeScreen(
                                 )
                             }
                             items(availableTags, key = { "tag-$it" }) { tag ->
+                                val selected = state.selectedTag
+                                    ?.equals(tag, ignoreCase = true) == true
                                 FilterChip(
-                                    selected = state.tag == tag,
+                                    selected = selected,
                                     onClick = {
-                                        onTagChange(if (state.tag == tag) null else tag)
+                                        onTagChange(
+                                            if (selected) {
+                                                null
+                                            } else {
+                                                state.tagFilterValue(tag) ?: tag
+                                            },
+                                        )
                                     },
                                     label = { Text("#$tag") },
                                     shape = CircleShape,

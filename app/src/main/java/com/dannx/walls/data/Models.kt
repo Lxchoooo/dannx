@@ -112,12 +112,32 @@ internal fun normalizeSearch(value: String): String =
     Normalizer.normalize(value.trim().lowercase(Locale.ROOT), Normalizer.Form.NFD)
         .replace(accents, "")
 
+private val adjacentHashtags = Regex("\\s+(?=#)")
+
 fun parseTags(value: String): List<String> =
     value.split(',', ';', '\n')
+        .flatMap { it.split(adjacentHashtags) }
         .map { it.trim().trimStart('#').trim() }
         .filter { it.isNotEmpty() }
         .distinctBy { it.lowercase(Locale.ROOT) }
         .take(12)
+
+private val nextHashtag = Regex("\\s+#")
+
+/**
+ * Etiqueta principal de un fondo. Si un tag guardado junta varios hashtags
+ * ("#playa #sol"), toma solo el primero. No corta nombres con espacios que no
+ * son hashtags ("Dragon Ball").
+ */
+fun primaryTag(tags: List<String>): String? {
+    val first = tags.asSequence()
+        .map { it.trim() }
+        .firstOrNull { it.isNotEmpty() }
+        ?: return null
+    val boundary = nextHashtag.find(first)
+    val value = if (boundary == null) first else first.take(boundary.range.first)
+    return value.trimStart('#').trim().takeIf { it.isNotEmpty() }
+}
 
 /**
  * Etiquetas de la fila de Inicio: solo el primer tag de cada fondo (el principal),
@@ -128,7 +148,7 @@ fun parseTags(value: String): List<String> =
 fun collectTags(items: List<Wallpaper>): List<String> {
     val counts = linkedMapOf<String, Pair<String, Int>>()
     items.forEach { wallpaper ->
-        val primary = wallpaper.tags.firstOrNull() ?: return@forEach
+        val primary = primaryTag(wallpaper.tags) ?: return@forEach
         val key = primary.lowercase(Locale.ROOT)
         val previous = counts[key]
         counts[key] = if (previous == null) {
@@ -159,7 +179,7 @@ fun filterWallpapers(
             else -> wallpaper.category.equals(category, ignoreCase = true)
         }
         val matchesTag = tag == null ||
-            wallpaper.tags.any { it.equals(tag, ignoreCase = true) }
+            wallpaper.tags.firstOrNull()?.equals(tag, ignoreCase = true) == true
         val matchesQuery = term.isBlank() ||
             normalizeSearch(wallpaper.title).contains(term) ||
             normalizeSearch(wallpaper.category).contains(term) ||

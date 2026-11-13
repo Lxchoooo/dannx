@@ -51,8 +51,8 @@ class FilterWallpapersTest {
     }
 
     @Test
-    fun `tag filter is case insensitive and combines with category`() {
-        assertEquals(listOf(items[0], items[3]), filterWallpapers(items, "", null, "NOCHE"))
+    fun `tag filter uses the primary tag and combines with category`() {
+        assertEquals(listOf(items[3]), filterWallpapers(items, "", null, "NOCHE"))
         assertEquals(listOf(items[3]), filterWallpapers(items, "", "Ciudad", "noche"))
     }
 
