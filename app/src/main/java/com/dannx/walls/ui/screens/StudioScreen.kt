@@ -114,6 +114,7 @@ import com.dannx.walls.data.DefaultCategories
 import com.dannx.walls.data.Wallpaper
 import com.dannx.walls.data.WallpaperCategory
 import com.dannx.walls.data.WallpaperCollection
+import com.dannx.walls.data.allTags
 import com.dannx.walls.data.collectAllTags
 import com.dannx.walls.data.parseTags
 
@@ -469,6 +470,7 @@ fun StudioScreen(
                             onCreate = { showTagCreate = true },
                             onEdit = { tagEdit = it },
                             onDelete = { tagToDelete = it },
+                            onClearRule = onClearTagRule,
                         )
                     }
 
@@ -718,9 +720,14 @@ fun StudioScreen(
         )
     }
     tagToDelete?.let { tag ->
+        val affected = remember(tag, state.studioWallpapers) {
+            state.studioWallpapers.count { wallpaper ->
+                allTags(wallpaper.tags).any { it.equals(tag, ignoreCase = true) }
+            }
+        }
         ConfirmDialog(
             title = stringResource(R.string.studio_tag_delete_title),
-            text = stringResource(R.string.studio_tag_delete_body, tag),
+            text = pluralStringResource(R.plurals.studio_tag_delete_body_count, affected, tag, affected),
             confirm = stringResource(R.string.studio_delete_confirm),
             onDismiss = { tagToDelete = null },
             onConfirm = {
@@ -2300,6 +2307,7 @@ private fun TagsPanel(
     onCreate: () -> Unit,
     onEdit: (String) -> Unit,
     onDelete: (String) -> Unit,
+    onClearRule: (String) -> Unit,
 ) {
     val counts = remember(state.studioWallpapers) {
         collectAllTags(state.studioWallpapers)
@@ -2326,7 +2334,7 @@ private fun TagsPanel(
         color = MaterialTheme.colorScheme.onSurfaceVariant,
     )
     Spacer(Modifier.height(12.dp))
-    if (counts.isEmpty()) {
+    if (counts.isEmpty() && state.tagCategories.isEmpty()) {
         Text(
             text = stringResource(R.string.studio_tags_empty),
             style = MaterialTheme.typography.bodyMedium,
@@ -2334,7 +2342,30 @@ private fun TagsPanel(
         )
         return
     }
-    counts.sortedBy { it.first.lowercase() }.forEach { (tag, count) ->
+    var tagQuery by rememberSaveable { mutableStateOf("") }
+    val visibleTags = counts.filter { (tag, _) ->
+        tagQuery.isBlank() || tag.contains(tagQuery.trim(), ignoreCase = true)
+    }
+    OutlinedTextField(
+        value = tagQuery,
+        onValueChange = { tagQuery = it },
+        label = { Text(stringResource(R.string.studio_tags_search)) },
+        leadingIcon = {
+            Icon(Icons.Rounded.Search, contentDescription = null)
+        },
+        singleLine = true,
+        shape = MaterialTheme.shapes.medium,
+        modifier = Modifier.fillMaxWidth(),
+    )
+    Spacer(Modifier.height(8.dp))
+    if (visibleTags.isEmpty()) {
+        Text(
+            text = stringResource(R.string.studio_tags_search_empty),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
+    visibleTags.sortedBy { it.first.lowercase() }.forEach { (tag, count) ->
         val ruleName = state.tagCategory(tag)?.let { rule ->
             rule.categoryName.takeIf { it.isNotBlank() }
                 ?: state.categories.firstOrNull { it.id == rule.categoryId }?.name
@@ -2381,6 +2412,49 @@ private fun TagsPanel(
             }
         }
         HorizontalDivider()
+    }
+
+    // Reglas que quedaron apuntando a etiquetas que ya no usa ningún fondo.
+    val orphanRules = state.tagCategories.filter { rule ->
+        counts.none { (tag, _) -> tag.equals(rule.displayTag, ignoreCase = true) }
+    }
+    if (orphanRules.isNotEmpty()) {
+        Spacer(Modifier.height(18.dp))
+        Text(
+            text = stringResource(R.string.studio_tag_rules_orphans),
+            style = MaterialTheme.typography.titleMedium,
+        )
+        Spacer(Modifier.height(4.dp))
+        Text(
+            text = stringResource(R.string.studio_tag_rules_orphans_hint),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Spacer(Modifier.height(6.dp))
+        orphanRules.forEach { rule ->
+            val categoryName = rule.categoryName.takeIf { it.isNotBlank() }
+                ?: state.categories.firstOrNull { it.id == rule.categoryId }?.name
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 2.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Column(Modifier.weight(1f)) {
+                    Text(rule.displayTag, style = MaterialTheme.typography.bodyLarge)
+                    if (categoryName != null) {
+                        Text(
+                            text = stringResource(R.string.studio_tag_rule_badge, categoryName),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
+                TextButton(onClick = { onClearRule(rule.displayTag) }) {
+                    Text(stringResource(R.string.studio_tag_rule_clear))
+                }
+            }
+        }
     }
 }
 

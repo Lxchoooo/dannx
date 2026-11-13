@@ -258,7 +258,10 @@
     <string name="studio_collection_delete_title">Delete collection</string>
     <string name="studio_collection_delete_body">“%1$s” will be deleted. The wallpapers will stay published.</string>
     <string name="studio_tag_delete_title">Delete tag</string>
-    <string name="studio_tag_delete_body">“%1$s” will be removed from every wallpaper that has it.</string>
+    <plurals name="studio_tag_delete_body_count">
+        <item quantity="one">“%1$s” will be removed from %2$d wallpaper.</item>
+        <item quantity="other">“%1$s” will be removed from %2$d wallpapers.</item>
+    </plurals>
     <string name="studio_delete_confirm">Delete</string>
     <string name="studio_setup_title">Catalog not connected</string>
     <string name="studio_setup_body">The app runs on sample wallpapers. Once the catalog is connected, Studio manages the real feed.</string>
@@ -382,6 +385,10 @@
     <string name="studio_create_tag">Create tag</string>
     <string name="studio_tags_help_section">Tags are applied to the wallpapers you choose. You can rename one, assign it a category, or remove it from every wallpaper that has it.</string>
     <string name="studio_tags_empty">There are no tags yet.</string>
+    <string name="studio_tags_search">Search tags</string>
+    <string name="studio_tags_search_empty">No tags match your search.</string>
+    <string name="studio_tag_rules_orphans">Rules without wallpapers</string>
+    <string name="studio_tag_rules_orphans_hint">These tags no longer belong to any wallpaper. You can remove their rules.</string>
     <string name="studio_collections">Collections</string>
     <string name="studio_collections_help">Change each collection\'s name, visibility, and wallpapers.</string>
     <string name="studio_collections_empty">You don\'t have any collections yet.</string>

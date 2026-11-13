@@ -258,7 +258,10 @@
     <string name="studio_collection_delete_title">Borrar colección</string>
     <string name="studio_collection_delete_body">Se eliminará “%1$s”. Los fondos seguirán publicados.</string>
     <string name="studio_tag_delete_title">Borrar etiqueta</string>
-    <string name="studio_tag_delete_body">Se quitará “%1$s” de todos los fondos que la tengan.</string>
+    <plurals name="studio_tag_delete_body_count">
+        <item quantity="one">Se quitará “%1$s” de %2$d fondo.</item>
+        <item quantity="other">Se quitará “%1$s” de %2$d fondos.</item>
+    </plurals>
     <string name="studio_delete_confirm">Borrar</string>
     <string name="studio_setup_title">Catálogo no conectado</string>
     <string name="studio_setup_body">La app funciona con fondos de ejemplo. Al conectar el catálogo, el Estudio pasa a administrar el contenido real.</string>
@@ -382,6 +385,10 @@
     <string name="studio_create_tag">Crear etiqueta</string>
     <string name="studio_tags_help_section">Las etiquetas se aplican a los fondos que elijas. Podés renombrar una, asignarle una categoría o quitarla de todos los fondos que la tengan.</string>
     <string name="studio_tags_empty">Todavía no hay etiquetas.</string>
+    <string name="studio_tags_search">Buscar etiquetas</string>
+    <string name="studio_tags_search_empty">No hay etiquetas que coincidan.</string>
+    <string name="studio_tag_rules_orphans">Reglas sin fondos</string>
+    <string name="studio_tag_rules_orphans_hint">Estas etiquetas ya no pertenecen a ningún fondo. Podés quitar sus reglas.</string>
     <string name="studio_collections">Colecciones</string>
     <string name="studio_collections_help">Cambiá el nombre, la visibilidad y los fondos de cada colección.</string>
     <string name="studio_collections_empty">Todavía no tenés colecciones.</string>
