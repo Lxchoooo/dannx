@@ -51,6 +51,7 @@ import com.dannx.walls.data.allTags
 import com.dannx.walls.data.collectTagValues
 import com.dannx.walls.data.isLocal
 import com.dannx.walls.data.mergeTagCatalog
+import com.dannx.walls.data.primaryTag
 import com.dannx.walls.util.WallpaperFiles
 import com.dannx.walls.util.WallpaperTarget
 import com.dannx.walls.util.StringResolver
