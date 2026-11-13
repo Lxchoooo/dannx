@@ -2487,7 +2487,9 @@ class MainViewModel(
         val targets = _state.value.studioWallpapers.filter { wallpaper ->
             allTags(wallpaper.tags).any { it.equals(old, ignoreCase = true) }
         }
-        val renamed = !new.equals(old, ignoreCase = true)
+        // Un cambio solo de mayúsculas también se aplica: así se fusionan dos
+        // etiquetas que se diferenciaban únicamente por cómo estaban escritas.
+        val renamed = new != old
         if (!renamed && category == null) return
         if (targets.isEmpty() && category == null) return
         // La regla se guarda aunque no haya fondos todavía: sirve para los que
