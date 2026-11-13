@@ -61,7 +61,7 @@ set search_path = public, pg_temp
 as $$
     with expanded as (
         select
-            btrim(both '#' from btrim(part.value)) as label,
+            btrim(btrim(part.value), '#') as label,
             raw.position as tag_position,
             part.position as part_position
         from unnest(coalesce(p_tags, '{}'::text[]))
