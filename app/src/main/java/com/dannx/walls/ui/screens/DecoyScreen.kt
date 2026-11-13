@@ -42,17 +42,15 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.dannx.walls.R
 
-private const val SECRET_TAP_COUNT = 25
+private const val SECRET_TAP_COUNT = 5
 
 /** Máximo tiempo entre toques seguidos antes de reiniciar el contador. */
 private const val SECRET_TAP_WINDOW_MS = 2_000L
 
 /**
- * Pantalla señuelo: lo que ve alguien que encuentra el gesto secreto sin ser
- * administrador. Parece una sala vacía y en el borde derecho hay una zona
- * chica e invisible que acumula toques; al vigésimo quinto toque seguido
- * abre el Estudio. La pantalla no deja señales del acceso: la zona no aparece
- * para lectores de pantalla y el contador solo vive en composición.
+ * Pantalla de espera: parece una sala vacía y en el borde derecho hay una zona
+ * chica que acumula toques seguidos. La zona no se anuncia a lectores de
+ * pantalla y el contador solo vive en composición.
  */
 @Composable
 fun DecoyScreen(

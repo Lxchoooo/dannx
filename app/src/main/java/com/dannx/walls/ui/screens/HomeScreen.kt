@@ -129,8 +129,8 @@ import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.withTimeoutOrNull
 
-/** Segundos que hay que mantener presionado el título para la puerta secreta. */
-private const val SECRET_HOLD_MS = 9_000L
+/** Tiempo que hay que mantener presionado el título para la puerta secreta. */
+private const val SECRET_HOLD_MS = 3_000L
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class, ExperimentalMaterial3Api::class)
 @Composable
@@ -320,8 +320,8 @@ fun HomeScreen(
                 Column(Modifier.fillMaxWidth()) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Column(Modifier.weight(1f)) {
-                            // Puerta secreta: mantener presionado el título unos
-                            // segundos sin mover el dedo abre la puerta del Estudio.
+                            // El título reacciona a una pulsación sostenida que no
+                            // se mueve del lugar.
                             val haptics = LocalHapticFeedback.current
                             Text(
                                 text = stringResource(R.string.app_name),
