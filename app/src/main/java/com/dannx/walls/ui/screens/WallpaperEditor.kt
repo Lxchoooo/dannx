@@ -21,6 +21,8 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
@@ -58,13 +60,16 @@ import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.DialogProperties
 import com.dannx.walls.ErrorKind
 import com.dannx.walls.R
 import com.dannx.walls.data.StudioEditException
@@ -197,7 +202,9 @@ internal fun WallpaperEditorSheet(
     )
 
     fun closeOrAsk() {
-        if (saving) return
+        // Mientras el aviso de descarte está abierto, los toques de fondo no
+        // vuelven a abrirlo.
+        if (saving || askDiscard) return
         if (dirty) askDiscard = true else onDismiss()
     }
 
@@ -264,6 +271,16 @@ internal fun WallpaperEditorSheet(
         }
     }
 
+    // El tilde del teclado también confirma la edición en los campos de una
+    // sola línea: así no queda una edición a medio guardar al cerrar.
+    val focus = LocalFocusManager.current
+    val saveOnDone = KeyboardActions(
+        onDone = {
+            focus.clearFocus()
+            runSave()
+        },
+    )
+
     ModalBottomSheet(
         onDismissRequest = { closeOrAsk() },
     ) {
@@ -291,6 +308,8 @@ internal fun WallpaperEditorSheet(
                     Text(stringResource(R.string.studio_title_counter, title.length))
                 },
                 singleLine = true,
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                keyboardActions = saveOnDone,
                 enabled = !saving,
                 modifier = Modifier.fillMaxWidth(),
             )
@@ -303,6 +322,8 @@ internal fun WallpaperEditorSheet(
                 },
                 label = { Text(stringResource(R.string.field_author)) },
                 singleLine = true,
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                keyboardActions = saveOnDone,
                 enabled = !saving,
                 modifier = Modifier.fillMaxWidth(),
             )
@@ -315,6 +336,10 @@ internal fun WallpaperEditorSheet(
                     categoryName = name
                     categoryId = id
                     errorText = null
+                },
+                onDone = {
+                    focus.clearFocus()
+                    runSave()
                 },
             )
             Spacer(Modifier.height(12.dp))
@@ -391,10 +416,16 @@ internal fun WallpaperEditorSheet(
     if (askDiscard) {
         AlertDialog(
             onDismissRequest = { askDiscard = false },
+            properties = DialogProperties(dismissOnClickOutside = false),
             title = { Text(stringResource(R.string.editor_discard_title)) },
             text = { Text(stringResource(R.string.editor_discard_body)) },
             confirmButton = {
-                TextButton(onClick = onDismiss) {
+                TextButton(
+                    onClick = {
+                        askDiscard = false
+                        onDismiss()
+                    },
+                ) {
                     Text(stringResource(R.string.editor_discard_confirm))
                 }
             },
@@ -441,6 +472,7 @@ private fun CategorySelector(
     value: String,
     enabled: Boolean,
     onPick: (name: String, id: String?) -> Unit,
+    onDone: () -> Unit,
 ) {
     var expanded by remember { mutableStateOf(false) }
     OutlinedTextField(
@@ -452,6 +484,8 @@ private fun CategorySelector(
         label = { Text(stringResource(R.string.field_category)) },
         supportingText = { Text(stringResource(R.string.editor_category_new)) },
         singleLine = true,
+        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+        keyboardActions = KeyboardActions(onDone = { onDone() }),
         enabled = enabled,
         trailingIcon = {
             IconButton(
@@ -560,12 +594,21 @@ private fun EditorTagChips(
             )
         }
         Spacer(Modifier.height(6.dp))
+        // El tilde del teclado agrega lo escrito, igual que el botón de al lado.
+        val addDraft: () -> Unit = {
+            if (additions.isNotEmpty() && tags.size < TagsLimit) {
+                onChange(tags + additions)
+                draft = ""
+            }
+        }
         Row(verticalAlignment = Alignment.CenterVertically) {
             OutlinedTextField(
                 value = draft,
                 onValueChange = { draft = it.take(TAG_INPUT_MAX_LENGTH) },
                 placeholder = { Text(stringResource(R.string.editor_tag_hint)) },
                 singleLine = true,
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                keyboardActions = KeyboardActions(onDone = { addDraft() }),
                 enabled = enabled && tags.size < TagsLimit,
                 isError = cleanDraft.isNotBlank() && duplicate,
                 supportingText = {
@@ -583,12 +626,7 @@ private fun EditorTagChips(
             )
             Spacer(Modifier.width(8.dp))
             IconButton(
-                onClick = {
-                    if (additions.isNotEmpty() && tags.size < TagsLimit) {
-                        onChange(tags + additions)
-                        draft = ""
-                    }
-                },
+                onClick = { addDraft() },
                 enabled = enabled && additions.isNotEmpty() && tags.size < TagsLimit,
             ) {
                 Icon(
