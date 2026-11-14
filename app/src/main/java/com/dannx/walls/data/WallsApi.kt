@@ -5,6 +5,7 @@ import android.net.Uri
 import android.util.Log
 import com.dannx.walls.BuildConfig
 import java.time.Instant
+import java.util.Locale
 import java.util.UUID
 import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.CancellationException
@@ -97,25 +98,29 @@ class WallsApi(
             CategoryFeatured, "Destacados" -> params += "featured=eq.true"
             else -> params += "category=eq.${encodeQueryValue(filter.category)}"
         }
-        val selectedTags = filter.tags.map { it.trim() }.filter { it.isNotBlank() }.distinct()
+        val selectedTags = filter.tags
+            .map { it.trim().lowercase(Locale.ROOT) }
+            .filter { it.isNotBlank() }
+            .distinct()
         when {
             // `ov` (overlaps) matchea cualquier fondo que tenga al menos una de
             // las etiquetas, en un solo parámetro.
             selectedTags.size > 1 -> {
                 val values = selectedTags.joinToString(",") { encodeQueryValue(it) }
-                params += "tags=ov.{$values}"
+                params += "tags_lower=ov.{$values}"
             }
             selectedTags.size == 1 -> {
-                params += "tags=cs.{${encodeQueryValue(selectedTags.first())}}"
+                params += "tags_lower=cs.{${encodeQueryValue(selectedTags.first())}}"
             }
             else -> filter.tag?.takeIf { it.isNotBlank() }?.let { tag ->
-                params += "tags=cs.{${encodeQueryValue(tag)}}"
+                params += "tags_lower=cs.{${encodeQueryValue(tag.lowercase(Locale.ROOT))}}"
             }
         }
         filter.query.trim().takeIf { it.isNotEmpty() }?.let { query ->
             val value = encodeQueryValue(query)
+            val lowerTag = encodeQueryValue(query.lowercase(Locale.ROOT))
             params += "or=(title.ilike.*$value*,category.ilike.*$value*," +
-                "author.ilike.*$value*,tags.cs.{$value})"
+                "author.ilike.*$value*,tags_lower.cs.{$lowerTag})"
         }
         return "wallpapers?${params.joinToString("&")}"
     }
@@ -1439,10 +1444,9 @@ class WallsApi(
         else -> false
     }
 
-    private fun cleanTags(tags: List<String>): List<String> = tags
-        .map { it.trim().take(40) }
+    private fun cleanTags(tags: List<String>): List<String> = allTags(tags)
+        .map { it.take(40) }
         .filter { it.isNotBlank() }
-        .distinctBy { it.lowercase() }
         .take(12)
 
     private fun defaultCategories(): List<WallpaperCategory> =

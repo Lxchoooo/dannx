@@ -77,6 +77,7 @@ import com.dannx.walls.data.TagCategory
 import com.dannx.walls.data.TagsLimit
 import com.dannx.walls.data.Wallpaper
 import com.dannx.walls.data.WallpaperCategory
+import com.dannx.walls.data.allTags
 import com.dannx.walls.data.parseTags
 import com.dannx.walls.data.primaryTag
 import com.dannx.walls.kind
@@ -168,7 +169,7 @@ internal fun WallpaperEditorSheet(
     var author by remember { mutableStateOf(wallpaper.author) }
     var categoryName by remember { mutableStateOf(wallpaper.category) }
     var categoryId by remember { mutableStateOf(wallpaper.categoryId) }
-    var tags by remember { mutableStateOf(wallpaper.tags) }
+    var tags by remember { mutableStateOf(allTags(wallpaper.tags)) }
     var featured by remember { mutableStateOf(wallpaper.featured) }
     var saving by remember { mutableStateOf(false) }
     var errorText by remember { mutableStateOf<String?>(null) }
