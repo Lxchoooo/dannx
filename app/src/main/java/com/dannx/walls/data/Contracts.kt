@@ -41,6 +41,10 @@ const val TagsLimit = 12
 /** Fondos por edición de tags en bloque: al tope se corta la cola. */
 const val BulkTagLimit = 50
 
+/** Límites de una colección, iguales a los de la base. */
+const val CollectionNameLimit = 80
+const val CollectionDescriptionLimit = 2000
+
 /**
  * Fallo de una edición con su mensaje listo para la pantalla. Permite
  * repasar errores puntuales (una categoría reservada, un título vacío) sin

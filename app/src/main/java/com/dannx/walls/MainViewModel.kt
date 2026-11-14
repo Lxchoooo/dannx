@@ -23,6 +23,8 @@ import com.dannx.walls.data.ColorCachePrefs
 import com.dannx.walls.data.ColorCacheStore
 import com.dannx.walls.data.CoilImageCache
 import com.dannx.walls.data.CoilWallpaperColorResolver
+import com.dannx.walls.data.CollectionDescriptionLimit
+import com.dannx.walls.data.CollectionNameLimit
 import com.dannx.walls.data.Connectivity
 import com.dannx.walls.data.DannXError
 import com.dannx.walls.data.EmptyAppCache
@@ -2297,11 +2299,12 @@ class MainViewModel(
         description: String,
         isPublic: Boolean,
     ) {
-        val clean = name.trim()
+        val clean = name.trim().take(CollectionNameLimit)
         if (clean.isBlank()) {
             _state.update { it.copy(message = strings.get(R.string.msg_collection_name_required)) }
             return
         }
+        val cleanDescription = description.trim().take(CollectionDescriptionLimit)
         val localOnly =
             _state.value.collectionItems.firstOrNull { it.id == collectionId }?.isLocal == true
         val visible = if (localOnly) false else isPublic
@@ -2311,7 +2314,7 @@ class MainViewModel(
                     if (c.id == collectionId) {
                         c.copy(
                             name = clean,
-                            description = description.trim(),
+                            description = cleanDescription,
                             isPublic = if (c.isLocal) false else visible,
                         )
                     } else {
@@ -2325,7 +2328,7 @@ class MainViewModel(
                 ).collectionDetailUpdated(
                     collectionId = collectionId,
                     name = clean,
-                    description = description.trim(),
+                    description = cleanDescription,
                     isPublic = if (localOnly) false else visible,
                 )
             }
@@ -2337,7 +2340,7 @@ class MainViewModel(
                 val updated = api.updateCollection(
                     id = collectionId,
                     name = clean,
-                    description = description,
+                    description = cleanDescription,
                     isPublic = visible,
                 )
                 _state.update {
@@ -2691,18 +2694,19 @@ class MainViewModel(
         isPublic: Boolean,
         onDevice: Boolean = false,
     ) {
-        val cleanName = name.trim()
+        val cleanName = name.trim().take(CollectionNameLimit)
         if (cleanName.isBlank()) {
             _state.update { it.copy(message = strings.get(R.string.msg_collection_name_required)) }
             return
         }
+        val cleanDescription = description.trim().take(CollectionDescriptionLimit)
         val session = _state.value.session
         // Sin sesión no hay cuenta: la colección vive solo en el teléfono.
         if (_state.value.isDemo || session == null || onDevice) {
             val created = WallpaperCollection(
                 id = "$LOCAL_COLLECTION_PREFIX${UUID.randomUUID()}",
                 name = cleanName,
-                description = description.trim(),
+                description = cleanDescription,
                 ownerId = LOCAL_COLLECTION_OWNER,
                 ownerName = strings.get(R.string.owner_you),
                 isPublic = false,
@@ -2722,7 +2726,7 @@ class MainViewModel(
         viewModelScope.launch {
             _state.update { it.copy(collectionBusy = true) }
             try {
-                val created = api.createCollection(cleanName, description, isPublic)
+                val created = api.createCollection(cleanName, cleanDescription, isPublic)
                 _state.update {
                     it.copy(
                         collectionBusy = false,

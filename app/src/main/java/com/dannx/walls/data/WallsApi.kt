@@ -117,10 +117,8 @@ class WallsApi(
             }
         }
         filter.query.trim().takeIf { it.isNotEmpty() }?.let { query ->
-            val value = encodeQueryValue(query)
-            val lowerTag = encodeQueryValue(query.lowercase(Locale.ROOT))
-            params += "or=(title.ilike.*$value*,category.ilike.*$value*," +
-                "author.ilike.*$value*,tags_lower.cs.{$lowerTag})"
+            val value = encodeQueryValue(normalizeSearch(query).ifBlank { query.trim() })
+            params += "search_text=ilike.*$value*"
         }
         return "wallpapers?${params.joinToString("&")}"
     }
