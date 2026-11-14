@@ -100,6 +100,8 @@ begin
     perform set_config('request.jwt.claim.sub', v_admin::text, true);
 
     if public.is_admin() then
+        perform set_config('dannx.rename_test', 'aplicado', false);
+
         -- Un cambio solo de mayúsculas también se aplica.
         perform public.rename_wallpaper_tag(v_old, v_case);
 
@@ -158,6 +160,7 @@ begin
             raise exception 'La regla no siguió el renombrado';
         end if;
     else
+        perform set_config('dannx.rename_test', 'omitido', false);
         raise notice 'Sin sesión de administración: se omite el renombrado';
     end if;
 
@@ -169,4 +172,6 @@ begin
 end;
 $$;
 
-select 'etiquetas verificadas' as result;
+select
+    'etiquetas verificadas' as result,
+    coalesce(current_setting('dannx.rename_test', true), 'sin datos') as renombrado;
