@@ -136,7 +136,29 @@ jobs:
                      'restore_wallpapers',
                      'reorder_featured',
                      'purge_expired_wallpapers'
-                 )) as trash_rpcs;
+                 )) as trash_rpcs,
+              (select relrowsecurity
+               from pg_class c
+               join pg_namespace n on n.oid = c.relnamespace
+               where n.nspname = 'public' and c.relname = 'tag_labels') as tag_labels_rls,
+              (select exists (
+                 select 1
+                 from pg_proc p
+                 join pg_namespace n on n.oid = p.pronamespace
+                 where n.nspname = 'public'
+                   and p.proname = 'canonicalize_wallpaper_tags'
+               )) as tag_casing_fn,
+              (select public.normalize_wallpaper_tags(
+                  array['Cleopatra', 'cleopatra'])
+                  = array['Cleopatra']) as tag_dedupe_case,
+              (select count(*)
+               from public.wallpapers w
+               where exists (
+                   select 1
+                   from unnest(coalesce(w.tags, '{}'::text[])) as t(tag)
+                   join public.tag_labels l on l.tag = lower(btrim(t.tag))
+                   where l.label is distinct from btrim(t.tag)
+               )) as tag_spelling_mismatch;
           SQL
           )
           jq -n --arg q "$query" '{query: $q}' > verify.json
@@ -155,5 +177,9 @@ jobs:
             and .delete_category
             and .trash_columns == 2
             and .trash_queue_rls
-            and .trash_rpcs == 7' verify-response.json > /dev/null
+            and .trash_rpcs == 7
+            and .tag_labels_rls
+            and .tag_casing_fn
+            and .tag_dedupe_case
+            and .tag_spelling_mismatch == 0' verify-response.json > /dev/null
           echo "Esquema y RLS verificados."
