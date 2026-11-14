@@ -4,8 +4,7 @@
 Prioridad:
 1. `docs/releases/v<versión>.md` (o `docs/releases/<tag>.md`).
 2. La sección `## v<versión>` del CHANGELOG.
-3. La release más nueva de `docs/releases/`, útil para la release rolling de
-   `main`, donde no hay tag.
+3. La release más nueva de `docs/releases/`, para builds sin tag.
 """
 
 from pathlib import Path
