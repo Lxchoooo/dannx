@@ -17,6 +17,8 @@ reservado a administradores y no se detalla en la documentación.
 ### Servidor
 
 - Mejoras de estabilidad y mantenimiento interno.
+- Los workflows y los scripts del repositorio se revisan automáticamente en
+  cada cambio.
 
 ## v1.6.0
 
