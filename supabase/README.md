@@ -20,7 +20,8 @@ gh workflow run apply-migration.yml
 
 Cada ejecución termina con dos verificaciones: la estructura (tablas, políticas,
 funciones y restricciones) y el comportamiento de las etiquetas
-(`scripts/sql/verify_tags.sql`, que corre en una transacción descartada).
+(`scripts/sql/verify_tags.sql`, que prueba un guardado real y borra sus propios
+datos).
 
 ## Orden de las migraciones
 

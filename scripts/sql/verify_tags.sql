@@ -1,8 +1,6 @@
 -- Pruebas de comportamiento de las etiquetas.
--- Se ejecuta dentro de una transacción que se descarta: no deja datos.
--- Si alguna comprobación falla, la consulta devuelve error y el workflow corta.
-
-begin;
+-- El bloque es una sola sentencia: si una comprobación falla, no queda nada
+-- guardado. Al terminar borra sus propios datos y devuelve una fila de control.
 
 do $$
 declare
@@ -45,7 +43,9 @@ begin
     end if;
 
     -- Las etiquetas compuestas se separan y no dejan repetidos.
-    if public.normalize_wallpaper_tags(array['#playa #sol', '#PLAYA']) <> array['playa', 'sol'] then
+    if public.normalize_wallpaper_tags(
+        array['#playa #sol', '#PLAYA']
+    ) <> array['playa', 'sol'] then
         raise exception 'La normalización no separa las etiquetas compuestas';
     end if;
 
@@ -54,4 +54,4 @@ begin
 end;
 $$;
 
-rollback;
+select 'etiquetas verificadas' as result;

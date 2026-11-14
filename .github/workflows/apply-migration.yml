@@ -221,4 +221,8 @@ jobs:
             echo "::error::Fallaron las comprobaciones de etiquetas (HTTP $status)."
             exit 1
           fi
+          if ! grep -q "etiquetas verificadas" tags-response.json; then
+            echo "::error::Las comprobaciones de etiquetas no se ejecutaron."
+            exit 1
+          fi
           echo "Comportamiento de etiquetas verificado."
