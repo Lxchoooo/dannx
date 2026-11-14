@@ -197,11 +197,26 @@ begin
 
     if v_old <> v_new then
         delete from public.tag_labels where tag = v_old;
+
+        -- La regla sigue a la etiqueta. Si ya había una para el texto nuevo,
+        -- se conserva esa y se descarta la anterior.
+        if exists (
+            select 1 from public.tag_categories where tag = v_new
+        ) then
+            delete from public.tag_categories where tag = v_old;
+        else
+            update public.tag_categories
+            set tag = v_new,
+                display_tag = v_label,
+                updated_at = now()
+            where tag = v_old;
+        end if;
     end if;
 
     -- La regla de esa etiqueta muestra la escritura nueva.
     update public.tag_categories
-    set display_tag = v_label
+    set display_tag = v_label,
+        updated_at = now()
     where tag = v_new
       and display_tag is distinct from v_label;
 
