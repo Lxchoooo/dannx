@@ -16,6 +16,9 @@ create table if not exists public.tag_labels (
 
 alter table public.tag_labels enable row level security;
 
+-- La app no lee esta tabla: solo la usan las funciones internas.
+revoke all on public.tag_labels from public, anon, authenticated;
+
 drop trigger if exists tag_labels_touch_updated_at on public.tag_labels;
 create trigger tag_labels_touch_updated_at
     before update on public.tag_labels
