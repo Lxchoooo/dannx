@@ -22,6 +22,8 @@ maintain them.
 - [x] **Surprise me** button for a random wallpaper from the current filter.
 - [x] **Accessibility pass**: TalkBack labels and states, larger touch targets
       and better large-font behaviour.
+- [x] **Tag filters on Home**, with a single spelling for tags written in
+      different case.
 - [x] Release notes read from an English file under `docs/releases/`.
 - [x] Green CI run for the release branch.
 - [x] Tag and publish `v1.6.0`.

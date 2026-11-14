@@ -21,6 +21,8 @@ están probados y cuando hay tiempo para mantenerlos.
       filtros en el servidor, y caché offline de 400 fondos.
 - [x] **Sorprendeme** para abrir un fondo aleatorio del filtro actual.
 - [x] **Repaso de accesibilidad**: TalkBack, áreas táctiles y fuentes grandes.
+- [x] **Filtros por etiquetas en Inicio**, con una sola escritura para las
+      etiquetas escritas en mayúsculas o minúsculas.
 - [x] Notas de release en inglés desde `docs/releases/`.
 - [x] CI en verde para la rama de release.
 - [x] Tag y publicación de `v1.6.0`.
