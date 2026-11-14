@@ -6,6 +6,18 @@ trabajo (fases de la hoja de ruta) y al publicar cada versión.
 Sobre el Estudio: la pantalla de publicación es de uso privado. El acceso está
 reservado a administradores y no se detalla en la documentación.
 
+## Sin publicar
+
+### Etiquetas
+
+- Una etiqueta escrita con mayúsculas o minúsculas distintas ahora cuenta como
+  la misma: se muestra con una sola escritura y los filtros del inicio la
+  encuentran igual.
+
+### Servidor
+
+- Mejoras de estabilidad y mantenimiento interno.
+
 ## v1.6.0
 
 ### Actualizador y feed

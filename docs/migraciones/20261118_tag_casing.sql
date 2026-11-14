@@ -199,6 +199,12 @@ begin
         delete from public.tag_labels where tag = v_old;
     end if;
 
+    -- La regla de esa etiqueta muestra la escritura nueva.
+    update public.tag_categories
+    set display_tag = v_label
+    where tag = v_new
+      and display_tag is distinct from v_label;
+
     update public.wallpapers as w
     set tags = public.normalize_wallpaper_tags(
         array(

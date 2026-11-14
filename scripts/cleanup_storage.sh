@@ -25,6 +25,7 @@ if [[ "$count" == "0" ]]; then
 fi
 
 deleted_ids=()
+failed_ids=()
 while IFS=$'\t' read -r id path; do
     [[ -z "$id" || -z "$path" ]] && continue
     code="$(curl -sS -o /dev/null -w '%{http_code}' \
@@ -35,9 +36,21 @@ while IFS=$'\t' read -r id path; do
             ;;
         *)
             echo "::warning::No se pudo borrar $path (HTTP $code)."
+            failed_ids+=("$id")
             ;;
     esac
 done < <(jq -r '.[] | [.id, .path] | @tsv' <<<"$queue")
+
+# Los que fallaron quedan en la cola con el intento contado, para poder ver
+# cuáles se repiten.
+if [[ ${#failed_ids[@]} -gt 0 ]]; then
+    ids="$(IFS=,; echo "${failed_ids[*]}")"
+    payload="$(jq -n --argjson ids "[$ids]" '{p_ids: $ids}')"
+    curl -sS -o /dev/null -X POST "$url/rest/v1/rpc/fail_storage_cleanup" \
+        "${headers[@]}" -H "Content-Type: application/json" \
+        --data-binary "$payload" \
+        || echo "::warning::No se pudieron registrar los intentos fallidos."
+fi
 
 if [[ ${#deleted_ids[@]} -eq 0 ]]; then
     echo "No se borró ningún objeto."
