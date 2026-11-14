@@ -624,37 +624,13 @@ fun HomeScreen(
 
             if (availableTags.isNotEmpty()) {
                 item(span = { GridItemSpan(maxLineSpan) }) {
-                    Column {
-                        Text(
-                            text = stringResource(R.string.home_tags_title),
-                            style = MaterialTheme.typography.labelLarge,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                        Spacer(Modifier.height(4.dp))
-                        LazyRow(
-                            contentPadding = PaddingValues(end = 20.dp),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        ) {
-                            item(key = "all-tags") {
-                                FilterChip(
-                                    selected = state.tags.isEmpty(),
-                                    onClick = { onTagChange(null) },
-                                    label = { Text(stringResource(R.string.filter_all_tags)) },
-                                    shape = CircleShape,
-                                )
-                            }
-                            items(availableTags, key = { "tag-$it" }) { tag ->
-                                FilterChip(
-                                    selected = state.isTagSelected(tag),
-                                    onClick = {
-                                        onTagChange(state.tagFilterValue(tag) ?: tag)
-                                    },
-                                    label = { Text("#$tag") },
-                                    shape = CircleShape,
-                                )
-                            }
-                        }
-                    }
+                    HomeTagFilterRow(
+                        tags = availableTags,
+                        allSelected = state.tags.isEmpty(),
+                        isSelected = state::isTagSelected,
+                        filterValue = state::tagFilterValue,
+                        onTagChange = onTagChange,
+                    )
                 }
             }
 
@@ -939,6 +915,52 @@ private fun HomeDailyCard(
                     style = MaterialTheme.typography.labelLarge,
                     color = MaterialTheme.colorScheme.onPrimaryContainer,
                     modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                )
+            }
+        }
+    }
+}
+
+/**
+ * Fila de etiquetas del inicio. La selección se resuelve con el estado de la
+ * pantalla: la primera opción quita el filtro y cada etiqueta se suma al
+ * conjunto.
+ */
+@Composable
+fun HomeTagFilterRow(
+    tags: List<String>,
+    allSelected: Boolean,
+    isSelected: (String) -> Boolean,
+    filterValue: (String) -> String?,
+    onTagChange: (String?) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    if (tags.isEmpty()) return
+    Column(modifier) {
+        Text(
+            text = stringResource(R.string.home_tags_title),
+            style = MaterialTheme.typography.labelLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Spacer(Modifier.height(4.dp))
+        LazyRow(
+            contentPadding = PaddingValues(end = 20.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            item(key = "all-tags") {
+                FilterChip(
+                    selected = allSelected,
+                    onClick = { onTagChange(null) },
+                    label = { Text(stringResource(R.string.filter_all_tags)) },
+                    shape = CircleShape,
+                )
+            }
+            items(tags, key = { "tag-$it" }) { tag ->
+                FilterChip(
+                    selected = isSelected(tag),
+                    onClick = { onTagChange(filterValue(tag) ?: tag) },
+                    label = { Text("#$tag") },
+                    shape = CircleShape,
                 )
             }
         }

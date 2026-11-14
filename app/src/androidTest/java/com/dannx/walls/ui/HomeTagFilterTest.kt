@@ -8,8 +8,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.dannx.walls.R
 import com.dannx.walls.UiState
-import com.dannx.walls.data.Wallpaper
-import com.dannx.walls.ui.screens.HomeScreen
+import com.dannx.walls.ui.screens.HomeTagFilterRow
 import com.dannx.walls.ui.theme.DannXTheme
 import org.junit.Assert.assertEquals
 import org.junit.Rule
@@ -26,7 +25,7 @@ class HomeTagFilterTest {
     @Test
     fun clickingATagChipSendsTheTag() {
         var received: String? = null
-        show(tags = emptySet(), onTagChange = { received = it })
+        show(state = UiState(tagCatalog = listOf("arte", "cielo")), onTagChange = { received = it })
 
         rule.onNodeWithText("#cielo").performClick()
 
@@ -34,47 +33,50 @@ class HomeTagFilterTest {
     }
 
     @Test
-    fun theSelectedTagIsMarked() {
-        show(tags = setOf("cielo"), onTagChange = {})
+    fun aCompoundTagSendsTheStoredValue() {
+        var received: String? = null
+        show(state = UiState(tagCatalog = listOf("playa #sol")), onTagChange = { received = it })
 
-        rule.onNodeWithText("#cielo").assertIsSelected()
+        rule.onNodeWithText("#playa").performClick()
+
+        rule.runOnIdle { assertEquals("playa #sol", received) }
+    }
+
+    @Test
+    fun theSelectionIsMarkedCaseInsensitive() {
+        show(
+            state = UiState(tagCatalog = listOf("Cielo"), tags = setOf("cielo")),
+            onTagChange = {},
+        )
+
+        rule.onNodeWithText("#Cielo").assertIsSelected()
     }
 
     @Test
     fun theAllChipClearsTheSelection() {
         var received: String? = "sin tocar"
-        show(tags = setOf("cielo"), onTagChange = { received = it })
+        show(
+            state = UiState(tagCatalog = listOf("arte", "cielo"), tags = setOf("cielo")),
+            onTagChange = { received = it },
+        )
 
         rule.onNodeWithText(context.getString(R.string.filter_all_tags)).performClick()
 
         rule.runOnIdle { assertEquals(null, received) }
     }
 
-    private fun show(tags: Set<String>, onTagChange: (String?) -> Unit) {
+    private fun show(state: UiState, onTagChange: (String?) -> Unit) {
         rule.setContent {
             DannXTheme(darkTheme = false) {
-                HomeScreen(
-                    state = UiState(
-                        wallpapers = listOf(wallpaper()),
-                        tagCatalog = listOf("arte", "cielo"),
-                        tags = tags,
-                    ),
-                    onQueryChange = {},
-                    onCategoryChange = {},
+                HomeTagFilterRow(
+                    tags = state.availableTags,
+                    allSelected = state.tags.isEmpty(),
+                    isSelected = state::isTagSelected,
+                    filterValue = state::tagFilterValue,
                     onTagChange = onTagChange,
-                    onRefresh = {},
-                    onOpenWallpaper = {},
-                    onToggleFavorite = {},
                 )
             }
         }
         rule.mainClock.advanceTimeBy(1_000)
     }
-
-    private fun wallpaper() = Wallpaper(
-        id = "a",
-        title = "Fondo A",
-        category = "Abstracto",
-        imageUrl = "https://example.com/a.jpg",
-    )
 }
