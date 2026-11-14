@@ -5,10 +5,12 @@ on:
     branches: [main]
     paths:
       - ".github/workflows/**"
+      - ".github/zizmor.yml"
       - "scripts/**"
   pull_request:
     paths:
       - ".github/workflows/**"
+      - ".github/zizmor.yml"
       - "scripts/**"
   workflow_dispatch:
 
@@ -21,13 +23,15 @@ concurrency:
 
 jobs:
   lint:
-    # Revisa los workflows con actionlint (que a su vez pasa los `run:` por
-    # shellcheck) y los scripts sueltos con shellcheck.
+    # Revisa los workflows con actionlint y zizmor, que a su vez pasan los
+    # `run:` por shellcheck, y los scripts sueltos con shellcheck.
     name: Workflows y scripts
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
 
       - name: Install actionlint
         env:
@@ -51,8 +55,22 @@ jobs:
           tar -xJf /tmp/shellcheck.tar.xz -C /tmp
           sudo install -m 0755 "/tmp/shellcheck-v${VERSION}/shellcheck" /usr/local/bin/shellcheck
 
+      - name: Install zizmor
+        env:
+          VERSION: 1.32.0
+          SHA256: bb110cc765eca9cd7efb2e284a956be5974c60027b0970f16397d86208a9957b
+        run: |
+          curl -sSfL -o /tmp/zizmor.tar.gz \
+            "https://github.com/zizmorcore/zizmor/releases/download/v${VERSION}/zizmor-x86_64-unknown-linux-gnu.tar.gz"
+          echo "${SHA256}  /tmp/zizmor.tar.gz" | sha256sum -c -
+          tar -xzf /tmp/zizmor.tar.gz -C /tmp zizmor
+          sudo install -m 0755 /tmp/zizmor /usr/local/bin/zizmor
+
       - name: Lint workflows
         run: actionlint
+
+      - name: Audit workflows
+        run: zizmor .github/workflows
 
       - name: Lint scripts
         run: shellcheck -x scripts/*.sh

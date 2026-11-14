@@ -1,0 +1,12 @@
+# Normaliza los finales de línea para que los diffs no dependan del sistema.
+* text=auto eol=lf
+
+*.bat text eol=crlf
+
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.webp binary
+*.gif binary
+*.apk binary
+*.jar binary

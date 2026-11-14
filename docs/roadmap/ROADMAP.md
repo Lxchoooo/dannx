@@ -13,12 +13,12 @@ maintain them.
 - **Planned**: accepted, but not started.
 - **Exploring**: needs a design decision first.
 
-## 1.7.0 (in progress)
+## 1.7.0
 
 - [x] **Tag filters on Home**, with a single spelling for tags written in
       different case and a selection that survives navigation.
 - [x] Stability and maintenance on the server and in the app.
-- [ ] Tag and publish `v1.7.0`.
+- [x] Tag and publish `v1.7.0`.
 
 ## 1.6.0
 
@@ -65,12 +65,12 @@ maintain them.
 - [ ] Instrumented tests for applying, downloading, favourites and the editor.
 - [ ] Screenshot tests (Roborazzi or Paparazzi) to catch visual changes.
 - [x] `actionlint` checks for workflows and `shellcheck` for scripts.
-- [ ] `zizmor` checks for GitHub Actions.
+- [x] `zizmor` checks for GitHub Actions.
 - [x] Release notes generated from a versioned English file.
 
 ## Backend and security
 
-- [ ] RLS tests that prove anonymous users cannot write.
+- [x] RLS tests that prove anonymous users cannot write.
 - [x] Storage policies and cleanup of orphaned images from the trash.
 - [ ] Rate limiting for writes.
 - [ ] Updated Supabase setup guide in `docs/`.

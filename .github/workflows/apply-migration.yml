@@ -22,6 +22,8 @@ jobs:
       contents: read
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
 
       - name: Check configuration
         env:
@@ -226,3 +228,25 @@ jobs:
             exit 1
           fi
           echo "Comportamiento de etiquetas verificado."
+
+      - name: Verify anonymous writes are blocked
+        env:
+          PROJECT_REF: ${{ vars.SUPABASE_PROJECT_REF }}
+          ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: |
+          set -euo pipefail
+          jq -Rs '{query: .}' scripts/sql/verify_anon.sql > anon.json
+          status=$(curl -sS -o anon-response.json -w '%{http_code}' \
+            -X POST "https://api.supabase.com/v1/projects/$PROJECT_REF/database/query" \
+            -H "Authorization: Bearer $ACCESS_TOKEN" \
+            -H "Content-Type: application/json" \
+            --data-binary @anon.json)
+          cat anon-response.json
+          if [ "$status" -lt 200 ] || [ "$status" -ge 300 ]; then
+            echo "::error::Fallaron las comprobaciones de permisos anónimos (HTTP $status)."
+            exit 1
+          fi
+          if ! grep -q "escrituras anónimas bloqueadas" anon-response.json; then
+            echo "::error::Las comprobaciones de permisos anónimos no se ejecutaron."
+            exit 1
+          fi

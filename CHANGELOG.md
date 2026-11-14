@@ -4,6 +4,13 @@ What changed in DannX, newest first. An entry is added when a block of work is
 closed and when a version is published. Maintainers keep the technical detail in
 the repository history.
 
+## Unreleased
+
+### Stability
+
+- Maintenance and stability improvements.
+- Repository checks now cover the workflows and the scripts.
+
 ## v1.7.0
 
 ### Tags

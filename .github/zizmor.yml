@@ -1,0 +1,9 @@
+# Configuración de zizmor para este repositorio.
+#
+# `android.yml` compila con la caché de Gradle y sube artefactos. La caché está
+# acotada a la referencia que la crea y las releases solo salen de `main` y de
+# tags, así que se acepta ese hallazgo para no perder la caché en cada corrida.
+rules:
+  cache-poisoning:
+    ignore:
+      - android.yml

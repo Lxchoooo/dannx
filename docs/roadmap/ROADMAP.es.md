@@ -13,13 +13,13 @@ están probados y cuando hay tiempo para mantenerlos.
 - **Planeado**: aceptado, pero sin empezar.
 - **Explorando**: necesita una decisión de diseño primero.
 
-## 1.7.0 (en preparación)
+## 1.7.0
 
 - [x] **Filtros por etiquetas en Inicio**, con una sola escritura para las
       etiquetas escritas en mayúsculas o minúsculas y una selección que se
       conserva al navegar.
 - [x] Estabilidad y mantenimiento en el servidor y en la app.
-- [ ] Tag y publicación de `v1.7.0`.
+- [x] Tag y publicación de `v1.7.0`.
 
 ## 1.6.0
 
@@ -66,12 +66,12 @@ están probados y cuando hay tiempo para mantenerlos.
 - [ ] Tests instrumentados para aplicar, descargar, favoritos y el editor.
 - [ ] Screenshot tests (Roborazzi o Paparazzi) para detectar cambios visuales.
 - [x] `actionlint` para los workflows y `shellcheck` para los scripts.
-- [ ] `zizmor` para GitHub Actions.
+- [x] `zizmor` para GitHub Actions.
 - [x] Notas de release generadas desde un archivo versionado en inglés.
 
 ## Backend y seguridad
 
-- [ ] Tests de RLS que demuestren que un usuario anónimo no puede escribir.
+- [x] Tests de RLS que demuestren que un usuario anónimo no puede escribir.
 - [x] Políticas de Storage y limpieza de imágenes huérfanas de la papelera.
 - [ ] Rate limiting para escrituras.
 - [ ] Guía actualizada de Supabase en `docs/`.

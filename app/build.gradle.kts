@@ -47,7 +47,7 @@ android {
         minSdk = 29
         targetSdk = 36
         versionCode = configValue("VERSION_CODE").toIntOrNull() ?: 2
-        versionName = configValue("VERSION_NAME").ifBlank { "1.7.0" }
+        versionName = configValue("VERSION_NAME").ifBlank { "1.8.0" }
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
