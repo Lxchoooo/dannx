@@ -65,7 +65,7 @@ class WallsApi(
         }
         retryPolicy.run {
             try {
-                val items = getList<WallpaperDto>(feedPath(filter, limit, offset))
+                val items = getList<WallpaperDto>(feedQuery(filter, limit, offset))
                     .filter { it.storagePath.isNotBlank() }
                     .map { it.toWallpaper(baseUrl) }
                     .filterNot { it.isArchived || it.isDeleted }
@@ -79,53 +79,6 @@ class WallsApi(
             }
         }
     }
-
-    /**
-     * La respuesta pide un elemento de más para saber si queda otra página.
-     * Los filtros viven en PostgREST para que la búsqueda no dependa de lo que
-     * ya se descargó en el teléfono.
-     */
-    private fun feedPath(filter: WallpaperFilter, limit: Int, offset: Int): String {
-        val params = mutableListOf(
-            "select=*",
-            "order=created_at.desc,id.desc",
-            "limit=${limit + 1}",
-            "offset=$offset",
-            "archived_at=is.null",
-        )
-        when (filter.category) {
-            null, CategoryAll, "Todos" -> Unit
-            CategoryFeatured, "Destacados" -> params += "featured=eq.true"
-            else -> params += "category=eq.${encodeQueryValue(filter.category)}"
-        }
-        val selectedTags = filter.tags
-            .map { it.trim().lowercase(Locale.ROOT) }
-            .filter { it.isNotBlank() }
-            .distinct()
-        when {
-            // `ov` (overlaps) matchea cualquier fondo que tenga al menos una de
-            // las etiquetas, en un solo parámetro.
-            selectedTags.size > 1 -> {
-                params += "tags_lower=ov.${encodeQueryValue(postgrestArray(selectedTags))}"
-            }
-            selectedTags.size == 1 -> {
-                params += "tags_lower=cs.${encodeQueryValue(postgrestArray(selectedTags))}"
-            }
-            else -> filter.tag?.takeIf { it.isNotBlank() }?.let { tag ->
-                val clean = postgrestArray(listOf(tag.trim().lowercase(Locale.ROOT)))
-                params += "tags_lower=cs.${encodeQueryValue(clean)}"
-            }
-        }
-        filter.query.trim().takeIf { it.isNotEmpty() }?.let { query ->
-            val value = encodeQueryValue(normalizeSearch(query).ifBlank { query.trim() })
-            params += "search_text=ilike.*$value*"
-        }
-        return "wallpapers?${params.joinToString("&")}"
-    }
-
-    private fun encodeQueryValue(value: String): String =
-        java.net.URLEncoder.encode(value, java.nio.charset.StandardCharsets.UTF_8.name())
-            .replace("+", "%20")
 
     override suspend fun loadAdminWallpapers(): List<Wallpaper> = withContext(Dispatchers.IO) {
         if (!isConfigured) {
