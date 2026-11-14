@@ -67,6 +67,7 @@ import coil.request.ImageRequest
 import com.dannx.walls.R
 import com.dannx.walls.data.Wallpaper
 import com.dannx.walls.ui.theme.LocalLiteMode
+import java.util.Locale
 
 internal const val ThumbWidth = 540
 internal const val ThumbHeight = 960
@@ -239,7 +240,7 @@ fun WallpaperCard(
                 .padding(12.dp),
         ) {
             Text(
-                text = wallpaper.category.uppercase(),
+                text = wallpaper.category.uppercase(Locale.ROOT),
                 style = MaterialTheme.typography.labelSmall,
                 color = Color.White.copy(alpha = 0.78f),
                 fontWeight = FontWeight.Bold,
@@ -363,7 +364,7 @@ fun FeaturedCard(
                 .padding(20.dp),
         ) {
             Text(
-                text = wallpaper.category.uppercase(),
+                text = wallpaper.category.uppercase(Locale.ROOT),
                 style = MaterialTheme.typography.labelMedium,
                 color = Color.White.copy(alpha = 0.8f),
                 fontWeight = FontWeight.Bold,
@@ -383,7 +384,7 @@ fun FeaturedCard(
                     color = Color.White.copy(alpha = 0.2f),
                 ) {
                     Text(
-                        text = wallpaper.author.take(1).uppercase(),
+                        text = wallpaper.author.take(1).uppercase(Locale.ROOT),
                         style = MaterialTheme.typography.labelLarge,
                         color = Color.White,
                         modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),

@@ -15,6 +15,7 @@ import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.json.Json
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import java.util.Locale
 
 /**
  * Consulta la API pública de GitHub y descarga el APK de la última release.
@@ -121,7 +122,7 @@ class GitHubUpdateRepository(
                     throw UpdateError.Download("Descarga incompleta")
                 }
                 val actual = digest.digest()
-                    .joinToString("") { "%02x".format(it.toInt() and 0xff) }
+                    .joinToString("") { String.format(Locale.ROOT, "%02x", it.toInt() and 0xff) }
                 if (!actual.equals(expected, ignoreCase = true)) {
                     throw UpdateError.Checksum
                 }

@@ -20,6 +20,7 @@ import androidx.core.graphics.scale
 import androidx.core.net.toUri
 import com.dannx.walls.R
 import com.dannx.walls.data.Wallpaper
+import com.dannx.walls.data.WallsApi
 import com.dannx.walls.data.WallpaperActions
 import java.io.File
 import java.io.IOException
@@ -28,8 +29,8 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
+import java.util.Locale
 import kotlinx.coroutines.withContext
-import okhttp3.OkHttpClient
 import okhttp3.Request
 
 enum class WallpaperTarget {
@@ -102,7 +103,8 @@ class WallpaperFiles(
     private val sharedMaxAgeMs = 6 * 60 * 60 * 1000L
     private val prefixSize = 16
 
-    private val client = OkHttpClient.Builder()
+    private val client = WallsApi.defaultClient()
+        .newBuilder()
         .connectTimeout(20, TimeUnit.SECONDS)
         .readTimeout(90, TimeUnit.SECONDS)
         .build()
@@ -187,7 +189,8 @@ class WallpaperFiles(
                     read += step
                 }
                 val format = detectImageFormat(prefix.copyOf(read))
-                    ?: mimeFromContentType(contentType).let { ImageFormat(it, extensionFor(it)) }
+                    ?: mimeFromContentType(contentType)
+                        .let { ImageFormat(it, extensionForMime(it)) }
                 val values = ContentValues().apply {
                     put(
                         MediaStore.Images.Media.DISPLAY_NAME,
@@ -259,7 +262,7 @@ class WallpaperFiles(
 
     private fun galleryFileName(wallpaper: Wallpaper, extension: String): String {
         val slug = wallpaper.id
-            .lowercase()
+            .lowercase(Locale.ROOT)
             .replace(Regex("[^a-z0-9]+"), "-")
             .trim('-')
             .take(40)
@@ -276,15 +279,6 @@ class WallpaperFiles(
         contentType.contains("jpeg", ignoreCase = true) ||
             contentType.contains("jpg", ignoreCase = true) -> "image/jpeg"
         else -> "image/jpeg"
-    }
-
-    private fun extensionFor(mime: String): String = when (mime) {
-        "image/png" -> "png"
-        "image/webp" -> "webp"
-        "image/gif" -> "gif"
-        "image/heic" -> "heic"
-        "image/heif" -> "heif"
-        else -> "jpg"
     }
 
     /**

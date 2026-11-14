@@ -1580,7 +1580,7 @@ class MainViewModel(
     ): Wallpaper {
         val cleanTags = tags.map { it.trim() }
             .filter { it.isNotBlank() }
-            .distinctBy { it.lowercase() }
+            .distinctBy { it.lowercase(Locale.ROOT) }
         val cleanAuthor = author.trim().ifBlank { "DannX" }.take(60)
         val cleanTitle = title.trim().take(120)
         val current = _state.value.studioWallpapers.firstOrNull { it.id == wallpaperId }
@@ -2419,7 +2419,7 @@ class MainViewModel(
             _state.update {
                 val updated = it.wallpapers.map { w ->
                     if (w.id in selected) {
-                        w.copy(tags = (w.tags + clean).distinctBy { t -> t.lowercase() })
+                        w.copy(tags = (w.tags + clean).distinctBy { t -> t.lowercase(Locale.ROOT) })
                     } else {
                         w
                     }
@@ -2428,7 +2428,7 @@ class MainViewModel(
                     wallpapers = updated,
                     adminWallpapers = it.adminWallpapers.map { w ->
                         if (w.id in selected) {
-                            w.copy(tags = (w.tags + clean).distinctBy { t -> t.lowercase() })
+                            w.copy(tags = (w.tags + clean).distinctBy { t -> t.lowercase(Locale.ROOT) })
                         } else {
                             w
                         }
@@ -2447,14 +2447,14 @@ class MainViewModel(
                         studioBusy = false,
                         wallpapers = it.wallpapers.map { w ->
                             if (w.id in selected) {
-                                w.copy(tags = (w.tags + clean).distinctBy { t -> t.lowercase() })
+                                w.copy(tags = (w.tags + clean).distinctBy { t -> t.lowercase(Locale.ROOT) })
                             } else {
                                 w
                             }
                         },
                         adminWallpapers = it.adminWallpapers.map { w ->
                             if (w.id in selected) {
-                                w.copy(tags = (w.tags + clean).distinctBy { t -> t.lowercase() })
+                                w.copy(tags = (w.tags + clean).distinctBy { t -> t.lowercase(Locale.ROOT) })
                             } else {
                                 w
                             }

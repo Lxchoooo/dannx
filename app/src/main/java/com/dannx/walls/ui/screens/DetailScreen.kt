@@ -118,6 +118,7 @@ import com.dannx.walls.util.clampPan
 import com.dannx.walls.util.clampScale
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import java.util.Locale
 
 private val ZoomStateSaver = listSaver<ZoomState, Float>(
     save = { listOf(it.scale, it.offset.x, it.offset.y) },
@@ -484,7 +485,7 @@ fun DetailScreen(
                 .padding(horizontal = 20.dp, vertical = 20.dp),
         ) {
             Text(
-                text = wallpaper.category.uppercase(),
+                text = wallpaper.category.uppercase(Locale.ROOT),
                 style = MaterialTheme.typography.labelLarge,
                 color = Color.White.copy(alpha = 0.75f),
                 fontWeight = FontWeight.Bold,

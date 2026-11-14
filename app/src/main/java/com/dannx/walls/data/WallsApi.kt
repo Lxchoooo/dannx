@@ -106,14 +106,14 @@ class WallsApi(
             // `ov` (overlaps) matchea cualquier fondo que tenga al menos una de
             // las etiquetas, en un solo parámetro.
             selectedTags.size > 1 -> {
-                val values = selectedTags.joinToString(",") { encodeQueryValue(it) }
-                params += "tags_lower=ov.{$values}"
+                params += "tags_lower=ov.${encodeQueryValue(postgrestArray(selectedTags))}"
             }
             selectedTags.size == 1 -> {
-                params += "tags_lower=cs.{${encodeQueryValue(selectedTags.first())}}"
+                params += "tags_lower=cs.${encodeQueryValue(postgrestArray(selectedTags))}"
             }
             else -> filter.tag?.takeIf { it.isNotBlank() }?.let { tag ->
-                params += "tags_lower=cs.{${encodeQueryValue(tag.lowercase(Locale.ROOT))}}"
+                val clean = postgrestArray(listOf(tag.trim().lowercase(Locale.ROOT)))
+                params += "tags_lower=cs.${encodeQueryValue(clean)}"
             }
         }
         filter.query.trim().takeIf { it.isNotEmpty() }?.let { query ->
@@ -1162,7 +1162,7 @@ class WallsApi(
         val clean = tags
             .map { it.trim().trimStart('#').trim().take(40) }
             .filter { it.isNotBlank() }
-            .distinctBy { it.lowercase() }
+            .distinctBy { it.lowercase(Locale.ROOT) }
         if (clean.isEmpty() || categoryId.isBlank()) return@withContext 0
         try {
             callRpcScalar(

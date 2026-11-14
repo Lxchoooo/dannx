@@ -6,7 +6,9 @@ import android.graphics.BitmapFactory
 import android.graphics.ImageDecoder
 import android.net.Uri
 import androidx.core.graphics.scale
+import com.dannx.walls.util.extensionForMime
 import java.io.File
+import java.util.Locale
 import kotlin.math.max
 
 /**
@@ -42,10 +44,10 @@ internal fun prepareUploadImage(
     }.getOrNull()?.takeIf { it > 0 }
 
     if (declared in ALLOWED_MIME && (knownSize == null || knownSize <= maxBytes)) {
-        val file = File(dir, "upload-${System.nanoTime()}.${extensionFor(declared)}")
+        val file = File(dir, "upload-${System.nanoTime()}.${extensionForMime(declared)}")
         if (copyToFile(context, uri, file, maxBytes) != null) {
             val (width, height) = readBounds(context, uri)
-            return PreparedImage(file, declared, extensionFor(declared), width, height)
+            return PreparedImage(file, declared, extensionForMime(declared), width, height)
         }
         file.delete()
     }
@@ -53,19 +55,13 @@ internal fun prepareUploadImage(
 }
 
 private fun normalizeMime(raw: String?): String {
-    val mime = raw?.trim()?.lowercase().orEmpty()
+    val mime = raw?.trim()?.lowercase(Locale.ROOT).orEmpty()
     return when (mime) {
         "image/jpg", "image/pjpeg" -> "image/jpeg"
         "image/x-png" -> "image/png"
         "" -> "image/jpeg"
         else -> mime
     }
-}
-
-private fun extensionFor(mime: String): String = when (mime) {
-    "image/png" -> "png"
-    "image/webp" -> "webp"
-    else -> "jpg"
 }
 
 /**
