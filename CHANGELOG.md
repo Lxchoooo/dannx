@@ -1,406 +1,311 @@
 # Changelog
 
-Registro de los cambios hechos en DannX. Se actualiza al cerrar cada bloque de
-trabajo (fases de la hoja de ruta) y al publicar cada versión.
-
-Sobre el Estudio: la pantalla de publicación es de uso privado. El acceso está
-reservado a administradores y no se detalla en la documentación.
+What changed in DannX, newest first. An entry is added when a block of work is
+closed and when a version is published. Maintainers keep the technical detail in
+the repository history.
 
 ## v1.7.0
 
-### Etiquetas
+### Tags
 
-- Una etiqueta escrita con mayúsculas o minúsculas distintas ahora cuenta como
-  la misma: se muestra con una sola escritura y los filtros del inicio la
-  encuentran igual.
-- El inicio permite elegir una o varias etiquetas y la selección se conserva al
-  cambiar de pantalla.
-- Las etiquetas con espacios, comas o símbolos funcionan como cualquier otra.
+- A tag written in capitals or lowercase now counts as the same tag: it is shown
+  with a single spelling and the Home filters find it either way.
+- Home lets you pick one or several tags, and the selection is kept when you
+  move between screens.
+- Tags with spaces, commas or symbols work like any other tag.
 
-### Servidor
+### Stability
 
-- Mejoras de estabilidad y mantenimiento interno.
-- Los workflows y los scripts del repositorio se revisan automáticamente en
-  cada cambio.
+- Stability and maintenance improvements.
 
 ## v1.6.0
 
-### Actualizador y feed
+### Updater and feed
 
-- Ajustes ahora consulta la última release de GitHub, descarga el APK en la
-  caché interna y abre el instalador del sistema. Si el usuario no habilitó
-  apps desconocidas, se abre el ajuste correspondiente.
-- El feed pide páginas de 30 fondos y carga la siguiente al llegar al final, sin
-  duplicados.
-- Búsqueda, categoría y tag se resuelven en el servidor. La búsqueda cubre
-  título, categoría y autor; los tags se buscan por coincidencia exacta.
-- La caché sigue limitada a 400 fondos y ahora se fusiona después de cada
-  página. Solo se escribe cuando no hay filtros activos.
-- Un chip “Sorprendeme” abre un fondo aleatorio del resultado actual y evita
-  repetir el último.
-- Pasada de accesibilidad: roles y estados en tarjetas, descripciones del
-  favorito, objetivos táctiles y textos con escala grande.
-- Las notas de release se leen de `docs/releases/v<versión>.md` en inglés. Se
-  corrigió la variable `VERSION_NAME` del job `publish`.
-- Tests nuevos para comparación de versiones, actualizador, paginación, filtros
-  y caché.
+- Settings now checks the latest GitHub release, downloads the APK into the
+  internal cache and opens the system installer. If unknown apps are not
+  allowed, the matching setting is opened.
+- The feed asks for 30 wallpapers per page and loads the next one at the end,
+  without duplicates.
+- Search, category and tag are resolved on the server. Search covers title,
+  category and author; tags match exactly.
+- The cache is still capped at 400 wallpapers and now merges after each page. It
+  is only written when no filters are active.
+- A “Surprise me” chip opens a random wallpaper from the current result and
+  avoids repeating the last one.
+- Accessibility pass: roles and states on cards, favourite descriptions, touch
+  targets and large-text scaling.
+- Release notes are read from an English file per version.
+- New tests for version comparison, updater, pagination, filters and cache.
 
 ## v1.5.0
 
-### Estudio 1.5: papelera y operaciones atómicas
+### Studio: trash and bulk actions
 
-- Las acciones en lote del Estudio usan RPC de Supabase y se aplican en una sola
-  transacción: destacar, archivar, mover de categoría, eliminar y restaurar.
-  Si una operación falla, no queda un lote a medias.
-- Nueva papelera: eliminar un fondo ya no borra la imagen. El fondo se puede
-  restaurar, borrar definitivamente o vaciar la papelera desde el Estudio.
-- Los fondos eliminados se purgan automáticamente a los 30 días con `pg_cron`.
-  Las rutas de Storage se guardan en `storage_cleanup_queue` y el workflow
-  `cleanup-storage.yml` borra los archivos con la service role key.
-- Las operaciones de lote tienen fallback secuencial si la migración todavía no
-  está aplicada. La papelera sí requiere la migración nueva.
-- “Contenido” suma una vista previa de la portada con la frase, el aviso y los
-  destacados actuales.
-- Nueva migración `docs/migraciones/20261110_studio_trash_bulk.sql` con
-  `deleted_at`, `deleted_by`, RLS, RPCs, cola de limpieza y programación diaria.
-- Tests nuevos para mover a la papelera, restaurar, vaciar y mantener el estado
-  local después de archivar o cambiar de categoría en lote.
+- Bulk actions in the Studio are applied as a single operation: feature,
+  archive, move to a category, delete and restore. If one fails, no half-done
+  batch is left behind.
+- New trash: deleting a wallpaper no longer removes the image. It can be
+  restored, deleted permanently or emptied from the Studio.
+- Deleted wallpapers are purged automatically after 30 days, and the scheduled
+  cleanup removes the leftover files.
+- Bulk actions fall back to sequential calls when the server has not been
+  updated yet. The trash does require the new version.
+- Content adds a preview of the cover with the current sentence, notice and
+  featured wallpapers.
+- New tests for moving to the trash, restoring, emptying and keeping the local
+  state after archiving or moving in bulk.
 
-### Traducción y editor
+### Translation and editor
 
-- La interfaz completa pasa a `strings.xml` y se traduce al inglés con
-  `values-en`; no quedan textos hardcodeados en las pantallas.
-- `StringResolver` permite resolver cadenas desde los ViewModels y desde capas
-  que no son de Compose.
-- El editor suma desenfoque progresivo real: tres niveles premoldeados, mezcla
-  entre niveles adyacentes y render final sobre una copia de 512 px.
-- El desenfoque se calcula una sola vez por nivel; mover el control no vuelve a
-  difuminar la imagen.
-- Tests nuevos de `EditorBlur` para uniformidad, varianza, alfa y mezcla.
+- The whole interface moves to string resources and is translated to English; no
+  hardcoded text is left on the screens.
+- Strings can be resolved from the ViewModels and from non-Compose layers.
+- The editor adds real progressive blur: three preset levels, blending between
+  adjacent levels and a final render on a reduced copy.
+- The blur is computed once per level; moving the control does not blur the
+  image again.
+- New tests for the blur: uniformity, variance, alpha and blending.
 
-### Documentación y comunidad
+### Documentation and community
 
-- `CONTRIBUTING.md` y `CONTRIBUTING.es.md` con setup, estilo, tests y checklist
-  de pull requests.
-- `CODE_OF_CONDUCT.md` y `CODE_OF_CONDUCT.es.md` con Contributor Covenant 2.1.
-- `SECURITY.md` y `SECURITY.es.md` con el canal privado y las prácticas de
-  seguridad del proyecto.
-- `docs/designs/security-hardening.md` con la checklist de settings de GitHub.
-- `ROADMAP.md` y `ROADMAP.es.md` con prioridades, estado y cosas que no se van a
-  hacer.
-- `PRIVACY.md` y `PRIVACY.es.md`, enlazados desde el README y desde Ajustes.
-- El README deja de mostrar capturas inexistentes; se actualizan con el build
-  1.5.0.
-- Issue templates al día: versión 1.5.0, apartados Editor y Privacidad, y enlace
-  de contribución corregido.
+- Contributing guide with setup, style, tests and a pull request checklist.
+- Code of conduct based on Contributor Covenant 2.1.
+- Security policy with the private channel and the project practices.
+- Roadmap with priorities, status and things that will not be done.
+- Privacy policy, linked from the README and from Settings.
+- The README stops showing screenshots that did not exist; they were updated
+  with the 1.5.0 build.
+- Issue templates updated: 1.5.0, Editor and Privacy sections, and a fixed
+  contributing link.
 
-### Seguridad
+### Stability and internal maintenance
 
-- Se agregó CodeQL para Kotlin (`java-kotlin`, build manual) en `main`, en pull
-  requests que toquen la app y en un análisis semanal.
-- Dependency review bloquea pull requests con dependencias de severidad alta.
-- CI valida el `gradle-wrapper.jar` con `gradle/actions/wrapper-validation`.
-- Los releases publican `DannX.apk.sha256` junto al APK para verificar la
-  descarga.
-- Los releases generan una atestación de procedencia (SLSA) para verificar que
-  el APK salió de este repositorio y de este workflow.
-- Se reparó la columna de privacidad de `collections`, que tenía un nombre
-  corrupto: ahora es `is_public`. Crear y editar colecciones vuelve a funcionar
-  y la privacidad se respeta en el servidor.
-- El DTO de colecciones asume privada por defecto si el servidor no manda el
-  campo (antes asumía pública).
-- El registro público de Supabase quedó deshabilitado.
-- La verificación de migraciones ahora exige `is_public`, RLS activo en
-  colecciones e ítems y políticas que usen esa columna.
-- Se eliminó la deploy key con escritura; `main` exige los checks `checks` y
-  `debug`; las actions están fijadas a SHA y el repo exige SHA pinning.
-- Se restauró `supabase/setup.sql` como referencia histórica del esquema.
-- El APK de release ya no incluye logs de depuración.
-- Los tags publican `versionName` sin la `v` inicial.
-- Las colecciones nuevas nacen privadas y el diálogo muestra la etiqueta
-  correcta según el interruptor.
+- Hardened the backend, the signing and the distribution of the app.
+- Release builds are signed with a key kept outside the repository, and tags
+  publish that APK instead of a debug build.
+- Version numbers come from Gradle properties; CI uses the run number and the
+  tag.
+- The pipeline is split into verification (lint and tests on every pull request)
+  and packaging (signed APKs on `main` and tags).
+- Collections are private by default, on the server and in the app when the
+  field is missing.
+- Release APKs no longer include debug logs.
 
-### Mejoras
+### Improvements
 
-- Ajustes suma Acerca de (versión, enlaces y licencias de terceros) y un acceso
-  directo a la política de privacidad.
-- En Android 13 o superior, Ajustes incluye “Idioma” y abre el selector de
-  idioma por app para cambiar entre español e inglés sin tocar el teléfono.
-- Acerca de suma “Compartir DannX” con el enlace del repositorio.
-- La búsqueda del feed muestra un botón para borrar el texto cuando hay una
-  consulta activa.
-- El buscador guarda las últimas 8 búsquedas y las ofrece como chips cuando el
-  campo está vacío, con una acción para borrarlas.
-- El Estudio suma un resumen con contadores y accesos rápidos a publicados,
-  archivados y destacados.
-- “Mis fondos” permite buscar, filtrar por categoría o destacados y ordenar por
-  fecha, título o categoría.
-- Cada fondo se puede destacar o quitar de destacados sin abrir el editor, y el
-  Estudio se puede actualizar desde el encabezado.
-- Las categorías se pueden reordenar con flechas y el nuevo orden se guarda en
-  el catálogo.
-- El Estudio suma “Contenido” para editar la frase de portada y el aviso global
-  de la app. Los textos se guardan en `app_settings` y se leen sin sesión.
-- “Mis fondos” permite seleccionar varios fondos y destacarlos, quitarlos de
-  destacados, archivarlos, restaurarlos, moverlos a una categoría o eliminarlos
-  en lote.
-- La edición de un fondo permite cambiar el autor además del título, la
-  categoría, las etiquetas y el destacado.
-- El Estudio suma “Destacados” para ordenar el carrusel con flechas. El orden se
-  guarda en `wallpapers.featured_position` y lo respeta la portada.
-- Nueva migración `docs/migraciones/20261109_app_editing.sql` con
-  `app_settings`, RLS, la columna `featured_position` y su índice.
-- La ficha del fondo suma botones laterales para pasar al fondo anterior o
-  siguiente sin volver al feed.
-- La caché del feed queda acotada a 400 fondos y 100 colecciones para evitar que
-  crezca sin límite.
-- CI publica el `mapping.txt` de R8 como artifact de 30 días para poder leer
-  crashes ofuscados.
-- Las notas de release se generan desde la sección de la versión publicada del
-  CHANGELOG, con un texto de respaldo si la sección está vacía.
-- Tests nuevos de `FeedCache` (tope y archivo corrupto) y `StringResolver`
-  (argumentos y cadenas sin argumentos).
-- Gradle actualizado a 9.9.0; se elimina el aviso de versión obsoleta del CI.
-- El job `debug` corre solo en pull requests: en `main` alcanza con la release
-  rolling, así que se ahorra un runner por push.
-- Ajustes incluye “Buscar actualizaciones”, que abre la última release.
-- Dependabot agrupa las actualizaciones menores de AndroidX, Kotlin y las
-  herramientas de build.
-- El editor marca su estado y sus filtros como inmutables para reducir
-  recomposiciones.
-- El `versionName` de los builds locales pasa a 1.5.0.
-- Actualizados `core-splashscreen` 1.2.0, `kotlinx-coroutines-test` 1.11.0 y
-  las actions `setup-java` 6.2.0 y `download-artifact` 8.0.2.
-- Se limpiaron los avisos de lint: extensiones KTX en preferencias, URIs y
-  bitmaps, tamaños de ventana en Compose y una llamada a `super` innecesaria.
-- La pantalla de detalle muestra la ayuda “puede tardar un momento” mientras
-  aplica un fondo.
+- Settings adds About (version, links and third-party licences) and a direct
+  link to the privacy policy.
+- On Android 13 or later, Settings includes Language and opens the per-app
+  language picker, so the language can change without touching the phone.
+- About adds “Share DannX” with the repository link.
+- The feed search shows a button to clear the text when there is an active
+  query.
+- Search keeps the last 8 queries and offers them as chips when the field is
+  empty, with an action to clear them.
+- The Studio adds a summary with counters and shortcuts to published, archived
+  and featured wallpapers.
+- My wallpapers lets you search, filter by category or featured and sort by
+  date, title or category.
+- Each wallpaper can be featured or unfeatured without opening the editor, and
+  the Studio can be refreshed from the header.
+- Categories can be reordered with arrows and the new order is saved.
+- The Studio adds Content to edit the cover sentence and the global notice. The
+  texts are saved on the server and read without a session.
+- My wallpapers lets you select several wallpapers and feature, unfeature,
+  archive, restore, move or delete them in bulk.
+- Editing a wallpaper allows changing the author as well as the title, category,
+  tags and featured state.
+- The Studio adds Featured to reorder the carousel with arrows; the order is
+  saved and respected by Home.
+- The wallpaper screen adds side buttons to move to the previous or next one
+  without going back to the feed.
+- The feed cache is capped at 400 wallpapers and 100 collections so it cannot
+  grow forever.
+- CI publishes the R8 mapping for 30 days so obfuscated crashes can be read.
+- Release notes are generated from the published version section, with a
+  fallback text when it is empty.
+- New cache tests (cap and corrupt file) and string resolver tests.
+- Gradle updated to 9.9.0; the outdated version warning in CI is gone.
+- The debug job runs only on pull requests: on `main` the rolling build is
+  enough, so one runner per push is saved.
+- Settings includes “Check for updates”, which opens the latest release.
+- Dependabot groups minor updates for AndroidX, Kotlin and the build tools.
+- The editor marks its state and filters as immutable to reduce recompositions.
+- Local builds move to version 1.5.0.
+- Updated `core-splashscreen` 1.2.0, `kotlinx-coroutines-test` 1.11.0 and the
+  `setup-java` 6.2.0 and `download-artifact` 8.0.2 actions.
+- Lint warnings cleaned up: KTX extensions in preferences, URIs and bitmaps,
+  window sizes in Compose and an unnecessary `super` call.
+- The detail screen shows a “this can take a moment” hint while applying a
+  wallpaper.
 
 ## v1.3.0
 
-### Fase 5 — Experiencia
+### Experience
 
-- **Librerías actualizadas**: Compose BOM 2026.09.00 (Compose 1.11), Material 3
-  1.5.0-rc01 para el kit Expressive oficial, core 1.19.1, activity 1.13.0,
-  lifecycle 2.11.0, navigation 2.10.2 y graphics-shapes 1.1.0 (las formas
-  "cookie" expresivas).
-- El tema completo usa `MotionScheme.expressive()`, y el onboarding muestra
-  formas de marca (cookie 12 lados) como fondo decorativo.
+- Updated libraries: Compose BOM 2026.09.00 (Compose 1.11), Material 3
+  1.5.0-rc01 for the official Expressive kit, core 1.19.1, activity 1.13.0,
+  lifecycle 2.11.0, navigation 2.10.2 and graphics-shapes 1.1.0.
+- The whole theme uses expressive motion, and the onboarding shows brand shapes
+  as a decorative background.
+- The welcome onboarding gets its first pass: three full-screen pages with a
+  horizontal pager, display typography and accent shapes, in the Material 3
+  Expressive style. It is shown once and can be skipped.
+- The Studio tab no longer sits in the bottom bar; it opens as a standalone
+  screen.
+- The feed adapts to the screen size: 2 columns on phones, 3 on small tablets
+  and 4 on large tablets or split screen; the hero is limited so it does not
+  cover the rest.
+- Accessibility: favourite and remove buttons are at least 48 dp, TalkBack reads
+  each card as one sentence, back arrows are mirrored in right-to-left
+  languages, and images show a loading indicator and a notice when they fail.
+- Removed unused code.
 
-- El onboarding de bienvenida hace su primera pasada: tres pantallas a página
-  completa con pager horizontal, tipografía display y formas de acento, en el
-  estilo Expressive de Material 3 (springs elásticos, formas decorativas e
-  indicadores animados). Se muestra una sola vez y se salta con "Saltar".
-- La pestaña **Estudio** ya no forma parte de la barra para el público: solo
-  aparece cuando hay una sesión de administrador iniciada. El ingreso al área
-  privada no se detalla en la documentación.
-- El Estudio sin sesión muestra un botón "Volver" y se ve como una pantalla
-  independiente, sin barra inferior.
-- El feed se adapta al tamaño de pantalla: 2 columnas en celular, 3 en tablet
-  chica y 4 en tablet grande o pantalla dividida; el hero se limita a poco más
-  de la mitad del alto disponible para que no tape el resto.
-- Accesibilidad: los botones de favorito y de quitar de una colección miden al
-  menos 48 dp, TalkBack lee cada tarjeta como una sola frase, las flechas
-  "Volver" se espejan en idiomas de derecha a izquierda, y las imágenes
-  muestran un indicador al cargar y un aviso si no se pudieron descargar.
-- Se eliminó código sin uso (`RoundedCornersTransformation`).
+### Fixes
 
-### Correcciones
+- Tag operations, category renaming, deleting with reassignment and reordering
+  collections use a single operation on the server when it is available, and
+  keep the previous path otherwise so compatibility is not broken.
+- Debug APKs from CI are signed with the same key as release when the secret is
+  available, and use the run's version number so they install on top without
+  uninstalling.
 
-- Las operaciones de etiquetas, el renombrado de categorías, el borrado con
-  reasignación y el reordenamiento de colecciones usan una función atómica de
-  la base de datos cuando la migración del Estudio está aplicada. Si la función
-  todavía no existe, la app conserva el recorrido anterior para no romper la
-  compatibilidad.
-- Los APK de debug de CI se firman con la misma clave que release cuando el
-  secreto está disponible, y usan el mismo `versionCode` del run para poder
-  instalarse encima sin desinstalar.
+### Stability
 
-### Fase 2 — Estabilidad
+- When the app comes back or refresh is tapped, the previous feed stays visible:
+  it is no longer replaced by the loading skeleton. Only a thin progress bar
+  appears while it refreshes in the background.
+- If collections fail but the feed responds, a small notice is shown without
+  hiding the content.
+- A 403 has its own message instead of being confused with an expired session.
+  The server error message no longer mixes English and Spanish.
+- Parsing errors are no longer retried: they are deterministic and retrying only
+  delayed the notice.
+- The feed cache is written atomically (temporary file and replacement), so a
+  close in the middle of a write does not corrupt it.
+- The detail image is requested at screen size instead of full resolution, to
+  use less memory and avoid out-of-memory closes.
 
-- Al volver a la app o tocar "Actualizar", el feed anterior sigue visible: ya no
-  se reemplaza por el esqueleto de carga. Solo aparece una barra fina de
-  progreso mientras se refresca en segundo plano.
-- Si falla la carga de colecciones pero el feed responde, se muestra un aviso
-  puntual sin ocultar el contenido.
-- Un 403 (permiso denegado) ahora tiene su propio mensaje en vez de
-  confundirse con una sesión vencida. Corregido el mensaje del error de
-  servidor, que mezclaba inglés y español.
-- Los errores de parseo ya no se reintentan: son deterministas y reintentarlos
-  solo demoraba el aviso al usuario.
-- El caché del feed se escribe de forma atómica (archivo temporal + reemplazo),
-  así un cierre a mitad de escritura no lo deja corrupto.
-- La imagen del detalle se pide al tamaño de la pantalla en vez de a resolución
-  completa, para bajar el uso de memoria y evitar cierres por OOM.
+### Robustness
 
-### Fase 1 — Seguridad
+**Errors and network**
 
-**Permisos del backend**
-- Las escrituras de `wallpapers` y del bucket ahora comparan `auth.uid()` con
-  el UUID de administrador configurado en `supabase/setup.sql`. Cualquier otra
-  cuenta autenticada recibe un error de política.
-- El bucket `wallpapers` limita los archivos a 25 MB y solo acepta JPEG, PNG y
-  WebP.
-- Se retiró la función `increment_downloads`: cualquiera con la clave anon
-  podía inflar el contador sin límite.
-- `wallpapers` gana límites de longitud para título, categoría, autor y tags,
-  columnas `updated_at` y `created_by`, e índices por fecha y tags.
-- Las colecciones ahora permiten actualizar `position` dentro de la colección
-  propia.
+- Typed network errors: no connection, server down, expired session or
+  unexpected failure, each with its own message.
+- Retries with exponential backoff only on transient failures; never on 4xx
+  errors or an expired session.
+- Timeouts set to 15 s for connection, 45 s for reading and 120 s for writing.
+- On a 401 the token is renewed once and the request is retried; if it fails
+  again, the session closes cleanly with a notice.
+- Image uploads stream from the URI in blocks instead of loading the whole file
+  into memory.
 
-**Firma y distribución**
-- Se eliminó `debug-signing.p12` del repositorio. El build de release usa una
-  clave nueva guardada como secreto de GitHub, y los tags publican ese APK en
-  lugar del build de debug.
-- `versionCode` y `versionName` se derivan de propiedades de Gradle; CI usa el
-  número de ejecución y el tag.
-- El pipeline se separó en `verify` (lint + tests en cada PR) y `package`
-  (APKs firmados en `main` y tags).
+**Screen states**
 
-**Dispositivo**
-- Se agregó el permiso `ACCESS_NETWORK_STATE`, que `Connectivity` ya leía.
-- Los tokens de sesión viven en un archivo de preferencias separado, excluido
-  de los backups en la nube y de la transferencia entre dispositivos.
-- `Gradle` ya no recurre a la clave de debug para firmar release.
+- A sealed loading state (loading, content, empty, error) replaces loose
+  booleans.
+- Every screen shows the four states: a light skeleton, content, an empty state
+  with useful text and an error with a Retry button.
+- New strings for those states.
 
-### Fase 3 — Robustez
+**Offline and cache**
 
-**Errores y red**
-- Errores de red tipados (`DannXError`): sin conexión, servidor caído, sesión
-  vencida o fallo inesperado, cada uno con su mensaje en español.
-- Reintentos con espera exponencial (400 ms, 800 ms, 1600 ms) solo en fallos
-  transitorios; nunca en errores 4xx ni en sesión vencida.
-- Timeouts ajustados: 15 s de conexión, 45 s de lectura, 120 s de escritura.
-- Ante un 401 se renueva el token una sola vez y se reintenta la petición; si
-  vuelve a fallar, la sesión se cierra limpiamente con aviso.
-- Subida de imágenes en streaming: la imagen se lee del URI en bloques y ya no
-  se cargan hasta 25 MB en memoria.
+- The last feed and collections are stored on disk.
+- Without a network the saved content is shown with a discreet “Offline”
+  notice.
+- Download, apply and share are disabled offline; favourites and local
+  collections keep working.
+- Coming back to the app refreshes once and only when there is a network.
 
-**Estados de pantalla**
-- `LoadState` sellado (cargando, contenido, vacío, error) reemplaza a los
-  booleanos sueltos de carga y error.
-- Cada pantalla muestra los cuatro estados: skeleton liviano sin animación,
-  contenido, vacío con texto útil y error con botón "Reintentar".
-- Textos nuevos en `strings.xml`.
+**Navigation and state**
 
-**Sin conexión y caché**
-- El último feed y las colecciones se guardan en disco (JSON en `cacheDir`).
-- Sin red se muestra lo guardado con un aviso discreto "Sin conexión".
-- Descargar, aplicar y compartir se desactivan sin red; favoritos y
-  colecciones locales siguen funcionando.
-- Al volver a la app se refresca una sola vez y solo si hay red.
+- Single-top navigation on the detail and collection screens: double taps no
+  longer stack screens.
+- Filters, search and the selected image survive rotation and the system killing
+  the app.
+- Concurrent refreshes are cancelled: requests and states do not stack.
 
-**Navegación y estado**
-- `launchSingleTop` en el detalle y en las colecciones: ya no se apilan
-  pantallas con doble toque.
-- Filtros, búsqueda y la imagen seleccionada en Estudio se guardan con
-  `SavedStateHandle`: sobreviven a la rotación y a que el sistema mate la app.
-- El refresh concurrente se cancela: no se apilan requests ni estados.
+**Tests**
 
-**Pruebas**
-- El ViewModel ya no depende de Android: se prueba en la JVM con fakes.
-- Tests nuevos: refresh cancelado, error transitorio con reintento, 401 con
-  refresh, caché offline, descarga y duplicados, y el `RetryPolicy`.
+- The ViewModel no longer depends on Android and is tested on the JVM with
+  fakes.
+- New tests: cancelled refresh, transient error with retry, 401 with refresh,
+  offline cache, download and duplicates, and the retry policy.
 
-### Fase 4 (adelantada) — Rendimiento
+### Performance
 
-- El estado de las acciones (descargar, aplicar, compartir) vive en su propio
-  `StateFlow`: el progreso ya no recompone toda la app.
-- Modelos y `UiState` marcados como inmutables.
-- El carrusel del hero lee su estado solo en la fase de dibujo.
-- Requests de imagen memorizadas; hero y portadas con tamaño explícito.
-- Gradientes memorizados, recorte redundante eliminado y barra inferior sin
-  animación en el cambio de pestaña.
-- Perfil de base con `profileinstaller` y reglas manuales.
-- Overlay de FPS: una actualización por segundo.
-- Reportes del compilador de Compose publicados en cada CI (artifact
-  `compose-reports`): con ellos se confirmó que `MainViewModel` era inestable y
-  eso invalidaba el skip de la app entera.
-- `MainViewModel` marcado como estable y precarga de miniaturas una sola vez
-  por carga del feed (no se relanza al volver a la pestaña).
-- RGB_565 para miniaturas queda como opción documentada, apagada por defecto:
-  ahorra memoria y decode, pero mete bandas en degradados.
+- Action state (download, apply, share) lives in its own flow: progress no
+  longer recomposes the whole app.
+- Models and UI state are marked immutable.
+- The hero carousel reads its state only in the draw phase.
+- Image requests are remembered; hero and covers use explicit sizes.
+- Gradients are remembered, redundant clipping removed and the bottom bar no
+  longer animates on tab changes.
+- Base profile with the profile installer and manual rules.
+- FPS overlay: one update per second.
+- Compose compiler reports are published on every CI run; they showed that the
+  main ViewModel was unstable and invalidated the whole app.
+- The main ViewModel is marked stable and thumbnails are prefetched once per
+  feed load.
+- RGB_565 for thumbnails stays as a documented option, off by default: it saves
+  memory and decoding but adds banding to gradients.
 
-### Fase 2 — Funciones centrales
+### Core features
 
-**Aplicar fondo**
-- Menú (bottom sheet) con "Pantalla de inicio", "Pantalla de bloqueo" y "Ambas"
-  (`FLAG_SYSTEM`, `FLAG_LOCK` y la combinación).
-- Se corrige el OOM: el bitmap ya no se decodifica entero. Se mide la imagen,
-  se calcula `inSampleSize` y se decodifica solo la región necesaria.
-- Recorte center-crop a la proporción de la pantalla: la imagen se escala al
-  tamaño exacto, sin estirar ni bandas.
-- Todo en `Dispatchers.IO`, con progreso, botón cancelar y mensajes claros.
+**Apply wallpaper**
 
-**Descarga**
-- Streaming directo a la fila de MediaStore: la imagen nunca se carga entera en
-  memoria.
-- Progreso visible con porcentaje y cancelación que borra la fila pendiente.
-- Nombre único (`dannx-<id>-<timestamp>.<ext>`) y extensión real detectada por
-  la firma de bytes del archivo, no solo por el `Content-Type`.
-- Detección de duplicados: si el archivo sigue en el teléfono, se ofrece abrir
-  la copia existente o descargarla de nuevo.
-- Snackbar final con acción "Abrir" (abre la imagen con la app de galería).
+- Bottom sheet with Home screen, Lock screen and Both.
+- Fixed the out-of-memory crash: the bitmap is measured, a sample size is
+  calculated and only the needed region is decoded.
+- Center crop to the screen ratio: the image is scaled to the exact size,
+  without stretching or bands.
+- Everything on a background thread, with progress, a cancel button and clear
+  messages.
+
+**Download**
+
+- Streamed straight into the gallery: the image is never fully loaded into
+  memory.
+- Visible progress with a percentage and a cancel action that removes the
+  pending row.
+- Unique name and real extension detected from the file signature, not only from
+  the content type.
+- Duplicate detection: if the file is still on the phone, the existing copy can
+  be opened or downloaded again.
+- Final snackbar with an Open action.
 
 **Zoom**
-- Pellizco, arrastre y doble toque (1x ↔ 2.5x) con animación.
-- Escala entre 1x y 5x, con límites de arrastre según el tamaño escalado para
-  no perder la imagen de vista.
-- Zoom y desplazamiento se guardan con `rememberSaveable`: sobreviven a la
-  rotación.
 
-**Compartir**
-- `FileProvider` declarado en el manifest con `res/xml/file_paths.xml`.
-- Se comparte la imagen desde `cache/shared` con `ClipData` y permiso temporal
-  de lectura.
-- Compartir ya no deja copia en la galería.
-- Se limpian los archivos viejos de `cache/shared` (8 máximo o 6 h).
+- Pinch, drag and double tap (1x ↔ 2.5x) with animation.
+- Scale between 1x and 5x, with drag limits based on the scaled size.
+- Zoom and pan survive rotation.
 
-### Fase 1 — Auditoría
+**Share**
 
-- Revisión completa del proyecto (código, recursos, build, CI y `setup.sql`).
-- Informe de riesgos priorizado (crítico / importante / menor) con los puntos
-  abiertos: firma de release, roles de administrador en Supabase, caché offline
-  del feed, thumbnails en el backend, strings sin extraer y zoom/rotación.
+- The image is shared from the cache with a temporary read permission.
+- Sharing no longer leaves a copy in the gallery.
+- Old shared files are cleaned up.
 
-### Rendimiento y pulido previos
+### Audit
 
-- Grillas uniformes de 2 columnas en 9:16 (antes `LazyVerticalStaggeredGrid`,
-  más cara de medir) en Explorar, Favoritos y detalle de colección.
-- Pipeline de miniaturas determinista: `.size(540, 960)` en cards y prefetch,
-  prefetch limitado a 12 con prioridad baja y arranque diferido 300 ms.
-- `bitmapFactoryMaxParallelism(2)`, crossfade corto solo en hero.
-- Ícono adaptativo nuevo con capa monocroma, splash screen y accesos directos.
-- Firma de debug estable (`debug-signing.p12`) para que las actualizaciones
-  instalen encima sin desinstalar. Reemplazada en la Fase 1 por una clave de
-  release guardada fuera del repositorio.
-- README profesional y textos de desarrollo fuera de la app.
+- Full review of the project: code, resources, build, CI and the server setup.
+- Prioritised risk report (critical, important, minor) with the open points at
+  the time.
 
-### Verificación
+### Earlier performance work
 
-- CI: build de debug y release (R8 con `minify` + `shrinkResources`) y tests
-  unitarios en cada push a `main`.
-- Tests nuevos: geometría de recorte y muestreo (`WallpaperGeometryTest`),
-  límites de zoom (`ZoomGeometryTest`).
+- Uniform 2-column 9:16 grids (instead of a staggered grid) in Explore,
+  Favourites and collection detail.
+- Deterministic thumbnail pipeline: fixed size in cards and prefetch, prefetch
+  limited to 12 with low priority and a short delayed start.
+- Limited decoding parallelism and a short crossfade only on the hero.
+- New adaptive icon with a monochrome layer, splash screen and shortcuts.
+- Stable debug signing so updates install on top without uninstalling.
+- Professional README and development texts moved out of the app.
 
-## Pendiente
+### Verification
 
-- Capturas de 1.5.0 para `docs/screenshots/` (explorar, detalle, colecciones y
-  favoritos).
-- Probar en un dispositivo el desenfoque progresivo, el cambio de idioma, el
-  modo avión, el proceso muerto, la papelera y la actualización sobre la versión
-  publicada.
-- Revisar la rama `feat/1.5.0` y, cuando esté aprobada, abrir el PR y publicar
-  el tag `v1.5.0`.
-
-## Estado actual
-
-- La actualización 1.5.0 está en la rama `feat/1.5.0`: traducción al inglés,
-  desenfoque progresivo, documentación de comunidad, CodeQL, dependency review,
-  validación del wrapper, checksums, pantalla Acerca de, operaciones en lote
-  atómicas y papelera con purga automática.
-- La compilación y los tests se validan en GitHub Actions; en el teléfono no hay
-  JDK ni Android SDK para correr Gradle.
-- Tests unitarios nuevos: `EditorBlurTest`, `FeedCacheTest` y
-  `StringResolverTest`; `MainViewModelTest` suma los casos de papelera y lotes.
-- El APK de release se firma en CI; el keystore no está en el repositorio.
+- CI builds debug and release (R8 with minify and resource shrinking) and runs
+  unit tests on every push to `main`.
+- New tests for crop geometry and sampling, and for zoom limits.
