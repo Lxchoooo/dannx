@@ -13,7 +13,15 @@ están probados y cuando hay tiempo para mantenerlos.
 - **Planeado**: aceptado, pero sin empezar.
 - **Explorando**: necesita una decisión de diseño primero.
 
-## 1.6.0 (en preparación)
+## 1.7.0 (en preparación)
+
+- [x] **Filtros por etiquetas en Inicio**, con una sola escritura para las
+      etiquetas escritas en mayúsculas o minúsculas y una selección que se
+      conserva al navegar.
+- [x] Estabilidad y mantenimiento en el servidor y en la app.
+- [ ] Tag y publicación de `v1.7.0`.
+
+## 1.6.0
 
 - [x] **Actualizador dentro de la app** que consulta la última release,
       descarga el APK y abre el instalador.
@@ -21,8 +29,6 @@ están probados y cuando hay tiempo para mantenerlos.
       filtros en el servidor, y caché offline de 400 fondos.
 - [x] **Sorprendeme** para abrir un fondo aleatorio del filtro actual.
 - [x] **Repaso de accesibilidad**: TalkBack, áreas táctiles y fuentes grandes.
-- [x] **Filtros por etiquetas en Inicio**, con una sola escritura para las
-      etiquetas escritas en mayúsculas o minúsculas.
 - [x] Notas de release en inglés desde `docs/releases/`.
 - [x] CI en verde para la rama de release.
 - [x] Tag y publicación de `v1.6.0`.
@@ -59,7 +65,8 @@ están probados y cuando hay tiempo para mantenerlos.
 - [x] Mapping de R8 publicado como artifact de CI.
 - [ ] Tests instrumentados para aplicar, descargar, favoritos y el editor.
 - [ ] Screenshot tests (Roborazzi o Paparazzi) para detectar cambios visuales.
-- [ ] Chequeos de `actionlint` y `zizmor` para GitHub Actions.
+- [x] `actionlint` para los workflows y `shellcheck` para los scripts.
+- [ ] `zizmor` para GitHub Actions.
 - [x] Notas de release generadas desde un archivo versionado en inglés.
 
 ## Backend y seguridad

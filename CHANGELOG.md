@@ -6,13 +6,16 @@ trabajo (fases de la hoja de ruta) y al publicar cada versión.
 Sobre el Estudio: la pantalla de publicación es de uso privado. El acceso está
 reservado a administradores y no se detalla en la documentación.
 
-## Sin publicar
+## v1.7.0
 
 ### Etiquetas
 
 - Una etiqueta escrita con mayúsculas o minúsculas distintas ahora cuenta como
   la misma: se muestra con una sola escritura y los filtros del inicio la
   encuentran igual.
+- El inicio permite elegir una o varias etiquetas y la selección se conserva al
+  cambiar de pantalla.
+- Las etiquetas con espacios, comas o símbolos funcionan como cualquier otra.
 
 ### Servidor
 

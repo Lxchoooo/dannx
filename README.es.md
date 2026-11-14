@@ -50,8 +50,8 @@ en [`docs/screenshots/`](docs/screenshots/) junto con la próxima versión.
 
 - Fondos destacados, categorías y tags libres.
 - Búsqueda que responde mientras escribís, con búsquedas recientes.
-- Filtrá el feed por color con un toque; tocá el mismo color otra vez para
-  quitarlo.
+- Filtrá el feed por color con un toque, o por una o varias etiquetas; tocá el
+  mismo chip otra vez para quitarlo.
 - Pull-to-refresh y navegación sin conexión por el feed que ya cargaste.
 - Favoritos y colecciones guardados en tu teléfono.
 - **Sorprendeme** abre un fondo aleatorio del filtro actual.

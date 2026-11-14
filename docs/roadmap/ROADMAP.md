@@ -13,7 +13,14 @@ maintain them.
 - **Planned**: accepted, but not started.
 - **Exploring**: needs a design decision first.
 
-## 1.6.0 (in progress)
+## 1.7.0 (in progress)
+
+- [x] **Tag filters on Home**, with a single spelling for tags written in
+      different case and a selection that survives navigation.
+- [x] Stability and maintenance on the server and in the app.
+- [ ] Tag and publish `v1.7.0`.
+
+## 1.6.0
 
 - [x] **In-app updater** that checks the latest release, downloads the APK and
       opens the Android installer.
@@ -22,8 +29,6 @@ maintain them.
 - [x] **Surprise me** button for a random wallpaper from the current filter.
 - [x] **Accessibility pass**: TalkBack labels and states, larger touch targets
       and better large-font behaviour.
-- [x] **Tag filters on Home**, with a single spelling for tags written in
-      different case.
 - [x] Release notes read from an English file under `docs/releases/`.
 - [x] Green CI run for the release branch.
 - [x] Tag and publish `v1.6.0`.
@@ -59,7 +64,8 @@ maintain them.
 - [x] R8 mapping published as a CI artifact.
 - [ ] Instrumented tests for applying, downloading, favourites and the editor.
 - [ ] Screenshot tests (Roborazzi or Paparazzi) to catch visual changes.
-- [ ] `actionlint` and `zizmor` checks for GitHub Actions.
+- [x] `actionlint` checks for workflows and `shellcheck` for scripts.
+- [ ] `zizmor` checks for GitHub Actions.
 - [x] Release notes generated from a versioned English file.
 
 ## Backend and security
