@@ -34,8 +34,8 @@ quedó desactualizada respecto de la realidad.
 - **No se pudo verificar:** compilación y tests en local (este equipo no tiene
   JDK ni Android SDK; el proyecto se compila solo en CI, como ya documenta
   `docs/designs/ci-optimization.md`), el estado en vivo de la base de datos
-  (solo se leyó el SQL del repositorio) y el límite real de escrituras que
-  impone el plan de Supabase.
+  (solo se leyó el SQL del repositorio) y el límite de escrituras que impone el
+  plan de Supabase.
 
 ## Lo que está bien y no hay que tocar
 
@@ -102,7 +102,10 @@ workflow se saltea, o sacar `debug` de los checks requeridos y dejar solo
 `checks`. La primera opción conserva la compuerta real y no obliga a compilar
 para un cambio de texto.
 
-**Nota:** deducido de la configuración, no reproducido con un PR de prueba.
+**Reproducido:** este mismo PR (#40, solo documentación) quedó
+`mergeStateStatus: BLOCKED` con un único check reportado (`Review dependencies`),
+porque `android.yml` no se creó. Se puede mergear únicamente con el bypass de
+Admin.
 
 ### H2 — El keystore de release se descifra en builds de PR
 
