@@ -42,9 +42,6 @@ class RetryPolicy(
 }
 
 /**
- * Un error de red es pasable si se puede reintentar más tarde.
- */
-/**
  * Un error se puede reintentar si la red puede mejorar. Los errores tipados
  * delegan en [isRetryable] para que la decisión viva en un solo lugar.
  */
