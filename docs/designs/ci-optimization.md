@@ -13,9 +13,9 @@ author's phone, and every APK the author distributes comes from a CI run. Build
 time is therefore the author's waiting time.
 
 The repository already went through one optimization round: fast debug build on
-push/PR, full build on tags and `main`, `paths-ignore`, Gradle build cache,
-timeouts, concurrency cancellation, newer action majors, and a single release
-invocation that excludes `lintVitalRelease`. This document records the measured
+push/PR, full build on tags and `main`, `paths-ignore` on `main` pushes, Gradle
+build cache, timeouts, concurrency cancellation, newer action majors, and a
+single release invocation that excludes `lintVitalRelease`. This document records the measured
 state, resolves the Stage 5 review (see
 `reviews/ci-optimization-stage5.md`), and documents the change that followed:
 the full path is split into a parallel correctness gate and a release build,
@@ -353,3 +353,17 @@ APK non-updatable and change release semantics. Rejected under NG7.
     (`checks` 183 s, `build` 174 s); con la caché tibia, `checks` volvió a 117 s
     y el camino completo quedó en ~3 min, dentro de G2.
 *   `download-artifact` pasó a v8 y `setup-java` a v6.2.0, fijados a SHA.
+
+## Actualización: sin `paths-ignore` en pull requests (2026-11-15)
+
+*   El filtro de rutas quedó **solo en `push` a `main` y en tags**. En
+    `pull_request` no se filtra nada: si el workflow no se crea, los checks
+    requeridos por el ruleset (`checks` y `debug`) quedan en "Expected" y el PR
+    no se puede mergear. Un PR de solo documentación quedaba bloqueado hasta que
+    un admin lo mergeaba con bypass.
+*   La decisión se mudó a un job `changes` (~10 s) que consulta los archivos del
+    PR y prende los jobs pesados con `if`. Un job omitido se reporta como éxito
+    y satisface el ruleset; si la detección falla, corre todo el CI, así que la
+    compuerta nunca falla hacia "saltear".
+*   Los builds de PR ya no reciben el keystore de release: el APK de prueba se
+    firma con la clave de depuración.
