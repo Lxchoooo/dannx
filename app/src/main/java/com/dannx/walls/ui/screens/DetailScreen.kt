@@ -38,6 +38,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
@@ -116,6 +117,7 @@ import com.dannx.walls.UiAction
 import com.dannx.walls.data.Wallpaper
 import com.dannx.walls.data.WallpaperCollection
 import com.dannx.walls.ui.components.ApplyWallpaperSheet
+import com.dannx.walls.ui.components.WallpaperCard
 import com.dannx.walls.ui.components.rememberFavoriteBounce
 import com.dannx.walls.ui.components.rememberWallpaperAccent
 import com.dannx.walls.ui.components.wallpaperThumbRequest
@@ -174,6 +176,8 @@ fun DetailScreen(
     onCreateCollection: (String, String, Boolean, Boolean) -> Unit,
     onPrevious: (() -> Unit)? = null,
     onNext: (() -> Unit)? = null,
+    related: List<Wallpaper> = emptyList(),
+    onOpenRelated: (Wallpaper) -> Unit = {},
 ) {
     var zoom by rememberSaveable(wallpaper.id, stateSaver = ZoomStateSaver) {
         mutableStateOf(ZoomState())
@@ -738,6 +742,36 @@ fun DetailScreen(
                     color = Color.White,
                     trackColor = Color.White.copy(alpha = 0.30f),
                 )
+            }
+            val relatedItems = related.filterNot { it.id == wallpaper.id }.take(5)
+            if (relatedItems.isNotEmpty()) {
+                Spacer(Modifier.height(18.dp))
+                Text(
+                    text = stringResource(R.string.detail_related_title),
+                    style = MaterialTheme.typography.titleMedium,
+                    color = Color.White.copy(alpha = 0.92f),
+                    fontWeight = FontWeight.Bold,
+                )
+                Spacer(Modifier.height(10.dp))
+                LazyRow(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    contentPadding = PaddingValues(end = 4.dp),
+                ) {
+                    items(items = relatedItems, key = { it.id }) { item ->
+                        WallpaperCard(
+                            wallpaper = item,
+                            isFavorite = false,
+                            onClick = { onOpenRelated(item) },
+                            onToggleFavorite = {},
+                            modifier = Modifier
+                                .width(116.dp)
+                                .height(174.dp),
+                            showFavorite = false,
+                            compact = true,
+                        )
+                    }
+                }
             }
         }
 

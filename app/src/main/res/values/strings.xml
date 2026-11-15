@@ -175,6 +175,7 @@
     <string name="detail_no_collections">You don\'t have any collections yet. Create one to group your wallpapers.</string>
     <string name="detail_preview">Preview on the lock screen</string>
     <string name="detail_preview_close">Close preview</string>
+    <string name="detail_related_title">You may also like</string>
 
     <!-- Settings -->
     <string name="settings_title">Settings</string>

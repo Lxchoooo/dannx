@@ -175,6 +175,7 @@
     <string name="detail_no_collections">Todavía no tenés colecciones. Creá una para agrupar tus fondos.</string>
     <string name="detail_preview">Vista previa en la pantalla de bloqueo</string>
     <string name="detail_preview_close">Cerrar vista previa</string>
+    <string name="detail_related_title">También te puede gustar</string>
 
     <!-- Ajustes -->
     <string name="settings_title">Ajustes</string>

@@ -143,6 +143,8 @@ fun WallpaperCard(
     onLongClick: (() -> Unit)? = null,
     showFavorite: Boolean = true,
     highlightQuery: String? = null,
+    /** Tamaño reducido para filas horizontales, como la de relacionados. */
+    compact: Boolean = false,
 ) {
     val interactionSource = remember { MutableInteractionSource() }
     val liteMode = LocalLiteMode.current
@@ -237,7 +239,7 @@ fun WallpaperCard(
         Column(
             Modifier
                 .align(Alignment.BottomStart)
-                .padding(12.dp),
+                .padding(if (compact) 8.dp else 12.dp),
         ) {
             Text(
                 text = wallpaper.category.uppercase(Locale.ROOT),
@@ -247,7 +249,11 @@ fun WallpaperCard(
             )
             Text(
                 text = title,
-                style = MaterialTheme.typography.titleMedium,
+                style = if (compact) {
+                    MaterialTheme.typography.titleSmall
+                } else {
+                    MaterialTheme.typography.titleMedium
+                },
                 color = Color.White,
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
