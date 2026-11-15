@@ -62,10 +62,10 @@ android {
     val releaseSigning = signingConfigs.findByName("release")
 
     buildTypes {
-        // En CI, el APK de debug se firma con la misma clave que el release
-        // cuando el keystore está disponible. Así se puede instalar encima de
-        // la versión publicada sin desinstalarla. Sin keystore (por ejemplo,
-        // un PR desde un fork) queda la firma de depuración habitual.
+        // Solo para builds locales con el keystore configurado: firmar el APK
+        // de debug con la clave de release permite instalarlo encima de la
+        // versión publicada. CI no le pasa el keystore a los builds de PR, así
+        // que ahí se usa la firma de depuración habitual.
         if (releaseSigning != null) {
             getByName("debug").signingConfig = releaseSigning
         }
