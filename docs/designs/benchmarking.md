@@ -88,30 +88,66 @@ matters.
 
 ## Generating a real profile
 
-`BaselineProfileGenerator` writes `baseline-prof.txt` to the additional test
-output directory:
+`BaselineProfileGenerator` writes a profile to the additional test output
+directory:
 
 ```
-benchmark/build/outputs/connected_android_test_additional_output/benchmarkAndroidTest/connected/<device>/baseline-prof.txt
+benchmark/build/outputs/connected_android_test_additional_output/benchmark/connected/<device>/
+    BaselineProfileGenerator_generate-startup-prof.txt
 ```
 
-To use it:
+**Do not commit that file as is.** The generator runs against the `benchmark`
+variant, which is minified, so every rule comes out with R8 names
+(`HSPLa02;-><init>()V`). AGP already remaps `src/main/baseline-prof.txt` through
+the R8 mapping when it builds a release APK; a profile that is already obfuscated
+is tied to one exact mapping and goes stale on the next code change.
 
-1.  Run the `benchmark` job (or `:benchmark:connectedBenchmarkAndroidTest`
-    locally) on a physical device when one is available. The emulator profile
-    is better than the handwritten one, but not as good as a real-device run.
-2.  Replace `app/src/main/baseline-prof.txt` with the generated file.
+The correct flow, once the non-minified variant exists:
+
+1.  Generate against a release-like variant **without R8**, so the rules keep
+    readable names.
+2.  Replace `app/src/main/baseline-prof.txt` with that file.
 3.  Re-run `StartupBenchmark` before and after to confirm the change is an
     improvement instead of a regression.
 4.  Commit both the profile and the numbers in this document.
 
+## First measurement (2026-11-15)
+
+Run [`43752802276`](https://github.com/Lxchoooo/dannx/actions/runs/43752802276),
+API 34 emulator (`emu64x`, 2 cores, `swiftshader_indirect`, no window), five
+iterations per test:
+
+| Test | Metric | Median | Min–max |
+| --- | --- | --- | --- |
+| `coldStartup` | `timeToInitialDisplayMs` | 757 ms | 727–769 ms |
+| `warmStartup` | `timeToInitialDisplayMs` | 65 ms | 49–88 ms |
+| `feedScroll` | `frameCount` | 2 frames | 2–2 |
+
+What the run says:
+
+*   Startup is dominated by the cold path: warm is about 11× faster, so the work
+    worth optimising is process start (Application, ViewModel, first composition),
+    not activity recreation.
+*   The scroll number is not usable. A headless emulator with software rendering
+    produced two frames per swipe, so `FrameTimingMetric` never saw a real
+    scroll. That test needs a physical device; on CI it is only a smoke test that
+    the gesture runs.
+*   The report says `compilationMode: run-from-apk`, so the numbers measure the
+    app with no AOT compilation. Treat them as an upper bound, not as what a
+    typical install does.
+
+They are still a useful reference: same emulator, same image, same command, so a
+future revision can be compared against this row.
+
 ## Current state and next steps
 
-*   The module compiles in CI and the benchmarks are wired to a manual dispatch.
-*   No measured profile has been produced yet: `baseline-prof.txt` is still the
-    handwritten list.
-*   The next measurement should compare `CompilationMode.None` against the
-    default mode on the same APK, to isolate how much of startup comes from the
-    profile.
-*   Once there are numbers, the same runs can validate (or reject) the
-    `MainViewModel` split, instead of doing it blind.
+*   The module, the benchmarks and the manual CI job work: run
+    [`43752802276`](https://github.com/Lxchoooo/dannx/actions/runs/43752802276)
+    finished green and produced the first numbers below.
+*   `baseline-prof.txt` is still the handwritten list: the generated one is
+    obfuscated and tied to one R8 mapping.
+*   Next: generate the profile against a **non-minified** release-like variant
+    (`nonMinifiedRelease`), either by hand or with the `androidx.baselineprofile`
+    plugin, so the rules keep readable names and AGP can apply the mapping.
+*   Then compare `CompilationMode.None` against the default mode on the same APK
+    to isolate how much of startup comes from the profile.

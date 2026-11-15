@@ -51,8 +51,11 @@ maintain them.
       on low-end devices.
   - [x] `:benchmark` module with startup and feed-scroll benchmarks, and a
         manual CI job that runs them on an emulator.
-  - [ ] Generate the profile from a real run and replace the handwritten
-        `app/src/main/baseline-prof.txt`.
+  - [x] First measurement: 757 ms median cold startup on the API 34 emulator,
+        kept as the reference row in
+        [`benchmarking.md`](../designs/benchmarking.md).
+  - [ ] Generate the profile against a non-minified variant and replace the
+        handwritten `app/src/main/baseline-prof.txt`.
 
 ## Product
 
