@@ -61,18 +61,23 @@ class WallsApi(
             return@withContext WallpaperPage(
                 items = page,
                 hasMore = offset + page.size < items.size,
+                nextOffset = offset + page.size,
             )
         }
         retryPolicy.run {
             try {
-                val items = getList<WallpaperDto>(feedQuery(filter, limit, offset))
+                val rows = getList<WallpaperDto>(feedQuery(filter, limit, offset))
+                val items = rows
                     .filter { it.storagePath.isNotBlank() }
                     .map { it.toWallpaper(baseUrl) }
                     .filterNot { it.isArchived || it.isDeleted }
                     .distinctBy { it.id }
                 WallpaperPage(
                     items = items.take(limit),
-                    hasMore = items.size > limit,
+                    hasMore = rows.size > limit,
+                    // El offset avanza con las filas que devolvió el servidor,
+                    // no con los fondos que sobreviven al filtro del cliente.
+                    nextOffset = offset + rows.size.coerceAtMost(limit),
                 )
             } catch (error: Throwable) {
                 throw error.toDannXError()

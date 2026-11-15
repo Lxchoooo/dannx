@@ -38,6 +38,8 @@ class FakeRepository : WallpapersRepository {
     var dailyWallpapersOverride: List<Wallpaper>? = null
     var loadCalls: Int = 0
     val pageFilters: MutableList<WallpaperFilter> = mutableListOf()
+    /** Ids que el API entrega y luego descarta (como los fondos sin `storagePath`). */
+    var droppedIds: Set<String> = emptySet()
     var session: AdminSession? = null
     var uploadWarning: String? = null
     var deletedCategory: Triple<String, String?, String?>? = null
@@ -65,10 +67,13 @@ class FakeRepository : WallpapersRepository {
             tag = filter.tag,
             tags = filter.tags,
         )
-        val page = filtered.drop(filter.offset).take(filter.limit)
+        // Igual que el API real: pide una fila de más, cuenta las filas que
+        // devolvió el servidor y recién después descarta lo invisible.
+        val rows = filtered.drop(filter.offset).take(filter.limit + 1)
         return WallpaperPage(
-            items = page,
-            hasMore = filter.offset + page.size < filtered.size,
+            items = rows.take(filter.limit).filterNot { it.id in droppedIds },
+            hasMore = rows.size > filter.limit,
+            nextOffset = filter.offset + rows.size.coerceAtMost(filter.limit),
         )
     }
 

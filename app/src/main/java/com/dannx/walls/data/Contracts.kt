@@ -31,6 +31,12 @@ data class WallpaperFilter(
 data class WallpaperPage(
     val items: List<Wallpaper>,
     val hasMore: Boolean,
+    /**
+     * Offset de la página siguiente, contado en filas del servidor. No coincide
+     * con `items.size`: los fondos que el cliente descarta (sin ruta de
+     * almacenamiento, archivados, en la papelera) igual ocupan su lugar.
+     */
+    val nextOffset: Int,
 )
 
 const val FEED_PAGE_SIZE = 30
