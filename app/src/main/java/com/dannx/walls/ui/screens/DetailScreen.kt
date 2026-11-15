@@ -1,7 +1,9 @@
 package com.dannx.walls.ui.screens
 
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.LocalActivity
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.Animatable
@@ -19,6 +21,7 @@ import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.rememberTransformableState
 import androidx.compose.foundation.gestures.transformable
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -43,10 +46,15 @@ import androidx.compose.material.icons.rounded.BookmarkAdd
 import androidx.compose.material.icons.rounded.ChevronLeft
 import androidx.compose.material.icons.rounded.ChevronRight
 import androidx.compose.material.icons.rounded.Check
+import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.CollectionsBookmark
 import androidx.compose.material.icons.rounded.Download
 import androidx.compose.material.icons.rounded.Favorite
 import androidx.compose.material.icons.rounded.FavoriteBorder
+import androidx.compose.material.icons.rounded.Message
+import androidx.compose.material.icons.rounded.Phone
+import androidx.compose.material.icons.rounded.PhoneAndroid
+import androidx.compose.material.icons.rounded.PhotoCamera
 import androidx.compose.material.icons.rounded.Share
 import androidx.compose.material.icons.rounded.Wallpaper
 import androidx.compose.material3.AlertDialog
@@ -82,16 +90,19 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.platform.LocalLocale
 import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.core.view.WindowCompat
@@ -118,6 +129,9 @@ import com.dannx.walls.util.clampPan
 import com.dannx.walls.util.clampScale
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter
+import java.time.format.FormatStyle
 import java.util.Locale
 
 private val ZoomStateSaver = listSaver<ZoomState, Float>(
@@ -167,6 +181,7 @@ fun DetailScreen(
     var showCollections by rememberSaveable { mutableStateOf(false) }
     var showCreateCollection by rememberSaveable { mutableStateOf(false) }
     var showApplySheet by rememberSaveable { mutableStateOf(false) }
+    var showPreview by rememberSaveable(wallpaper.id) { mutableStateOf(false) }
     val haptics = LocalHapticFeedback.current
     val favoriteScale = rememberFavoriteBounce(isFavorite)
     // El botón principal toma el color de la imagen para sentirse parte de ella.
@@ -194,6 +209,7 @@ fun DetailScreen(
     }
     val activity = LocalActivity.current
     val liteMode = LocalLiteMode.current
+    BackHandler(enabled = showPreview) { showPreview = false }
     var applyPhase by remember { mutableStateOf(ApplyPhase.Idle) }
     var seenApplyTick by remember { mutableIntStateOf(applySuccessTick) }
     LaunchedEffect(applySuccessTick) {
@@ -388,6 +404,21 @@ fun DetailScreen(
                 )
             }
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                FilledIconButton(
+                    onClick = {
+                        haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                        showPreview = true
+                    },
+                    colors = IconButtonDefaults.filledIconButtonColors(
+                        containerColor = Color.Black.copy(alpha = 0.35f),
+                        contentColor = Color.White,
+                    ),
+                ) {
+                    Icon(
+                        Icons.Rounded.PhoneAndroid,
+                        contentDescription = stringResource(R.string.detail_preview),
+                    )
+                }
                 if (canManageCollections) {
                     FilledIconButton(
                         onClick = { showCollections = true },
@@ -709,6 +740,20 @@ fun DetailScreen(
                 )
             }
         }
+
+        AnimatedVisibility(
+            visible = showPreview,
+            enter = if (liteMode) {
+                fadeIn(tween(180))
+            } else {
+                fadeIn(tween(200)) +
+                    scaleIn(tween(240, easing = FastOutSlowInEasing), initialScale = 0.92f)
+            },
+            exit = fadeOut(tween(if (liteMode) 0 else 160)),
+            modifier = Modifier.fillMaxSize(),
+        ) {
+            LockScreenPreview(onDismiss = { showPreview = false })
+        }
     }
 
     if (showApplySheet) {
@@ -986,4 +1031,126 @@ private fun NewCollectionDialog(
             }
         },
     )
+}
+
+/**
+ * Simulación de la pantalla de bloqueo sobre el fondo: hora, fecha y accesos
+ * genéricos. Se cierra tocando en cualquier lado o con la X.
+ */
+@Composable
+private fun LockScreenPreview(
+    onDismiss: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    var now by remember { mutableStateOf(LocalDateTime.now()) }
+    LaunchedEffect(Unit) {
+        while (true) {
+            now = LocalDateTime.now()
+            delay(15_000)
+        }
+    }
+    val locale = LocalLocale.current.platformLocale
+    val time = remember(now.hour, now.minute, locale) {
+        now.format(DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT).withLocale(locale))
+    }
+    val date = remember(now.year, now.monthValue, now.dayOfMonth, locale) {
+        val formatted = now.format(DateTimeFormatter.ofPattern("EEEE, d MMMM", locale))
+        formatted.replaceFirstChar { char ->
+            if (char.isLowerCase()) char.titlecase(locale) else char.toString()
+        }
+    }
+    val dismissInteraction = remember { MutableInteractionSource() }
+    Box(
+        modifier = modifier
+            .fillMaxSize()
+            .background(
+                Brush.verticalGradient(
+                    0f to Color.Black.copy(alpha = 0.45f),
+                    0.3f to Color.Black.copy(alpha = 0.12f),
+                    0.7f to Color.Transparent,
+                    1f to Color.Black.copy(alpha = 0.55f),
+                ),
+            )
+            .clickable(
+                interactionSource = dismissInteraction,
+                indication = null,
+                onClick = onDismiss,
+            ),
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .statusBarsPadding()
+                .navigationBarsPadding()
+                .padding(horizontal = 22.dp, vertical = 12.dp),
+        ) {
+            Box(
+                modifier = Modifier.fillMaxWidth(),
+                contentAlignment = Alignment.CenterEnd,
+            ) {
+                FilledIconButton(
+                    onClick = onDismiss,
+                    modifier = Modifier.size(40.dp),
+                    colors = IconButtonDefaults.filledIconButtonColors(
+                        containerColor = Color.Black.copy(alpha = 0.3f),
+                        contentColor = Color.White,
+                    ),
+                ) {
+                    Icon(
+                        Icons.Rounded.Close,
+                        contentDescription = stringResource(R.string.detail_preview_close),
+                    )
+                }
+            }
+            Spacer(Modifier.weight(0.32f))
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                Text(
+                    text = time,
+                    style = MaterialTheme.typography.displayLarge.copy(
+                        fontSize = 64.sp,
+                        lineHeight = 66.sp,
+                        fontWeight = FontWeight.Light,
+                    ),
+                    color = Color.White,
+                )
+                Spacer(Modifier.height(6.dp))
+                Text(
+                    text = date,
+                    style = MaterialTheme.typography.titleMedium,
+                    color = Color.White.copy(alpha = 0.92f),
+                )
+            }
+            Spacer(Modifier.weight(1f))
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 12.dp),
+                horizontalArrangement = Arrangement.SpaceEvenly,
+            ) {
+                LockShortcut(Icons.Rounded.PhotoCamera)
+                LockShortcut(Icons.Rounded.Phone)
+                LockShortcut(Icons.Rounded.Message)
+            }
+        }
+    }
+}
+
+@Composable
+private fun LockShortcut(icon: ImageVector) {
+    Box(
+        modifier = Modifier
+            .size(54.dp)
+            .background(Color.White.copy(alpha = 0.18f), CircleShape),
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            tint = Color.White,
+            modifier = Modifier.size(24.dp),
+        )
+    }
 }
