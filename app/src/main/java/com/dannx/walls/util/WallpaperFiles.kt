@@ -18,6 +18,7 @@ import android.view.WindowManager
 import androidx.core.content.FileProvider
 import androidx.core.graphics.scale
 import androidx.core.net.toUri
+import com.dannx.walls.BuildConfig
 import com.dannx.walls.R
 import com.dannx.walls.data.Wallpaper
 import com.dannx.walls.data.WallsApi
@@ -121,7 +122,7 @@ class WallpaperFiles(
     ): File = withContext(Dispatchers.IO) {
         val request = Request.Builder()
             .url(wallpaper.imageUrl)
-            .header("User-Agent", "DannX/1.0")
+            .header("User-Agent", "DannX/${BuildConfig.VERSION_NAME}")
             .build()
         client.newCall(request).execute().use { response ->
             val body = response.body
@@ -168,7 +169,7 @@ class WallpaperFiles(
     ): String = withContext(Dispatchers.IO) {
         val request = Request.Builder()
             .url(wallpaper.imageUrl)
-            .header("User-Agent", "DannX/1.0")
+            .header("User-Agent", "DannX/${BuildConfig.VERSION_NAME}")
             .build()
         client.newCall(request).execute().use { response ->
             val body = response.body
