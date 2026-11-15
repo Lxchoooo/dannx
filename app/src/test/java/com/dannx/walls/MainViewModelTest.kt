@@ -215,7 +215,7 @@ class MainViewModelTest {
             advanceUntilIdle()
             model.loadMore()
             advanceUntilIdle()
-            assertEquals(45, model.state.value.wallpapers.size)
+            assertEquals(50, model.state.value.wallpapers.size)
 
             model.toggleTag("noche")
             advanceUntilIdle()
