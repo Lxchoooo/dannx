@@ -1067,6 +1067,54 @@ class MainViewModelTest {
         }
 
     @Test
+    fun `related wallpapers prefer shared tags and leave out the current one`() =
+        runTest(dispatcher) {
+            val current = wallpaper("current").copy(tags = listOf("noche", "ciudad"))
+            val tagMatch = wallpaper("tag").copy(category = "Otros", tags = listOf("NOCHE"))
+            val categoryMatch = wallpaper("category")
+            val unrelated = wallpaper("unrelated")
+                .copy(category = "Animales", tags = listOf("perro"))
+            cache.writeWallpapers(listOf(current, tagMatch, categoryMatch, unrelated))
+            val model = viewModel(online = false)
+            advanceUntilIdle()
+
+            model.loadWallpaperDetail(current.id)
+            advanceUntilIdle()
+            model.loadRelatedWallpapers(current)
+            advanceUntilIdle()
+
+            val related = model.state.value.detailRelated
+            assertEquals(listOf("tag", "category"), related.map { it.id })
+        }
+
+    @Test
+    fun `related wallpapers cap at five and stay empty when nothing matches`() =
+        runTest(dispatcher) {
+            val current = wallpaper("current")
+            val related = (1..8).map { wallpaper("r$it") }
+            cache.writeWallpapers(listOf(current) + related)
+            val model = viewModel(online = false)
+            advanceUntilIdle()
+
+            model.loadWallpaperDetail(current.id)
+            advanceUntilIdle()
+            model.loadRelatedWallpapers(current)
+            advanceUntilIdle()
+
+            assertEquals(5, model.state.value.detailRelated.size)
+            assertTrue(model.state.value.detailRelated.none { it.id == current.id })
+
+            val alone = wallpaper("alone").copy(category = "Sola")
+            cache.writeWallpapers(listOf(alone))
+            model.loadWallpaperDetail(alone.id, force = true)
+            advanceUntilIdle()
+            model.loadRelatedWallpapers(alone)
+            advanceUntilIdle()
+
+            assertTrue(model.state.value.detailRelated.isEmpty())
+        }
+
+    @Test
     fun `collection detail resolves the collection and its wallpapers by id`() =
         runTest(dispatcher) {
             repository.wallpapers = listOf(wallpaper("1"), wallpaper("2"))

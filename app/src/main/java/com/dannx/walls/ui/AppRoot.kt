@@ -688,6 +688,9 @@ private fun MainApp(
                 when (detail) {
                     is LoadState.Content -> {
                         val wallpaper = detail.data
+                        LaunchedEffect(wallpaper.id) {
+                            viewModel.loadRelatedWallpapers(wallpaper)
+                        }
                         val detailIndex = state.wallpapers.indexOfFirst { it.id == wallpaper.id }
                         val previous = state.wallpapers.getOrNull(detailIndex - 1)
                         val next = state.wallpapers.getOrNull(detailIndex + 1)
@@ -752,6 +755,13 @@ private fun MainApp(
                                         launchSingleTop = true
                                         popUpTo(detailDestinationId) { inclusive = true }
                                     }
+                                }
+                            },
+                            related = state.detailRelated,
+                            onOpenRelated = { target ->
+                                navController.navigate("detail/${target.id}") {
+                                    launchSingleTop = true
+                                    popUpTo(detailDestinationId) { inclusive = true }
                                 }
                             },
                         )

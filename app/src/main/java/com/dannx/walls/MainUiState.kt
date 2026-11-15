@@ -103,6 +103,8 @@ data class UiState(
     val collectionItems: List<WallpaperCollection> = emptyList(),
     val detailWallpaperId: String? = null,
     val detailWallpaper: LoadState<Wallpaper>? = null,
+    /** Fondos parecidos al del detalle, ya ordenados y sin el actual. */
+    val detailRelated: List<Wallpaper> = emptyList(),
     val detailCollectionId: String? = null,
     val detailCollection: LoadState<CollectionDetailData>? = null,
     val query: String = "",

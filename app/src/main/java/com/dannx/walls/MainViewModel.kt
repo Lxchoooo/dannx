@@ -117,6 +117,7 @@ class MainViewModel(
     private var feedOffset = 0
     private var detailJob: Job? = null
     private var detailToken = 0
+    private var relatedJob: Job? = null
     private var collectionDetailJob: Job? = null
     private var collectionDetailToken = 0
     private var studioJob: Job? = null
@@ -580,6 +581,9 @@ class MainViewModel(
             return
         }
         val current = _state.value
+        if (current.detailWallpaperId != wallpaperId && current.detailRelated.isNotEmpty()) {
+            _state.update { it.copy(detailRelated = emptyList()) }
+        }
         if (!force) {
             if (current.detailWallpaperId == wallpaperId &&
                 current.detailWallpaper is LoadState.Content
@@ -670,7 +674,122 @@ class MainViewModel(
     fun clearWallpaperDetail() {
         detailToken += 1
         detailJob?.cancel()
-        _state.update { it.copy(detailWallpaperId = null, detailWallpaper = null) }
+        relatedJob?.cancel()
+        _state.update {
+            it.copy(
+                detailWallpaperId = null,
+                detailWallpaper = null,
+                detailRelated = emptyList(),
+            )
+        }
+    }
+
+    /**
+     * Arma la fila de fondos parecidos al que se está viendo. Primero usa lo
+     * que ya está en memoria y en la caché; si no alcanza, pregunta al
+     * servidor por la misma categoría o por las mismas etiquetas. Nunca incluye
+     * al fondo actual y deja como máximo [RELATED_LIMIT] elementos.
+     */
+    fun loadRelatedWallpapers(current: Wallpaper) {
+        relatedJob?.cancel()
+        val local = relatedWallpapers(current, relatedCandidates())
+        _state.update { it.copy(detailRelated = local) }
+        if (local.size >= RELATED_LIMIT) return
+
+        relatedJob = viewModelScope.launch {
+            val cached = try {
+                cache.readWallpapers()
+            } catch (error: CancellationException) {
+                throw error
+            } catch (_: Exception) {
+                emptyList()
+            }
+            if (_state.value.detailWallpaperId != current.id) return@launch
+            val withCache = relatedWallpapers(current, relatedCandidates() + cached)
+            if (withCache != _state.value.detailRelated) {
+                _state.update { it.copy(detailRelated = withCache) }
+            }
+            if (withCache.size >= RELATED_LIMIT || !isOnline() || !api.isConfigured) {
+                return@launch
+            }
+            val remote = relatedFromServer(current)
+            if (_state.value.detailWallpaperId != current.id) return@launch
+            val ranked = relatedWallpapers(current, relatedCandidates() + cached + remote)
+            _state.update { it.copy(detailRelated = ranked) }
+        }
+    }
+
+    /**
+     * Ordena candidatos por parecido: cada etiqueta compartida pesa más que
+     * compartir la categoría, porque describe mejor el contenido.
+     */
+    internal fun relatedWallpapers(
+        current: Wallpaper,
+        candidates: List<Wallpaper>,
+        limit: Int = RELATED_LIMIT,
+    ): List<Wallpaper> {
+        val currentTags = allTags(current.tags)
+            .map { it.lowercase(Locale.ROOT) }
+            .toSet()
+        val category = current.category.trim()
+        return candidates.asSequence()
+            .filter { it.id != current.id && !it.isDeleted && !it.isArchived }
+            .distinctBy { it.id }
+            .map { candidate ->
+                val shared = if (currentTags.isEmpty()) {
+                    0
+                } else {
+                    allTags(candidate.tags).count {
+                        it.lowercase(Locale.ROOT) in currentTags
+                    }
+                }
+                val sameCategory = category.isNotEmpty() &&
+                    candidate.category.trim().equals(category, ignoreCase = true)
+                candidate to (shared * 2 + if (sameCategory) 1 else 0)
+            }
+            .filter { it.second > 0 }
+            .sortedWith(
+                compareByDescending<Pair<Wallpaper, Int>> { it.second }
+                    .thenByDescending { it.first.createdAt }
+                    .thenBy { it.first.title.lowercase(Locale.ROOT) },
+            )
+            .map { it.first }
+            .take(limit)
+            .toList()
+    }
+
+    private fun relatedCandidates(): List<Wallpaper> {
+        val state = _state.value
+        return buildList {
+            addAll(state.wallpapers)
+            addAll(state.adminWallpapers)
+            state.dailyWallpaper?.let { add(it) }
+        }
+    }
+
+    private suspend fun relatedFromServer(current: Wallpaper): List<Wallpaper> {
+        val collected = mutableListOf<Wallpaper>()
+        suspend fun fetch(filter: WallpaperFilter) {
+            try {
+                collected += api.loadWallpapersPage(filter).items
+            } catch (error: CancellationException) {
+                throw error
+            } catch (_: Exception) {
+                // La sección es opcional: si falla, se queda con lo que ya tenía.
+            }
+        }
+        if (current.tags.isNotEmpty()) {
+            fetch(WallpaperFilter(tags = current.tags))
+        } else if (current.category.isNotBlank()) {
+            fetch(WallpaperFilter(category = current.category))
+        }
+        if (relatedWallpapers(current, collected).size < RELATED_LIMIT &&
+            current.tags.isNotEmpty() &&
+            current.category.isNotBlank()
+        ) {
+            fetch(WallpaperFilter(category = current.category))
+        }
+        return collected
     }
 
     /**
@@ -1166,6 +1285,7 @@ class MainViewModel(
                 downloadPrompt = null,
                 detailWallpaperId = null,
                 detailWallpaper = null,
+                detailRelated = emptyList(),
                 detailCollectionId = null,
                 detailCollection = null,
             )
@@ -3543,6 +3663,8 @@ class MainViewModel(
         private const val SEARCH_DEBOUNCE_MS = 300L
         private const val REFRESH_WINDOW_MS = 5 * 60 * 1000L
         private const val COLOR_BATCH_SIZE = 4
+        /** Fondos que muestra la fila de similares en el Detalle. */
+        private const val RELATED_LIMIT = 5
 
         fun factory(application: Application): ViewModelProvider.Factory = viewModelFactory {
             initializer {
