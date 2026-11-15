@@ -83,7 +83,8 @@ maintain them.
 - [x] Storage policies and cleanup of orphaned images from the trash.
 - [ ] Rate limiting for writes
       ([design and decision](../designs/rate-limiting.md)).
-- [ ] Updated Supabase setup guide in `docs/`.
+- [x] Supabase setup guide updated
+      ([`supabase/README.md`](../supabase/README.md)).
 - [x] Secret scanning, push protection and private vulnerability reporting
       enabled in the GitHub settings.
 - [x] Restrict the allowed GitHub Actions to GitHub-owned and verified
