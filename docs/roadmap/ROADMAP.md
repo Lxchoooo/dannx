@@ -49,6 +49,10 @@ maintain them.
 
 - [ ] **Baseline profile and Macrobenchmark** to improve startup and scrolling
       on low-end devices.
+  - [x] `:benchmark` module with startup and feed-scroll benchmarks, and a
+        manual CI job that runs them on an emulator.
+  - [ ] Generate the profile from a real run and replace the handwritten
+        `app/src/main/baseline-prof.txt`.
 
 ## Product
 

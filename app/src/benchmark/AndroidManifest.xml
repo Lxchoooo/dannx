@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!--
+      Solo en la variante `benchmark`: permite que Macrobenchmark lea trazas
+      detalladas de la app. El APK de release no es profileable.
+    -->
+    <application>
+        <profileable android:shell="true" />
+    </application>
+</manifest>

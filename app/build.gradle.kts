@@ -78,6 +78,15 @@ android {
                 "proguard-rules.pro",
             )
         }
+        // Copia de release para Macrobenchmark: mismo R8 y mismos recursos,
+        // firmada con la clave de depuración para instalarla en un emulador.
+        // No se publica y `app/src/benchmark/AndroidManifest.xml` la marca
+        // como profileable.
+        create("benchmark") {
+            initWith(getByName("release"))
+            signingConfig = signingConfigs.getByName("debug")
+            matchingFallbacks += listOf("release")
+        }
     }
 
     compileOptions {

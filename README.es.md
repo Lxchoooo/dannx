@@ -113,6 +113,10 @@ Al participar aceptás el
 ./gradlew assembleDebug
 ```
 
+El arranque y el scroll se miden con Macrobenchmark; el módulo `:benchmark` y
+cómo correrlo están en
+[`docs/designs/benchmarking.md`](docs/designs/benchmarking.md).
+
 ## 🔐 Privacidad
 
 DannX no incluye anuncios, analítica ni SDKs de seguimiento. Tus favoritos,
