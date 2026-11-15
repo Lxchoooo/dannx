@@ -13,9 +13,10 @@ import org.junit.runner.RunWith
  * feed, que es el camino crítico.
  *
  * El archivo queda en la salida adicional de los tests instrumentados
- * (`benchmark/build/outputs/connected_android_test_additional_output/...`) y
- * reemplaza a mano a `app/src/main/baseline-prof.txt`, que hoy está escrito sin
- * medir.
+ * (`benchmark/build/outputs/connected_android_test_additional_output/...`).
+ * Ojo: la variante `benchmark` está minificada, así que los nombres salen
+ * ofuscados y solo valen para ese mapping exacto. Para versionar el perfil hay
+ * que generarlo contra una variante sin R8.
  */
 @LargeTest
 @RunWith(AndroidJUnit4::class)
