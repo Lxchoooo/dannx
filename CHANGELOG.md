@@ -11,6 +11,13 @@ the repository history.
 - Maintenance and stability improvements.
 - Repository checks now cover the workflows and the scripts.
 
+### Documentation
+
+- The roadmap, the security notes and the screenshots guide describe the current
+  state of the repository again.
+- Pull requests that only touch documentation no longer get stuck waiting for
+  the required checks.
+
 ## v1.7.0
 
 ### Tags

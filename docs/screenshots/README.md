@@ -22,9 +22,9 @@ How to take them:
    export as PNG.
 4. Name the files exactly as in the table and drop them in this folder.
 
-The 1.5.0 set should use the same theme (light or dark) and the same device for
-all four shots. Until the files exist, the main README does not show images
-instead of showing broken links.
+All four shots should use the same theme (light or dark) and the same device.
+Until the files exist, the main README does not show images instead of showing
+broken links.
 
 <a id="español"></a>
 ## Español
@@ -46,6 +46,6 @@ Cómo sacarlas:
    exportalas en PNG.
 4. Poneles los nombres exactos de la tabla y dejalas en esta carpeta.
 
-El set de 1.5.0 debería usar el mismo tema (claro u oscuro) y el mismo
-dispositivo en las cuatro capturas. Mientras los archivos no existan, el README
-principal no muestra imágenes en vez de mostrar enlaces rotos.
+Las cuatro capturas deberían usar el mismo tema (claro u oscuro) y el mismo
+dispositivo. Mientras los archivos no existan, el README principal no muestra
+imágenes en vez de mostrar enlaces rotos.

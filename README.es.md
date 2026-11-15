@@ -28,8 +28,9 @@ que podés probarla apenas la instalás.
   <img src="docs/screenshots/demo-placeholder.svg" alt="Demo de DannX" width="720">
 </p>
 
-El GIF de demo está en camino. Las capturas del build actual se van a publicar
-en [`docs/screenshots/`](docs/screenshots/) junto con la próxima versión.
+El GIF de demo y las capturas todavía están pendientes. Mientras no existan, el
+README muestra un placeholder en vez de enlaces rotos; la tabla de capturas vive
+en [`docs/screenshots/`](docs/screenshots/).
 
 ## ✨ Características
 
