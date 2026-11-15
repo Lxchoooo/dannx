@@ -182,6 +182,53 @@ class MainViewModelTest {
         }
 
     @Test
+    fun `load more advances the offset by the rows the server returned`() =
+        runTest(dispatcher) {
+            repository.wallpapers = (1..60).map { wallpaper("$it") }
+            // El API entrega la fila y el cliente la descarta (sin storagePath,
+            // archivada o en la papelera): la fila igual se consumió.
+            repository.droppedIds = setOf("30")
+            val model = viewModel()
+            advanceUntilIdle()
+
+            assertEquals(29, model.state.value.wallpapers.size)
+
+            model.loadMore()
+            advanceUntilIdle()
+
+            val state = model.state.value
+            assertEquals(30, repository.pageFilters.last().offset)
+            assertEquals(
+                (1..60).map { "$it" }.filterNot { it == "30" },
+                state.wallpapers.map { it.id },
+            )
+            assertFalse(state.hasMore)
+        }
+
+    @Test
+    fun `changing the tag selection starts the feed from the first page again`() =
+        runTest(dispatcher) {
+            repository.wallpapers =
+                (1..45).map { wallpaper("$it").copy(tags = listOf("dia")) } +
+                    (46..50).map { wallpaper("$it").copy(tags = listOf("noche")) }
+            val model = viewModel()
+            advanceUntilIdle()
+            model.loadMore()
+            advanceUntilIdle()
+            assertEquals(50, model.state.value.wallpapers.size)
+
+            model.toggleTag("noche")
+            advanceUntilIdle()
+
+            assertEquals(0, repository.pageFilters.last().offset)
+            assertEquals(listOf("noche"), repository.pageFilters.last().tags)
+            assertEquals(
+                (46..50).map { "$it" },
+                model.state.value.wallpapers.map { it.id },
+            )
+        }
+
+    @Test
     fun `load more keeps the current feed when the request fails`() = runTest(dispatcher) {
         repository.wallpapers = (1..45).map { wallpaper("$it") }
         val model = viewModel()

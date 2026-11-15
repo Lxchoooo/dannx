@@ -109,6 +109,12 @@ class MainViewModel(
     /** null = se intentó y no se pudo resolver; evita reintentos infinitos. */
     private val colorCache = colorCacheStore.read().toMutableMap()
     private var lastFeedRefreshAt: Long? = null
+    /**
+     * Filas del servidor ya consumidas por el feed actual. Se reinicia con cada
+     * primera página y avanza con [WallpaperPage.nextOffset]; usar el tamaño de
+     * la lista visible corría el offset cuando el cliente descartaba fondos.
+     */
+    private var feedOffset = 0
     private var detailJob: Job? = null
     private var detailToken = 0
     private var collectionDetailJob: Job? = null
@@ -235,6 +241,9 @@ class MainViewModel(
     ) {
         refreshJob?.cancel()
         loadMoreJob?.cancel()
+        // La primera página vuelve a empezar: cualquier offset anterior deja de
+        // valer, aunque el pedido falle y quede el feed viejo en pantalla.
+        feedOffset = 0
         refreshJob = viewModelScope.launch {
             val snapshot = _state.value
             val filter = snapshot.feedFilter(offset = 0)
@@ -319,6 +328,7 @@ class MainViewModel(
                 } else {
                     page.hasMore
                 }
+                feedOffset = page.nextOffset
                 _state.update {
                     it.copy(
                         feed = if (items.isEmpty()) LoadState.Empty else LoadState.Content(items),
@@ -504,7 +514,7 @@ class MainViewModel(
         if (snapshot.color != null) return
         if (!snapshot.hasMore || snapshot.loadingMore || snapshot.refreshing) return
         if (refreshJob?.isActive == true) return
-        val filter = snapshot.feedFilter(offset = snapshot.wallpapers.size)
+        val filter = snapshot.feedFilter(offset = feedOffset)
         if (filter.offset <= 0) return
         loadMoreJob?.cancel()
         loadMoreJob = viewModelScope.launch {
@@ -514,7 +524,8 @@ class MainViewModel(
                 val current = _state.value
                 if (current.query != filter.query ||
                     current.category != filter.category ||
-                    current.tag != filter.tag
+                    current.tag != filter.tag ||
+                    current.tags.toList() != filter.tags
                 ) {
                     _state.update { it.copy(loadingMore = false) }
                     return@launch
@@ -522,6 +533,7 @@ class MainViewModel(
                 val trashedIds = current.trashWallpapers.map { it.id }.toSet()
                 val fresh = page.items.filterNot { it.isDeleted || it.id in trashedIds }
                 val merged = (current.wallpapers + fresh).distinctBy { it.id }
+                feedOffset = page.nextOffset
                 _state.update {
                     it.copy(
                         feed = LoadState.Content(merged),

@@ -10,6 +10,8 @@ the repository history.
 
 - Maintenance and stability improvements.
 - Repository checks now cover the workflows and the scripts.
+- The feed no longer skips wallpapers while loading more pages, and changing the
+  tag selection always starts from the first page.
 
 ### Documentation
 
