@@ -78,7 +78,8 @@ maintain them.
 
 - [x] RLS tests that prove anonymous users cannot write.
 - [x] Storage policies and cleanup of orphaned images from the trash.
-- [ ] Rate limiting for writes.
+- [ ] Rate limiting for writes
+      ([design and decision](../designs/rate-limiting.md)).
 - [ ] Updated Supabase setup guide in `docs/`.
 - [x] Secret scanning, push protection and private vulnerability reporting
       enabled in the GitHub settings.

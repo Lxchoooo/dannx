@@ -79,7 +79,8 @@ están probados y cuando hay tiempo para mantenerlos.
 
 - [x] Tests de RLS que demuestren que un usuario anónimo no puede escribir.
 - [x] Políticas de Storage y limpieza de imágenes huérfanas de la papelera.
-- [ ] Rate limiting para escrituras.
+- [ ] Rate limiting para escrituras
+      ([diseño y decisión](../designs/rate-limiting.md)).
 - [ ] Guía actualizada de Supabase en `docs/`.
 - [x] Secret scanning, push protection y reporte privado de vulnerabilidades
       activados en los settings de GitHub.
