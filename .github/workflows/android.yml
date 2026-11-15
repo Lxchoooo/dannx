@@ -38,6 +38,7 @@ jobs:
       pull-requests: read
     outputs:
       code: ${{ steps.scope.outputs.code }}
+      benchmark: ${{ steps.scope.outputs.benchmark }}
     steps:
       - name: Detect changed files
         id: scope
@@ -49,22 +50,31 @@ jobs:
         run: |
           set -uo pipefail
           code=true
+          # Fuera de PR no hay archivos que inspeccionar: se valida todo.
+          benchmark=true
           if [ "$EVENT" = "pull_request" ] && [ -n "$PR" ]; then
             files=$(gh api --paginate \
               "repos/$REPO/pulls/$PR/files?per_page=100" \
               --jq '.[].filename' 2>/dev/null) || files=""
             if [ -n "$files" ]; then
               code=false
+              benchmark=false
               while IFS= read -r file; do
                 case "$file" in
                   *.md|docs/*|LICENSE) ;;
-                  *) code=true; break ;;
+                  *) code=true ;;
+                esac
+                # El módulo de medición solo se compila si el PR lo toca.
+                case "$file" in
+                  benchmark/*|gradle/*|*.gradle.kts|gradle.properties|.github/workflows/*)
+                    benchmark=true ;;
                 esac
               done <<< "$files"
             fi
           fi
           echo "code=$code" >> "$GITHUB_OUTPUT"
-          echo "Toca código: $code"
+          echo "benchmark=$benchmark" >> "$GITHUB_OUTPUT"
+          echo "Toca código: $code. Toca el módulo de medición: $benchmark"
 
   # Modo rápido: APK de prueba en cada PR. En main el job `build` genera el
   # APK release sin publicar ninguna versión.
@@ -144,6 +154,13 @@ jobs:
 
       - name: Lint and unit tests
         run: ./gradlew lintDebug testDebugUnitTest
+
+      # El módulo de medición y la variante `benchmark` de la app solo se
+      # compilan cuando el PR los toca: es un R8 extra que no hace falta en
+      # cada cambio.
+      - name: Assemble benchmark variant
+        if: needs.changes.outputs.benchmark == 'true'
+        run: ./gradlew :benchmark:assembleBenchmark :app:assembleBenchmark
 
       - name: Upload lint report
         if: always()
@@ -246,6 +263,88 @@ jobs:
           path: app/build/reports/androidTests/connected
           if-no-files-found: ignore
           retention-days: 7
+
+  # Macrobenchmark: arranque y fluidez del feed sobre la variante release.
+  # No corre en PRs ni en main: un emulador no da números representativos y
+  # cada corrida cuesta varios minutos de runner. Se dispara a mano desde
+  # Actions ("Run workflow") o con `gh workflow run android.yml`.
+  benchmark:
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+
+      - uses: gradle/actions/wrapper-validation@8da46b539cd8fe6ab27ca75128919a18d757604c # v6.4.1
+
+      - uses: actions/setup-java@77dd5b2ce225ea11469928ac317850245a74ae78 # v6.2.0
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - uses: gradle/actions/setup-gradle@8da46b539cd8fe6ab27ca75128919a18d757604c # v6
+
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' |
+            sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      # API 34 o superior: desde Android 14 la librería puede reiniciar el
+      # estado de compilación entre iteraciones sin reinstalar el APK.
+      - name: AVD cache
+        id: avd-cache
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: |
+            ~/.android/avd/*
+            ~/.android/adb*
+          key: avd-34-default-x86_64
+
+      - name: Create AVD and save snapshot
+        id: avd
+        if: steps.avd-cache.outputs.cache-hit != 'true'
+        uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d # v2
+        with:
+          api-level: 34
+          target: default
+          arch: x86_64
+          force-avd-creation: false
+          disable-animations: true
+          emulator-options: >-
+            -no-window -no-audio -no-boot-anim
+            -gpu swiftshader_indirect -camera-back none -camera-front none
+          script: echo "AVD ready to cache."
+
+      - name: Macrobenchmarks on API 34
+        if: steps.avd-cache.outputs.cache-hit == 'true' || steps.avd.outcome == 'success'
+        uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d # v2
+        with:
+          api-level: 34
+          target: default
+          arch: x86_64
+          force-avd-creation: false
+          disable-animations: true
+          emulator-options: >-
+            -no-snapshot-save -no-window -no-audio -no-boot-anim
+            -gpu swiftshader_indirect -camera-back none -camera-front none
+          script: >-
+            ./gradlew :benchmark:connectedBenchmarkAndroidTest
+            -Pandroid.testInstrumentationRunnerArguments.androidx.benchmark.suppressErrors=EMULATOR,LOW-BATTERY
+
+      - name: Upload benchmark results
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: benchmark-results
+          path: |
+            benchmark/build/outputs/connected_android_test_additional_output
+            benchmark/build/reports/androidTests/connected
+          if-no-files-found: ignore
+          retention-days: 14
 
   # Build release sin lint ni tests: esas compuertas viven en `checks`.
   # lintVitalRelease se excluye porque lintDebug ya es la compuerta completa.

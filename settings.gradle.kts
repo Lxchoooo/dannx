@@ -22,3 +22,5 @@ dependencyResolutionManagement {
 
 rootProject.name = "DannX"
 include(":app")
+// Módulo de medición (Macrobenchmark). No entra en ningún APK publicado.
+include(":benchmark")

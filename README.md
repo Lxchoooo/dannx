@@ -107,6 +107,10 @@ Want to build from source? You need JDK 17 and the Android SDK:
 ./gradlew assembleDebug
 ```
 
+Startup and scrolling are measured with Macrobenchmark; the `:benchmark` module
+and how to run it are described in
+[`docs/designs/benchmarking.md`](docs/designs/benchmarking.md).
+
 ## 🔐 Privacy
 
 DannX does not include ads, analytics or tracking SDKs. Your favourites,

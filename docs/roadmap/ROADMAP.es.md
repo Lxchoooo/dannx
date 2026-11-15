@@ -51,6 +51,10 @@ están probados y cuando hay tiempo para mantenerlos.
 
 - [ ] **Baseline profile y Macrobenchmark** para mejorar el arranque y el scroll
       en equipos de gama baja.
+  - [x] Módulo `:benchmark` con mediciones de arranque y scroll del feed, y un
+        job manual en CI que las corre en un emulador.
+  - [ ] Generar el perfil con una corrida real y reemplazar el
+        `app/src/main/baseline-prof.txt` escrito a mano.
 
 ## Producto
 
