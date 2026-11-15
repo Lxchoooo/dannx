@@ -317,15 +317,15 @@ class WallsApi(
         collectionId: String?,
     ): UploadOutcome = withContext(Dispatchers.IO) {
         ensureConfigured()
-        val token = requireToken()
+        // Falla antes de preparar la imagen si no hay sesión.
+        requireToken()
         val prepared = prepareUploadImage(context, uri, MAX_BYTES)
         val fileName = "${UUID.randomUUID()}.${prepared.extension}"
         try {
-            uploadObject(token, fileName, prepared)
+            uploadObject(fileName, prepared)
             val author = prefs.adminEmail?.substringBefore('@') ?: "DannX"
             val created = try {
                 insertWallpaper(
-                    token = token,
                     wallpaper = NewWallpaper(
                         title = title.trim().ifBlank { "Sin título" }.take(120),
                         category = category.trim().take(40).ifBlank { "Abstracto" },
@@ -343,7 +343,7 @@ class WallsApi(
             } catch (error: Throwable) {
                 // El archivo ya está arriba pero la ficha falló: se borra para
                 // no dejar basura en el almacenamiento.
-                runCatching { deleteObject(token, fileName) }
+                runCatching { deleteObject(fileName) }
                 throw if (error.message.orEmpty().contains("Could not find the table")) {
                     DannXError.Unexpected("Falta crear las tablas del catálogo.")
                 } else {
@@ -352,7 +352,7 @@ class WallsApi(
             }
             val warning = if (collectionId != null) {
                 try {
-                    insertCollectionItem(token, collectionId, created.id)
+                    insertCollectionItem(collectionId, created.id)
                     null
                 } catch (error: CancellationException) {
                     throw error
@@ -648,14 +648,15 @@ class WallsApi(
         uri: Uri,
     ): Wallpaper = withContext(Dispatchers.IO) {
         ensureConfigured()
-        val token = requireToken()
+        // Falla antes de preparar la imagen si no hay sesión.
+        requireToken()
         val prepared = prepareUploadImage(context, uri, MAX_BYTES)
         val fileName = "${UUID.randomUUID()}.${prepared.extension}"
         val oldPath = wallpaper.storagePath.ifBlank {
             wallpaper.imageUrl.substringAfter("/object/public/wallpapers/", "")
         }
         try {
-            uploadObject(token, fileName, prepared)
+            uploadObject(fileName, prepared)
             val body = executeAuthorized(
                 build = { token ->
                     Request.Builder()
@@ -682,11 +683,11 @@ class WallsApi(
             // La imagen anterior solo se borra cuando la ficha ya apunta a la
             // nueva. Si el PATCH no confirmó, la ficha sigue usando la vieja.
             if (oldPath.isNotBlank() && oldPath != fileName) {
-                runCatching { deleteObject(token, oldPath) }
+                runCatching { deleteObject(oldPath) }
             }
             updated
         } catch (error: Throwable) {
-            runCatching { deleteObject(token, fileName) }
+            runCatching { deleteObject(fileName) }
             throw error
         } finally {
             prepared.file.delete()
@@ -739,7 +740,9 @@ class WallsApi(
         var attempt = 0
         while (attempt < IMAGE_DELETE_ATTEMPTS && !deletedImage) {
             try {
-                deleteObject(requireToken(), path)
+                // Falla temprano si la sesión se perdió entre intentos.
+                requireToken()
+                deleteObject(path)
                 deletedImage = true
             } catch (error: CancellationException) {
                 throw error
@@ -1225,7 +1228,7 @@ class WallsApi(
     override suspend fun addToCollection(collectionId: String, wallpaperId: String) {
         if (!isConfigured) return
         withContext(Dispatchers.IO) {
-            insertCollectionItem(requireToken(), collectionId, wallpaperId)
+            insertCollectionItem(collectionId, wallpaperId)
         }
     }
 
@@ -1500,7 +1503,6 @@ class WallsApi(
     }
 
     private suspend fun uploadObject(
-        token: String,
         fileName: String,
         prepared: PreparedImage,
     ) {
@@ -1529,7 +1531,7 @@ class WallsApi(
         }
     }
 
-    private suspend fun deleteObject(token: String, fileName: String) {
+    private suspend fun deleteObject(fileName: String) {
         executeAuthorized(
             build = { token ->
                 Request.Builder()
@@ -1570,7 +1572,7 @@ class WallsApi(
         }
     }
 
-    private suspend fun insertWallpaper(token: String, wallpaper: NewWallpaper): WallpaperDto {
+    private suspend fun insertWallpaper(wallpaper: NewWallpaper): WallpaperDto {
         val body = executeAuthorized(
             build = { token ->
                 Request.Builder()
@@ -1587,7 +1589,6 @@ class WallsApi(
     }
 
     private suspend fun insertCollectionItem(
-        token: String,
         collectionId: String,
         wallpaperId: String,
     ) {
