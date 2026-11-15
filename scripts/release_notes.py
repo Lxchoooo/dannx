@@ -43,7 +43,7 @@ def version_key(path: Path) -> tuple[int, int, int]:
 def changelog_notes(version: str) -> str:
     if not CHANGELOG.exists():
         return ""
-    targets = ["## sin publicar"]
+    targets = ["## unreleased", "## sin publicar"]
     if version:
         targets.insert(0, f"## v{version.lstrip('v')}".lower())
     lines = CHANGELOG.read_text(encoding="utf-8").splitlines()

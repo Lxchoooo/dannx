@@ -1,7 +1,8 @@
 # Security hardening
 
-Status: implemented in the repository; a few GitHub settings still have to be
-enabled by the maintainer.
+Status: implemented in the repository. The GitHub settings below were checked
+against the API on 2026-11-15; only restricting the allowed actions is still
+pending.
 
 ## In the repository
 
@@ -23,19 +24,27 @@ enabled by the maintainer.
 - **No secrets in the repository**: signing material lives in GitHub secrets;
   session tokens are excluded from Android backups.
 
-## GitHub settings to enable
+## GitHub settings
 
 These are repository settings, not files, so they are applied once from the
-GitHub UI or API:
+GitHub UI or API. Verified with the API on 2026-11-15:
 
-- **Secret scanning** and **push protection**.
-- **Private vulnerability reporting** (Security Advisories).
-- **Dependabot alerts** and **Dependabot security updates**.
-- **Actions permissions**: allow only selected actions, require SHA pinning, and
-  set the default `GITHUB_TOKEN` to read-only.
-- **Ruleset for `main`**: require `checks` and `debug`, block force-pushes and
-  deletions. This is already configured.
+- **Secret scanning** and **push protection**: enabled, with no open alerts.
+- **Private vulnerability reporting**: enabled.
+- **Dependabot alerts** and **Dependabot security updates**: enabled, with no
+  open alerts.
+- **SHA pinning**: required for every action; Actions are enabled.
+- **Default `GITHUB_TOKEN`**: read-only, and workflows cannot approve pull
+  requests.
+- **Ruleset for `main`**: requires `checks` and `debug`, blocks force-pushes and
+  deletions, with an `always` bypass for the Admin role.
+
+Still pending:
+
+- **Actions permissions**: allow only selected actions instead of all actions.
 - **Release immutability** for published tags, if available.
+- **Secret scanning validity checks** and **non-provider patterns**: both
+  disabled; worth enabling if the plan supports them.
 
 ## Verification
 

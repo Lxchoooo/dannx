@@ -62,7 +62,9 @@ maintain them.
 ## Quality and CI
 
 - [x] R8 mapping published as a CI artifact.
-- [ ] Instrumented tests for applying, downloading, favourites and the editor.
+- [x] Instrumented tests for applying a wallpaper and for the favourites
+      selection.
+- [ ] Instrumented tests for downloading and for the editor.
 - [ ] Screenshot tests (Roborazzi or Paparazzi) to catch visual changes.
 - [x] `actionlint` checks for workflows and `shellcheck` for scripts.
 - [x] `zizmor` checks for GitHub Actions.
@@ -74,8 +76,9 @@ maintain them.
 - [x] Storage policies and cleanup of orphaned images from the trash.
 - [ ] Rate limiting for writes.
 - [ ] Updated Supabase setup guide in `docs/`.
-- [ ] Secret scanning, push protection and private vulnerability reporting
+- [x] Secret scanning, push protection and private vulnerability reporting
       enabled in the GitHub settings.
+- [ ] Restrict the allowed GitHub Actions to a selected list.
 
 ## Not planned
 

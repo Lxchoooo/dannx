@@ -28,8 +28,9 @@ installing.
   <img src="docs/screenshots/demo-placeholder.svg" alt="DannX demo placeholder" width="720">
 </p>
 
-A short demo GIF is on the way. Screenshots for the current build will be
-published in [`docs/screenshots/`](docs/screenshots/) with the next release.
+A short demo GIF and the screenshots are still pending. Until they exist, the
+README shows a placeholder instead of broken links; the table of shots lives in
+[`docs/screenshots/`](docs/screenshots/).
 
 ## ✨ Features
 
