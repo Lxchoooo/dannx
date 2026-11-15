@@ -253,7 +253,7 @@ jobs:
           emulator-options: >-
             -no-snapshot-save -no-window -no-audio -no-boot-anim
             -gpu swiftshader_indirect -camera-back none -camera-front none
-          script: ./gradlew connectedDebugAndroidTest
+          script: ./gradlew :app:connectedDebugAndroidTest
 
       - name: Upload instrumented report
         if: always()

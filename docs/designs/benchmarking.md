@@ -37,7 +37,12 @@ variant as `profileable`; the release APK is not.
 
 The benchmark module is self-instrumenting (`android.experimental.self-instrumenting`)
 and compiles separately from the app, so it does not add dependencies or code to
-any published APK.
+any published APK. Only its `benchmark` variant is enabled: the others would
+install a debuggable app, which Macrobenchmark refuses to measure.
+
+The app's own instrumented tests run with `./gradlew :app:connectedDebugAndroidTest`
+on purpose. Without the module prefix Gradle runs the task in every module, and
+the benchmark tests would try to measure a debug build.
 
 ## What is measured
 

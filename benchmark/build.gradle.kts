@@ -34,6 +34,14 @@ android {
     experimentalProperties["android.experimental.self-instrumenting"] = true
 }
 
+androidComponents {
+    // Solo la variante `benchmark` tiene sentido: las demás instalarían la
+    // app en modo debug, que Macrobenchmark rechaza.
+    beforeVariants {
+        it.enable = it.buildType == "benchmark"
+    }
+}
+
 kotlin {
     compilerOptions {
         jvmTarget.set(JvmTarget.JVM_17)
