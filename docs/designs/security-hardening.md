@@ -14,6 +14,9 @@ enabled by the maintainer.
 - **SHA pinning**: every action is pinned to a 40-character commit SHA.
 - **Least privilege**: the Android workflow starts with `contents: read`; the
   release job requests only the scopes it uses.
+- **Pull requests never see the signing key**: the release keystore is only
+  restored for `main` and tag builds, so a PR checks out code that cannot read
+  it. Debug APKs from PRs use the standard debug signature.
 - **Release integrity**: every tag and rolling release publishes
   `DannX.apk.sha256` and generates a build provenance attestation.
 - **Private reporting**: `SECURITY.md` points to GitHub Security Advisories.
