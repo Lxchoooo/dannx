@@ -1,7 +1,7 @@
 # Security hardening
 
 Status: implemented in the repository. The GitHub settings below were checked
-against the API on 2026-11-15; only restricting the allowed actions is still
+against the API on 2026-11-15; only the secret scanning extras are still
 pending.
 
 ## In the repository
@@ -34,6 +34,11 @@ GitHub UI or API. Verified with the API on 2026-11-15:
 - **Dependabot alerts** and **Dependabot security updates**: enabled, with no
   open alerts.
 - **SHA pinning**: required for every action; Actions are enabled.
+- **Allowed actions**: only actions owned by GitHub or by a verified creator,
+  plus two explicit patterns for the only third parties in use:
+  `gradle/actions/*@*` and `reactivecircus/android-emulator-runner@*`.
+- **Release immutability**: enabled; a published tag cannot be deleted or have
+  its assets replaced.
 - **Default `GITHUB_TOKEN`**: read-only, and workflows cannot approve pull
   requests.
 - **Ruleset for `main`**: requires `checks` and `debug`, blocks force-pushes and
@@ -41,10 +46,10 @@ GitHub UI or API. Verified with the API on 2026-11-15:
 
 Still pending:
 
-- **Actions permissions**: allow only selected actions instead of all actions.
-- **Release immutability** for published tags, if available.
 - **Secret scanning validity checks** and **non-provider patterns**: both
-  disabled; worth enabling if the plan supports them.
+  disabled. The API accepts the request and returns the repository unchanged,
+  so they look plan-gated rather than misconfigured; retry from the UI when the
+  account has GitHub Secret Protection.
 
 ## Verification
 

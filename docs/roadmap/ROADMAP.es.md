@@ -84,7 +84,8 @@ están probados y cuando hay tiempo para mantenerlos.
 - [ ] Guía actualizada de Supabase en `docs/`.
 - [x] Secret scanning, push protection y reporte privado de vulnerabilidades
       activados en los settings de GitHub.
-- [ ] Limitar las GitHub Actions permitidas a una lista seleccionada.
+- [x] Limitar las GitHub Actions a las de GitHub y creadores verificados, más
+      los dos terceros que se usan.
 
 ## No planeado
 
