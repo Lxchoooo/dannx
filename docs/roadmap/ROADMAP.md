@@ -83,7 +83,8 @@ maintain them.
 - [ ] Updated Supabase setup guide in `docs/`.
 - [x] Secret scanning, push protection and private vulnerability reporting
       enabled in the GitHub settings.
-- [ ] Restrict the allowed GitHub Actions to a selected list.
+- [x] Restrict the allowed GitHub Actions to GitHub-owned and verified
+      creators, plus the two third parties in use.
 
 ## Not planned
 
