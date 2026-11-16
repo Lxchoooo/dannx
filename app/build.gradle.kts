@@ -6,6 +6,7 @@ plugins {
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.kotlin.serialization)
+    alias(libs.plugins.roborazzi)
 }
 
 val localProperties = Properties().apply {
@@ -115,6 +116,21 @@ android {
         reportsDestination = layout.buildDirectory.dir("compose-reports")
     }
 
+    // Screenshot tests con Roborazzi: corren como tests unitarios (Robolectric),
+    // sin emulador. Los dorados se versionan en src/test/screenshots.
+    roborazzi {
+        outputDir.set(file("src/test/screenshots"))
+    }
+
+    testOptions {
+        unitTests {
+            isIncludeAndroidResources = true
+            all {
+                it.systemProperties["robolectric.pixelCopyRenderMode"] = "hardware"
+            }
+        }
+    }
+
     packaging {
         resources.excludes += "/META-INF/{AL2.0,LGPL2.1}"
     }
@@ -150,6 +166,12 @@ dependencies {
 
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)
+    // Screenshot tests en JVM: Robolectric dibuja Compose con Native Graphics.
+    testImplementation(libs.robolectric)
+    testImplementation(libs.roborazzi)
+    testImplementation(libs.roborazzi.compose)
+    testImplementation(platform(libs.compose.bom))
+    testImplementation(libs.compose.ui.test.junit4)
 
     androidTestImplementation(libs.junit)
     // Sin kotlinx-coroutines-test acá: la prueba usa runBlocking de la versión
