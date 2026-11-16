@@ -76,7 +76,7 @@ maintain them.
       attestation verification.
 - [ ] **Widgets and automatic rotation**: wallpaper of the day or change every
       few hours.
-- [ ] **More languages**, starting with Portuguese and French.
+- [x] **More languages**, starting with Portuguese and French.
 
 ## Quality and CI
 

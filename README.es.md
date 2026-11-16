@@ -44,8 +44,8 @@ en [`docs/screenshots/`](docs/screenshots/).
   accesos directos en el launcher.
 - Accesible: etiquetas para TalkBack, objetivos táctiles de 48 dp y texto que
   escala con el sistema.
-- Bienvenida que se muestra una sola vez, interfaz en español e inglés y
-  actualizador dentro de la app.
+- Bienvenida que se muestra una sola vez, interfaz en inglés, español,
+  portugués (Brasil) y francés, y actualizador dentro de la app.
 
 ### 🗂 Explorar y organizar
 

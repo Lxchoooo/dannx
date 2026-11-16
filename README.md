@@ -42,7 +42,8 @@ README shows a placeholder instead of broken links; the table of shots lives in
 - Light and dark themes, dynamic colour on Android 12+, an adaptive icon and
   home-screen shortcuts.
 - Accessible by default: TalkBack labels, 48 dp touch targets and scalable text.
-- One-time welcome flow, Spanish and English UI, and an in-app update check.
+- One-time welcome flow, UI in English, Spanish, Portuguese (Brazil), and
+  French, and an in-app update check.
 
 ### 🗂 Explore and organise
 
