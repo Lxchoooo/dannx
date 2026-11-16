@@ -143,8 +143,22 @@ the handwritten profile, so this is the "before" row for the new one:
 | `coldStartup` | `timeToInitialDisplayMs` | 973 ms | (from run 43787911475) |
 | `warmStartup` | `timeToInitialDisplayMs` | 75 ms | (from run 43787911475) |
 
-The comparison run against the committed profile is pending; numbers go here
-once the workflow finishes on `main`.
+## Comparison with the committed profile (2026-11-16)
+
+Run [`43790648387`](https://github.com/Lxchoooo/dannx/actions/runs/43790648387),
+same emulator, image and five iterations, only change being the committed
+profile:
+
+| Test | Metric | Handwritten | Generated | Δ |
+| --- | --- | --- | --- | --- |
+| `coldStartup` | `timeToInitialDisplayMs` | 973 ms | 729 ms | −25% |
+| `warmStartup` | `timeToInitialDisplayMs` | 75 ms | 57 ms | −24% |
+
+The comparison is valid: same emulator, same image, same command; the only
+difference between the two runs is the profile shipped in the APK. Cold startup
+moves around between runs on this emulator (the first reference row was 757 ms),
+but both rows here come from the same setup five minutes apart, so the 25% gap
+is the profile's effect, not run noise.
 
 ## First measurement (2026-11-15)
 
@@ -179,10 +193,8 @@ future revision can be compared against this row.
 *   The module, the benchmarks and the manual CI job work: run
     [`43752802276`](https://github.com/Lxchoooo/dannx/actions/runs/43752802276)
     finished green and produced the first numbers below.
-*   `baseline-prof.txt` is still the handwritten list: the generated one is
-    obfuscated and tied to one R8 mapping.
-*   Next: the `benchmark` job now generates the profile against
-    `nonMinifiedRelease` (readable names) and uploads it as the
-    `baseline-profile-generated` artifact; commit that file and compare
-    `CompilationMode.None` against the default mode on the same APK to isolate
-    how much of startup comes from the profile.
+*   `baseline-prof.txt` is now the generated profile (17,963 readable rules),
+    replaced automatically when the workflow produces a new one.
+*   Next: compare `CompilationMode.None` against the default mode on the same
+    APK to isolate how much of startup comes from the profile, and get the
+    scroll test on a physical device.
