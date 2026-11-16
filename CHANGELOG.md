@@ -40,6 +40,8 @@ Nothing yet.
 ### Stability
 
 - Maintenance and stability improvements.
+- CI builds and publishes only the signed release APK, so every download
+  installs over the app already on the phone.
 - Backend query guards: statement timeouts for anonymous and authenticated
   roles, plus `pg_stat_statements` measurement of the real catalogue queries.
 - Screenshot tests cover the key screens in the four languages and both

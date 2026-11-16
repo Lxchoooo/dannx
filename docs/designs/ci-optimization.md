@@ -3,6 +3,12 @@
 *   **Author:** Lxchoooo
 *   **Status:** Implemented; goals confirmed by measurement
 *   **Date:** 2026-11-08
+*   **Update 2026-11-16:** the workspace moved to `main`-only pushes without
+    pull requests, so the `debug` APK job and the `pull_request` trigger were
+    removed. The only installable artifact is now the signed release APK from
+    `build`, the same key the published app uses, so a CI build always installs
+    over the version on the phone. The `changes` job was dropped too: with no
+    PRs it always reported "validate everything".
 
 ---
 
