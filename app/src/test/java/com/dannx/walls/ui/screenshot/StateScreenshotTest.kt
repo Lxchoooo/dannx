@@ -64,13 +64,13 @@ abstract class StateScreenshotBase(private val tag: String) : ScreenshotTestBase
         onRetry = {},
     )
 
-    private fun emptyState(dark: Boolean = false) {
+    protected fun emptyState(dark: Boolean = false) {
         capture("empty_state${darkSuffix(dark)}_$tag", darkTheme = dark) {
             sampleEmptyState()
         }
     }
 
-    private fun errorState(dark: Boolean = false) {
+    protected fun errorState(dark: Boolean = false) {
         capture("error_state${darkSuffix(dark)}_$tag", darkTheme = dark) {
             sampleErrorState()
         }
