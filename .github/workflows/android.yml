@@ -155,6 +155,12 @@ jobs:
       - name: Lint and unit tests
         run: ./gradlew lintDebug testDebugUnitTest
 
+      # Los dorados de Roborazzi se versionan en app/src/test/screenshots;
+      # una diferencia visual rompe el PR. Regrabar con el workflow
+      # `Record screenshots` cuando el cambio sea intencional.
+      - name: Verify screenshots
+        run: ./gradlew :app:verifyRoborazziDebug
+
       # El módulo de medición y la variante `benchmark` de la app solo se
       # compilan cuando el PR los toca: es un R8 extra que no hace falta en
       # cada cambio.
