@@ -87,7 +87,9 @@ están probados y cuando hay tiempo para mantenerlos.
 - [x] Tests instrumentados para aplicar un fondo y para la selección de
       favoritos.
 - [ ] Tests instrumentados para descargar y para el editor.
-- [ ] Screenshot tests (Roborazzi o Paparazzi) para detectar cambios visuales.
+- [x] Screenshot tests con Roborazzi: bienvenida, Sobre, señuelo y estados en
+      los 4 idiomas y claro/oscuro; `verifyRoborazziDebug` corre en la CI y los
+      dorados se regeneran con el workflow `Record screenshots`.
 - [x] `actionlint` para los workflows y `shellcheck` para los scripts.
 - [x] `zizmor` para GitHub Actions.
 - [x] Notas de release generadas desde un archivo versionado en inglés.
