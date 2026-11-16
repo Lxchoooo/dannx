@@ -66,8 +66,10 @@ maintain them.
   - [x] First measurement: 757 ms median cold startup on the API 34 emulator,
         kept as the reference row in
         [`benchmarking.md`](../designs/benchmarking.md).
-  - [ ] Generate the profile against a non-minified variant and replace the
-        handwritten `app/src/main/baseline-prof.txt`.
+  - [x] Generate the profile against a non-minified variant and replace the
+        handwritten `app/src/main/baseline-prof.txt`: cold startup went from
+        973 ms to 729 ms on the same emulator
+        ([`benchmarking.md`](../designs/benchmarking.md)).
 
 ## Product
 
