@@ -1,6 +1,6 @@
 # Macrobenchmark and Baseline Profile
 
-*   **Status:** module added; profile not regenerated yet
+*   **Status:** profile generated against `nonMinifiedRelease` and committed
 *   **Date:** 2026-11-15
 
 ---
@@ -120,10 +120,31 @@ com.dannx.walls.benchmark.BaselineProfileGenerator \
 and uploads the readable profile as the `baseline-profile-generated` artifact.
 From there the flow is:
 
-1.  Download the artifact and replace `app/src/main/baseline-prof.txt` with it.
+1.  Download the artifact and replace `app/src/main/baseline-prof.txt` with the
+    `nonMinifiedRelease` copy (the `benchmark` copy is still obfuscated).
 2.  Re-run `StartupBenchmark` before and after to confirm the change is an
     improvement instead of a regression.
 3.  Commit both the profile and the numbers in this document.
+
+## Committed profile (2026-11-16)
+
+The committed `app/src/main/baseline-prof.txt` is the `nonMinifiedRelease`
+output of run
+[`43787911475`](https://github.com/Lxchoooo/dannx/actions/runs/43787911475):
+17,963 rules with readable names (614 of them from `com.dannx.walls`), which
+AGP remaps through the R8 mapping on every release build. The handwritten
+65-line file is gone; regenerating is the workflow, not a manual edit.
+
+Same emulator, same image, five iterations, run 43787911475 — the APK still had
+the handwritten profile, so this is the "before" row for the new one:
+
+| Test | Metric | Median | Min–max |
+| --- | --- | --- | --- |
+| `coldStartup` | `timeToInitialDisplayMs` | 973 ms | (from run 43787911475) |
+| `warmStartup` | `timeToInitialDisplayMs` | 75 ms | (from run 43787911475) |
+
+The comparison run against the committed profile is pending; numbers go here
+once the workflow finishes on `main`.
 
 ## First measurement (2026-11-15)
 
