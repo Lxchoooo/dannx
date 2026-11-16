@@ -6,12 +6,35 @@ the repository history.
 
 ## Unreleased
 
+Nothing yet.
+
+## v1.8.0
+
+### Detail screen
+
+- A preview button shows the wallpaper behind a simulated lock screen with the
+  current time, today's date and a few generic shortcuts. It closes by tapping
+  anywhere, with the close button or with Back, and respects Lite mode.
+- A “You may also like” row lists up to five wallpapers that share tags or a
+  category, never the current one, and is hidden when there is nothing to show.
+- Opening a related wallpaper replaces the current detail entry in the back
+  stack. The row uses cached wallpapers first and asks the server only when it
+  needs more.
+
+### Performance
+
+- New Macrobenchmark module with cold-start and feed-scroll measurements, plus a
+  manual CI job that runs them on an emulator.
+- First reference measurement for cold start on the API 34 emulator.
+
 ### Stability
 
 - Maintenance and stability improvements.
 - Repository checks now cover the workflows and the scripts.
 - The feed no longer skips wallpapers while loading more pages, and changing the
   tag selection always starts from the first page.
+- Download requests send the real app version.
+- Dependencies updated, including Android Gradle Plugin 9.5.1.
 
 ### Documentation
 
