@@ -1,5 +1,6 @@
 package com.dannx.walls.ui.screens
 
+import android.text.format.DateFormat as AndroidDateFormat
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.LocalActivity
 import androidx.compose.animation.AnimatedContent
@@ -52,6 +53,7 @@ import androidx.compose.material.icons.rounded.CollectionsBookmark
 import androidx.compose.material.icons.rounded.Download
 import androidx.compose.material.icons.rounded.Favorite
 import androidx.compose.material.icons.rounded.FavoriteBorder
+import androidx.compose.material.icons.rounded.Lock
 import androidx.compose.material.icons.rounded.Message
 import androidx.compose.material.icons.rounded.Phone
 import androidx.compose.material.icons.rounded.PhoneAndroid
@@ -87,8 +89,10 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -133,7 +137,6 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
-import java.time.format.FormatStyle
 import java.util.Locale
 
 private val ZoomStateSaver = listSaver<ZoomState, Float>(
@@ -387,389 +390,394 @@ fun DetailScreen(
                 ),
         )
 
-        Row(
-            modifier = Modifier
-                .align(Alignment.TopStart)
-                .fillMaxWidth()
-                .statusBarsPadding()
-                .padding(horizontal = 16.dp, vertical = 10.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-        ) {
-            FilledIconButton(
-                onClick = onBack,
-                colors = IconButtonDefaults.filledIconButtonColors(
-                    containerColor = Color.Black.copy(alpha = 0.35f),
-                    contentColor = Color.White,
-                ),
+        // Mientras se simula la pantalla de bloqueo se oculta el contenido del
+        // detalle para que el reloj y los accesos no se superpongan con el
+        // título, las etiquetas, los botones ni la fila de relacionados.
+        if (!showPreview) {
+            Row(
+                modifier = Modifier
+                    .align(Alignment.TopStart)
+                    .fillMaxWidth()
+                    .statusBarsPadding()
+                    .padding(horizontal = 16.dp, vertical = 10.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
             ) {
-                Icon(
-                    Icons.AutoMirrored.Rounded.ArrowBack,
-                    contentDescription = stringResource(R.string.action_back),
-                )
-            }
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 FilledIconButton(
-                    onClick = {
-                        haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                        showPreview = true
-                    },
+                    onClick = onBack,
                     colors = IconButtonDefaults.filledIconButtonColors(
                         containerColor = Color.Black.copy(alpha = 0.35f),
                         contentColor = Color.White,
                     ),
                 ) {
                     Icon(
-                        Icons.Rounded.PhoneAndroid,
-                        contentDescription = stringResource(R.string.detail_preview),
+                        Icons.AutoMirrored.Rounded.ArrowBack,
+                        contentDescription = stringResource(R.string.action_back),
                     )
                 }
-                if (canManageCollections) {
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     FilledIconButton(
-                        onClick = { showCollections = true },
+                        onClick = {
+                            haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                            showPreview = true
+                        },
                         colors = IconButtonDefaults.filledIconButtonColors(
                             containerColor = Color.Black.copy(alpha = 0.35f),
                             contentColor = Color.White,
                         ),
                     ) {
                         Icon(
-                            Icons.Rounded.BookmarkAdd,
-                            contentDescription = stringResource(R.string.detail_save_collection),
+                            Icons.Rounded.PhoneAndroid,
+                            contentDescription = stringResource(R.string.detail_preview),
+                        )
+                    }
+                    if (canManageCollections) {
+                        FilledIconButton(
+                            onClick = { showCollections = true },
+                            colors = IconButtonDefaults.filledIconButtonColors(
+                                containerColor = Color.Black.copy(alpha = 0.35f),
+                                contentColor = Color.White,
+                            ),
+                        ) {
+                            Icon(
+                                Icons.Rounded.BookmarkAdd,
+                                contentDescription = stringResource(R.string.detail_save_collection),
+                            )
+                        }
+                    }
+                    FilledIconButton(
+                        onClick = {
+                            haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                            onToggleFavorite()
+                        },
+                        colors = IconButtonDefaults.filledIconButtonColors(
+                            containerColor = Color.Black.copy(alpha = 0.35f),
+                            contentColor = if (isFavorite) accent else Color.White,
+                        ),
+                    ) {
+                        Icon(
+                            imageVector = if (isFavorite) {
+                                Icons.Rounded.Favorite
+                            } else {
+                                Icons.Rounded.FavoriteBorder
+                            },
+                            contentDescription = if (isFavorite) {
+                                stringResource(R.string.action_remove_favorite)
+                            } else {
+                                stringResource(R.string.action_add_favorite)
+                            },
+                            modifier = Modifier.graphicsLayer {
+                                scaleX = favoriteScale
+                                scaleY = favoriteScale
+                            },
                         )
                     }
                 }
-                FilledIconButton(
-                    onClick = {
-                        haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                        onToggleFavorite()
-                    },
-                    colors = IconButtonDefaults.filledIconButtonColors(
-                        containerColor = Color.Black.copy(alpha = 0.35f),
-                        contentColor = if (isFavorite) accent else Color.White,
-                    ),
-                ) {
-                    Icon(
-                        imageVector = if (isFavorite) {
-                            Icons.Rounded.Favorite
-                        } else {
-                            Icons.Rounded.FavoriteBorder
-                        },
-                        contentDescription = if (isFavorite) {
-                            stringResource(R.string.action_remove_favorite)
-                        } else {
-                            stringResource(R.string.action_add_favorite)
-                        },
-                        modifier = Modifier.graphicsLayer {
-                            scaleX = favoriteScale
-                            scaleY = favoriteScale
-                        },
-                    )
-                }
             }
-        }
 
-        if (zoom.scale <= MinZoom + 0.01f) {
-            onPrevious?.let { previous ->
-                FilledIconButton(
-                    onClick = {
-                        haptics.performHapticFeedback(HapticFeedbackType.LongPress)
-                        previous()
-                    },
-                    modifier = Modifier
-                        .align(Alignment.CenterStart)
-                        .padding(start = 12.dp)
-                        .size(48.dp),
-                    colors = IconButtonDefaults.filledIconButtonColors(
-                        containerColor = Color.Black.copy(alpha = 0.35f),
-                        contentColor = Color.White,
-                    ),
-                ) {
-                    Icon(
-                        Icons.Rounded.ChevronLeft,
-                        contentDescription = stringResource(R.string.detail_previous),
-                    )
+            if (zoom.scale <= MinZoom + 0.01f) {
+                onPrevious?.let { previous ->
+                    FilledIconButton(
+                        onClick = {
+                            haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                            previous()
+                        },
+                        modifier = Modifier
+                            .align(Alignment.CenterStart)
+                            .padding(start = 12.dp)
+                            .size(48.dp),
+                        colors = IconButtonDefaults.filledIconButtonColors(
+                            containerColor = Color.Black.copy(alpha = 0.35f),
+                            contentColor = Color.White,
+                        ),
+                    ) {
+                        Icon(
+                            Icons.Rounded.ChevronLeft,
+                            contentDescription = stringResource(R.string.detail_previous),
+                        )
+                    }
+                }
+                onNext?.let { next ->
+                    FilledIconButton(
+                        onClick = {
+                            haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                            next()
+                        },
+                        modifier = Modifier
+                            .align(Alignment.CenterEnd)
+                            .padding(end = 12.dp)
+                            .size(48.dp),
+                        colors = IconButtonDefaults.filledIconButtonColors(
+                            containerColor = Color.Black.copy(alpha = 0.35f),
+                            contentColor = Color.White,
+                        ),
+                    ) {
+                        Icon(
+                            Icons.Rounded.ChevronRight,
+                            contentDescription = stringResource(R.string.detail_next),
+                        )
+                    }
                 }
             }
-            onNext?.let { next ->
-                FilledIconButton(
-                    onClick = {
-                        haptics.performHapticFeedback(HapticFeedbackType.LongPress)
-                        next()
-                    },
-                    modifier = Modifier
-                        .align(Alignment.CenterEnd)
-                        .padding(end = 12.dp)
-                        .size(48.dp),
-                    colors = IconButtonDefaults.filledIconButtonColors(
-                        containerColor = Color.Black.copy(alpha = 0.35f),
-                        contentColor = Color.White,
-                    ),
-                ) {
-                    Icon(
-                        Icons.Rounded.ChevronRight,
-                        contentDescription = stringResource(R.string.detail_next),
-                    )
-                }
-            }
-        }
 
-        Column(
-            modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .fillMaxWidth()
-                .navigationBarsPadding()
-                .padding(horizontal = 20.dp, vertical = 20.dp),
-        ) {
-            Text(
-                text = wallpaper.category.uppercase(Locale.ROOT),
-                style = MaterialTheme.typography.labelLarge,
-                color = Color.White.copy(alpha = 0.75f),
-                fontWeight = FontWeight.Bold,
-            )
-            Spacer(Modifier.height(6.dp))
-            Text(
-                text = wallpaper.title,
-                style = MaterialTheme.typography.headlineLarge,
-                color = Color.White,
-            )
-            Spacer(Modifier.height(4.dp))
-            Text(
-                text = stringResource(R.string.detail_by_author, wallpaper.author),
-                style = MaterialTheme.typography.bodyMedium,
-                color = Color.White.copy(alpha = 0.72f),
-            )
-            if (wallpaper.tags.isNotEmpty()) {
-                Spacer(Modifier.height(6.dp))
+            Column(
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .fillMaxWidth()
+                    .navigationBarsPadding()
+                    .padding(horizontal = 20.dp, vertical = 20.dp),
+            ) {
                 Text(
-                    text = wallpaper.tags.joinToString("   ") { "#$it" },
-                    style = MaterialTheme.typography.labelLarge,
-                    color = Color.White.copy(alpha = 0.72f),
-                )
-            }
-            Spacer(Modifier.height(20.dp))
-            if (offline) {
-                Text(
-                    text = stringResource(R.string.state_offline_detail),
+                    text = wallpaper.category.uppercase(Locale.ROOT),
                     style = MaterialTheme.typography.labelLarge,
                     color = Color.White.copy(alpha = 0.75f),
-                )
-                Spacer(Modifier.height(10.dp))
-            }
-            val applyContainer by animateColorAsState(
-                targetValue = if (applyPhase == ApplyPhase.Done) {
-                    ApplySuccessGreen
-                } else {
-                    MaterialTheme.colorScheme.secondaryContainer
-                },
-                animationSpec = tween(durationMillis = if (liteMode) 0 else 220),
-                label = "applyButtonColor",
-            )
-            val applyContent = if (applyPhase == ApplyPhase.Done) {
-                Color.White
-            } else {
-                MaterialTheme.colorScheme.onSecondaryContainer
-            }
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(10.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Button(
-                    onClick = {
-                        haptics.performHapticFeedback(HapticFeedbackType.LongPress)
-                        onDownload()
-                    },
-                    modifier = Modifier.weight(1f),
-                    shape = CircleShape,
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = accent,
-                        contentColor = onAccent,
-                    ),
-                    contentPadding = PaddingValues(horizontal = 14.dp, vertical = 14.dp),
-                    enabled = actionState.active == null && !offline,
-                ) {
-                    Icon(Icons.Rounded.Download, contentDescription = null)
-                    Spacer(Modifier.width(8.dp))
-                    Text(
-                        text = if (alreadyDownloaded) {
-                            stringResource(R.string.download_again)
-                        } else {
-                            stringResource(R.string.download_action)
-                        },
-                    )
-                }
-                FilledTonalButton(
-                    onClick = {
-                        haptics.performHapticFeedback(HapticFeedbackType.LongPress)
-                        if (openEditorOnApply) {
-                            onOpenEditor()
-                        } else {
-                            showApplySheet = true
-                        }
-                    },
-                    modifier = Modifier
-                        .weight(1f)
-                        .animateContentSize(
-                            animationSpec = if (liteMode) {
-                                tween(0)
-                            } else {
-                                spring(
-                                    dampingRatio = Spring.DampingRatioNoBouncy,
-                                    stiffness = Spring.StiffnessMedium,
-                                )
-                            },
-                        ),
-                    shape = CircleShape,
-                    colors = ButtonDefaults.filledTonalButtonColors(
-                        containerColor = applyContainer,
-                        contentColor = applyContent,
-                    ),
-                    contentPadding = PaddingValues(horizontal = 14.dp, vertical = 14.dp),
-                    enabled = actionState.active == null && !offline,
-                ) {
-                    AnimatedContent(
-                        targetState = applyPhase,
-                        transitionSpec = {
-                            if (liteMode) {
-                                fadeIn(tween(120)) togetherWith fadeOut(tween(90))
-                            } else {
-                                (
-                                    fadeIn(tween(160)) +
-                                        scaleIn(tween(160), initialScale = 0.9f)
-                                    ) togetherWith fadeOut(tween(100))
-                            }
-                        },
-                        label = "applyPhase",
-                    ) { phase ->
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            when (phase) {
-                                ApplyPhase.Idle -> {
-                                    Icon(Icons.Rounded.Wallpaper, contentDescription = null)
-                                    Spacer(Modifier.width(8.dp))
-                                    Text(stringResource(R.string.action_apply))
-                                }
-
-                                ApplyPhase.Loading -> {
-                                    CircularProgressIndicator(
-                                        modifier = Modifier.size(18.dp),
-                                        strokeWidth = 2.dp,
-                                        color = applyContent,
-                                    )
-                                    Spacer(Modifier.width(8.dp))
-                                    Text(stringResource(R.string.apply_button_loading))
-                                }
-
-                                ApplyPhase.Done -> {
-                                    Icon(Icons.Rounded.Check, contentDescription = null)
-                                    Spacer(Modifier.width(8.dp))
-                                    Text(stringResource(R.string.apply_button_done))
-                                }
-                            }
-                        }
-                    }
-                }
-                FilledIconButton(
-                    onClick = onShare,
-                    modifier = Modifier.size(52.dp),
-                    enabled = actionState.active == null && !offline,
-                    colors = IconButtonDefaults.filledIconButtonColors(
-                        containerColor = Color.White.copy(alpha = 0.18f),
-                        contentColor = Color.White,
-                    ),
-                ) {
-                    Icon(
-                        Icons.Rounded.Share,
-                        contentDescription = stringResource(R.string.action_share),
-                    )
-                }
-            }
-            if (actionState.active == UiAction.APPLY) {
-                Spacer(Modifier.height(12.dp))
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(18.dp),
-                        strokeWidth = 2.dp,
-                        color = Color.White,
-                    )
-                    Spacer(Modifier.width(10.dp))
-                    Column(Modifier.weight(1f)) {
-                        Text(
-                            text = stringResource(R.string.apply_in_progress),
-                            style = MaterialTheme.typography.labelLarge,
-                            color = Color.White.copy(alpha = 0.9f),
-                        )
-                        Text(
-                            text = stringResource(R.string.apply_in_progress_hint),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = Color.White.copy(alpha = 0.7f),
-                        )
-                    }
-                    TextButton(onClick = onCancelAction) {
-                        Text(
-                            text = stringResource(R.string.action_cancel),
-                            color = Color.White,
-                        )
-                    }
-                }
-            }
-            if (actionState.active == UiAction.DOWNLOAD) {
-                Spacer(Modifier.height(12.dp))
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Text(
-                        text = stringResource(
-                            R.string.download_in_progress,
-                            actionState.progress ?: 0,
-                        ),
-                        style = MaterialTheme.typography.labelLarge,
-                        color = Color.White.copy(alpha = 0.9f),
-                        modifier = Modifier.weight(1f),
-                    )
-                    TextButton(onClick = onCancelAction) {
-                        Text(
-                            text = stringResource(R.string.action_cancel),
-                            color = Color.White,
-                        )
-                    }
-                }
-                LinearWavyProgressIndicator(
-                    progress = { (actionState.progress ?: 0).coerceIn(0, 100) / 100f },
-                    modifier = Modifier.fillMaxWidth(),
-                    color = Color.White,
-                    trackColor = Color.White.copy(alpha = 0.30f),
-                )
-            }
-            val relatedItems = related.filterNot { it.id == wallpaper.id }.take(5)
-            if (relatedItems.isNotEmpty()) {
-                Spacer(Modifier.height(18.dp))
-                Text(
-                    text = stringResource(R.string.detail_related_title),
-                    style = MaterialTheme.typography.titleMedium,
-                    color = Color.White.copy(alpha = 0.92f),
                     fontWeight = FontWeight.Bold,
                 )
-                Spacer(Modifier.height(10.dp))
-                LazyRow(
+                Spacer(Modifier.height(6.dp))
+                Text(
+                    text = wallpaper.title,
+                    style = MaterialTheme.typography.headlineLarge,
+                    color = Color.White,
+                )
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    text = stringResource(R.string.detail_by_author, wallpaper.author),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = Color.White.copy(alpha = 0.72f),
+                )
+                if (wallpaper.tags.isNotEmpty()) {
+                    Spacer(Modifier.height(6.dp))
+                    Text(
+                        text = wallpaper.tags.joinToString("   ") { "#$it" },
+                        style = MaterialTheme.typography.labelLarge,
+                        color = Color.White.copy(alpha = 0.72f),
+                    )
+                }
+                Spacer(Modifier.height(20.dp))
+                if (offline) {
+                    Text(
+                        text = stringResource(R.string.state_offline_detail),
+                        style = MaterialTheme.typography.labelLarge,
+                        color = Color.White.copy(alpha = 0.75f),
+                    )
+                    Spacer(Modifier.height(10.dp))
+                }
+                val applyContainer by animateColorAsState(
+                    targetValue = if (applyPhase == ApplyPhase.Done) {
+                        ApplySuccessGreen
+                    } else {
+                        MaterialTheme.colorScheme.secondaryContainer
+                    },
+                    animationSpec = tween(durationMillis = if (liteMode) 0 else 220),
+                    label = "applyButtonColor",
+                )
+                val applyContent = if (applyPhase == ApplyPhase.Done) {
+                    Color.White
+                } else {
+                    MaterialTheme.colorScheme.onSecondaryContainer
+                }
+                Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(10.dp),
-                    contentPadding = PaddingValues(end = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    items(items = relatedItems, key = { it.id }) { item ->
-                        WallpaperCard(
-                            wallpaper = item,
-                            isFavorite = false,
-                            onClick = { onOpenRelated(item) },
-                            onToggleFavorite = {},
-                            modifier = Modifier
-                                .width(116.dp)
-                                .height(174.dp),
-                            showFavorite = false,
-                            compact = true,
+                    Button(
+                        onClick = {
+                            haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                            onDownload()
+                        },
+                        modifier = Modifier.weight(1f),
+                        shape = CircleShape,
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = accent,
+                            contentColor = onAccent,
+                        ),
+                        contentPadding = PaddingValues(horizontal = 14.dp, vertical = 14.dp),
+                        enabled = actionState.active == null && !offline,
+                    ) {
+                        Icon(Icons.Rounded.Download, contentDescription = null)
+                        Spacer(Modifier.width(8.dp))
+                        Text(
+                            text = if (alreadyDownloaded) {
+                                stringResource(R.string.download_again)
+                            } else {
+                                stringResource(R.string.download_action)
+                            },
                         )
+                    }
+                    FilledTonalButton(
+                        onClick = {
+                            haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                            if (openEditorOnApply) {
+                                onOpenEditor()
+                            } else {
+                                showApplySheet = true
+                            }
+                        },
+                        modifier = Modifier
+                            .weight(1f)
+                            .animateContentSize(
+                                animationSpec = if (liteMode) {
+                                    tween(0)
+                                } else {
+                                    spring(
+                                        dampingRatio = Spring.DampingRatioNoBouncy,
+                                        stiffness = Spring.StiffnessMedium,
+                                    )
+                                },
+                            ),
+                        shape = CircleShape,
+                        colors = ButtonDefaults.filledTonalButtonColors(
+                            containerColor = applyContainer,
+                            contentColor = applyContent,
+                        ),
+                        contentPadding = PaddingValues(horizontal = 14.dp, vertical = 14.dp),
+                        enabled = actionState.active == null && !offline,
+                    ) {
+                        AnimatedContent(
+                            targetState = applyPhase,
+                            transitionSpec = {
+                                if (liteMode) {
+                                    fadeIn(tween(120)) togetherWith fadeOut(tween(90))
+                                } else {
+                                    (
+                                        fadeIn(tween(160)) +
+                                            scaleIn(tween(160), initialScale = 0.9f)
+                                        ) togetherWith fadeOut(tween(100))
+                                }
+                            },
+                            label = "applyPhase",
+                        ) { phase ->
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                when (phase) {
+                                    ApplyPhase.Idle -> {
+                                        Icon(Icons.Rounded.Wallpaper, contentDescription = null)
+                                        Spacer(Modifier.width(8.dp))
+                                        Text(stringResource(R.string.action_apply))
+                                    }
+
+                                    ApplyPhase.Loading -> {
+                                        CircularProgressIndicator(
+                                            modifier = Modifier.size(18.dp),
+                                            strokeWidth = 2.dp,
+                                            color = applyContent,
+                                        )
+                                        Spacer(Modifier.width(8.dp))
+                                        Text(stringResource(R.string.apply_button_loading))
+                                    }
+
+                                    ApplyPhase.Done -> {
+                                        Icon(Icons.Rounded.Check, contentDescription = null)
+                                        Spacer(Modifier.width(8.dp))
+                                        Text(stringResource(R.string.apply_button_done))
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    FilledIconButton(
+                        onClick = onShare,
+                        modifier = Modifier.size(52.dp),
+                        enabled = actionState.active == null && !offline,
+                        colors = IconButtonDefaults.filledIconButtonColors(
+                            containerColor = Color.White.copy(alpha = 0.18f),
+                            contentColor = Color.White,
+                        ),
+                    ) {
+                        Icon(
+                            Icons.Rounded.Share,
+                            contentDescription = stringResource(R.string.action_share),
+                        )
+                    }
+                }
+                if (actionState.active == UiAction.APPLY) {
+                    Spacer(Modifier.height(12.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(18.dp),
+                            strokeWidth = 2.dp,
+                            color = Color.White,
+                        )
+                        Spacer(Modifier.width(10.dp))
+                        Column(Modifier.weight(1f)) {
+                            Text(
+                                text = stringResource(R.string.apply_in_progress),
+                                style = MaterialTheme.typography.labelLarge,
+                                color = Color.White.copy(alpha = 0.9f),
+                            )
+                            Text(
+                                text = stringResource(R.string.apply_in_progress_hint),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = Color.White.copy(alpha = 0.7f),
+                            )
+                        }
+                        TextButton(onClick = onCancelAction) {
+                            Text(
+                                text = stringResource(R.string.action_cancel),
+                                color = Color.White,
+                            )
+                        }
+                    }
+                }
+                if (actionState.active == UiAction.DOWNLOAD) {
+                    Spacer(Modifier.height(12.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(
+                            text = stringResource(
+                                R.string.download_in_progress,
+                                actionState.progress ?: 0,
+                            ),
+                            style = MaterialTheme.typography.labelLarge,
+                            color = Color.White.copy(alpha = 0.9f),
+                            modifier = Modifier.weight(1f),
+                        )
+                        TextButton(onClick = onCancelAction) {
+                            Text(
+                                text = stringResource(R.string.action_cancel),
+                                color = Color.White,
+                            )
+                        }
+                    }
+                    LinearWavyProgressIndicator(
+                        progress = { (actionState.progress ?: 0).coerceIn(0, 100) / 100f },
+                        modifier = Modifier.fillMaxWidth(),
+                        color = Color.White,
+                        trackColor = Color.White.copy(alpha = 0.30f),
+                    )
+                }
+                val relatedItems = related.filterNot { it.id == wallpaper.id }.take(5)
+                if (relatedItems.isNotEmpty()) {
+                    Spacer(Modifier.height(18.dp))
+                    Text(
+                        text = stringResource(R.string.detail_related_title),
+                        style = MaterialTheme.typography.titleMedium,
+                        color = Color.White.copy(alpha = 0.92f),
+                        fontWeight = FontWeight.Bold,
+                    )
+                    Spacer(Modifier.height(10.dp))
+                    LazyRow(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                        contentPadding = PaddingValues(end = 4.dp),
+                    ) {
+                        items(items = relatedItems, key = { it.id }) { item ->
+                            WallpaperCard(
+                                wallpaper = item,
+                                isFavorite = false,
+                                onClick = { onOpenRelated(item) },
+                                onToggleFavorite = {},
+                                modifier = Modifier
+                                    .width(116.dp)
+                                    .height(174.dp),
+                                showFavorite = false,
+                                compact = true,
+                            )
+                        }
                     }
                 }
             }
@@ -1083,26 +1091,50 @@ private fun LockScreenPreview(
             delay(15_000)
         }
     }
+    val context = LocalContext.current
     val locale = LocalLocale.current.platformLocale
-    val time = remember(now.hour, now.minute, locale) {
-        now.format(DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT).withLocale(locale))
+    // Android no expone el reloj de su pantalla de bloqueo a las apps, así que
+    // se imita el estilo usando los mismos ajustes del sistema: formato de 12 o
+    // 24 horas y patrones de fecha del idioma actual.
+    val is24Hour = AndroidDateFormat.is24HourFormat(context)
+    val time = remember(now.hour, now.minute, is24Hour, locale) {
+        val pattern = if (is24Hour) "HH:mm" else "h:mm"
+        now.format(DateTimeFormatter.ofPattern(pattern, locale))
+    }
+    val period = remember(now.hour, now.minute, is24Hour, locale) {
+        if (is24Hour) {
+            null
+        } else {
+            now.format(DateTimeFormatter.ofPattern("a", locale))
+                .replace(".", "")
+                .replace(" ", "")
+                .uppercase(locale)
+        }
     }
     val date = remember(now.year, now.monthValue, now.dayOfMonth, locale) {
-        val formatted = now.format(DateTimeFormatter.ofPattern("EEEE, d MMMM", locale))
+        val pattern = AndroidDateFormat.getBestDateTimePattern(locale, "EEEEdMMMM")
+        val formatted = now.format(DateTimeFormatter.ofPattern(pattern, locale))
         formatted.replaceFirstChar { char ->
             if (char.isLowerCase()) char.titlecase(locale) else char.toString()
         }
     }
     val dismissInteraction = remember { MutableInteractionSource() }
+    val clockShadow = remember {
+        Shadow(
+            color = Color.Black.copy(alpha = 0.35f),
+            offset = Offset(0f, 2f),
+            blurRadius = 14f,
+        )
+    }
     Box(
         modifier = modifier
             .fillMaxSize()
             .background(
                 Brush.verticalGradient(
-                    0f to Color.Black.copy(alpha = 0.45f),
-                    0.3f to Color.Black.copy(alpha = 0.12f),
+                    0f to Color.Black.copy(alpha = 0.5f),
+                    0.3f to Color.Black.copy(alpha = 0.16f),
                     0.7f to Color.Transparent,
-                    1f to Color.Black.copy(alpha = 0.55f),
+                    1f to Color.Black.copy(alpha = 0.6f),
                 ),
             )
             .clickable(
@@ -1136,24 +1168,45 @@ private fun LockScreenPreview(
                     )
                 }
             }
-            Spacer(Modifier.weight(0.32f))
+            Spacer(Modifier.weight(0.3f))
             Column(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
-                Text(
-                    text = time,
-                    style = MaterialTheme.typography.displayLarge.copy(
-                        fontSize = 64.sp,
-                        lineHeight = 66.sp,
-                        fontWeight = FontWeight.Light,
-                    ),
-                    color = Color.White,
+                Icon(
+                    Icons.Rounded.Lock,
+                    contentDescription = null,
+                    tint = Color.White.copy(alpha = 0.8f),
+                    modifier = Modifier.size(18.dp),
                 )
+                Spacer(Modifier.height(10.dp))
+                Row(verticalAlignment = Alignment.Bottom) {
+                    Text(
+                        text = time,
+                        style = MaterialTheme.typography.displayLarge.copy(
+                            fontSize = 76.sp,
+                            lineHeight = 78.sp,
+                            fontWeight = FontWeight.Light,
+                            letterSpacing = (-2).sp,
+                            shadow = clockShadow,
+                        ),
+                        color = Color.White,
+                        maxLines = 1,
+                    )
+                    period?.let { suffix ->
+                        Text(
+                            text = suffix,
+                            style = MaterialTheme.typography.titleMedium,
+                            color = Color.White.copy(alpha = 0.9f),
+                            fontWeight = FontWeight.SemiBold,
+                            modifier = Modifier.padding(start = 6.dp, bottom = 12.dp),
+                        )
+                    }
+                }
                 Spacer(Modifier.height(6.dp))
                 Text(
                     text = date,
-                    style = MaterialTheme.typography.titleMedium,
+                    style = MaterialTheme.typography.titleMedium.copy(shadow = clockShadow),
                     color = Color.White.copy(alpha = 0.92f),
                 )
             }
@@ -1161,7 +1214,7 @@ private fun LockScreenPreview(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(bottom = 12.dp),
+                    .padding(bottom = 16.dp),
                 horizontalArrangement = Arrangement.SpaceEvenly,
             ) {
                 LockShortcut(Icons.Rounded.PhotoCamera)
