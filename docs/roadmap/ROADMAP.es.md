@@ -13,6 +13,18 @@ están probados y cuando hay tiempo para mantenerlos.
 - **Planeado**: aceptado, pero sin empezar.
 - **Explorando**: necesita una decisión de diseño primero.
 
+## 1.8.0
+
+- [x] **Vista previa de pantalla de bloqueo** en el detalle, con la hora, la
+      fecha y accesos genéricos, respetando el Modo Lite.
+- [x] **Fondos relacionados** por categoría y etiquetas, con un tope de cinco y
+      navegación que reemplaza la entrada actual.
+- [x] **Módulo de Macrobenchmark** con mediciones de arranque y scroll, y una
+      primera medición de referencia.
+- [x] Correcciones de paginación del feed, del User-Agent de descargas y del
+      bucket de Storage en las migraciones.
+- [ ] Tag y publicación de `v1.8.0`.
+
 ## 1.7.0
 
 - [x] **Filtros por etiquetas en Inicio**, con una sola escritura para las

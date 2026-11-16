@@ -10,7 +10,7 @@ This folder holds the app screenshots used in the main README.
 | File | Screen |
 | --- | --- |
 | `explore.png` | Home feed with search, categories and tags |
-| `detail.png` | Wallpaper detail with zoom and the apply/download actions |
+| `detail.png` | Wallpaper detail with zoom, lock screen preview and the apply/download actions |
 | `collections.png` | Collections list, public and private |
 | `favorites.png` | Favourites tab |
 
@@ -34,7 +34,7 @@ Esta carpeta guarda las capturas de la app que usa el README principal.
 | Archivo | Pantalla |
 | --- | --- |
 | `explore.png` | Feed de inicio con búsqueda, categorías y tags |
-| `detail.png` | Detalle del fondo con zoom y las acciones aplicar/descargar |
+| `detail.png` | Detalle del fondo con zoom, vista previa de bloqueo y las acciones aplicar/descargar |
 | `collections.png` | Lista de colecciones, públicas y privadas |
 | `favorites.png` | Pestaña de Favoritos |
 

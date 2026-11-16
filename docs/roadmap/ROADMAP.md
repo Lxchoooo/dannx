@@ -13,6 +13,18 @@ maintain them.
 - **Planned**: accepted, but not started.
 - **Exploring**: needs a design decision first.
 
+## 1.8.0
+
+- [x] **Lock screen preview** on the detail screen, with the time, the date and
+      generic shortcuts, respecting Lite mode.
+- [x] **Related wallpapers** by category and tags, capped at five and with
+      navigation that replaces the current entry.
+- [x] **Macrobenchmark module** with startup and scroll measurements, plus a
+      first reference measurement.
+- [x] Fixes for feed pagination, the download User-Agent and the Storage bucket
+      in the migrations.
+- [ ] Tag and publish `v1.8.0`.
+
 ## 1.7.0
 
 - [x] **Tag filters on Home**, with a single spelling for tags written in
