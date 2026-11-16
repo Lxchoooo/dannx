@@ -86,7 +86,9 @@ maintain them.
 - [x] Instrumented tests for applying a wallpaper and for the favourites
       selection.
 - [ ] Instrumented tests for downloading and for the editor.
-- [ ] Screenshot tests (Roborazzi or Paparazzi) to catch visual changes.
+- [x] Screenshot tests with Roborazzi: onboarding, About, decoy and states in
+      the 4 languages and light/dark; `verifyRoborazziDebug` runs in CI and the
+      goldens are regenerated with the `Record screenshots` workflow.
 - [x] `actionlint` checks for workflows and `shellcheck` for scripts.
 - [x] `zizmor` checks for GitHub Actions.
 - [x] Release notes generated from a versioned English file.

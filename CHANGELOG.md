@@ -42,6 +42,8 @@ Nothing yet.
 - Maintenance and stability improvements.
 - Backend query guards: statement timeouts for anonymous and authenticated
   roles, plus `pg_stat_statements` measurement of the real catalogue queries.
+- Screenshot tests cover the key screens in the four languages and both
+  themes, so a layout break or a translation overflow fails the build.
 - Repository checks now cover the workflows and the scripts.
 - The feed no longer skips wallpapers while loading more pages, and changing the
   tag selection always starts from the first page.
