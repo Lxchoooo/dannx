@@ -77,7 +77,7 @@ están probados y cuando hay tiempo para mantenerlos.
 - [ ] **Release firmado distribuido fuera de GitHub**, con verificación de
       checksum y atestación.
 - [ ] **Widgets y rotación automática**: fondo del día o cambio cada pocas horas.
-- [ ] **Más idiomas**, empezando por portugués y francés.
+- [x] **Más idiomas**, empezando por portugués y francés.
 
 ## Calidad y CI
 
