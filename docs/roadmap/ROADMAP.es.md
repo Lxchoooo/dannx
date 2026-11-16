@@ -94,7 +94,8 @@ están probados y cuando hay tiempo para mantenerlos.
 
 - [x] Tests de RLS que demuestren que un usuario anónimo no puede escribir.
 - [x] Políticas de Storage y limpieza de imágenes huérfanas de la papelera.
-- [ ] Rate limiting para escrituras
+- [x] Rate limiting: sin limitador de escrituras (solo el admin puede
+      escribir) y con `statement_timeout` + medición `pg_stat_statements`
       ([diseño y decisión](../designs/rate-limiting.md)).
 - [x] Guía de instalación de Supabase actualizada
       ([`supabase/README.md`](../supabase/README.md)).
