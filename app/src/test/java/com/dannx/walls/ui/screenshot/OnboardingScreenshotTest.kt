@@ -9,7 +9,7 @@ import org.robolectric.annotation.Config
  * fondo animado del modo normal es infinito y no deja un frame reproducible.
  * El recorte en inglés se agrega también en oscuro para cubrir el tema.
  */
-@Config(sdk = [34], qualifiers = "en")
+@Config(sdk = [34], qualifiers = "en-w411dp-h891dp-420dpi")
 class OnboardingScreenshotEn : ScreenshotTestBase() {
     @Test
     fun `onboarding in English`() {
@@ -26,7 +26,7 @@ class OnboardingScreenshotEn : ScreenshotTestBase() {
     }
 }
 
-@Config(sdk = [34], qualifiers = "es")
+@Config(sdk = [34], qualifiers = "es-w411dp-h891dp-420dpi")
 class OnboardingScreenshotEs : ScreenshotTestBase() {
     @Test
     fun `onboarding in Spanish`() {
@@ -36,7 +36,7 @@ class OnboardingScreenshotEs : ScreenshotTestBase() {
     }
 }
 
-@Config(sdk = [34], qualifiers = "pt-rBR")
+@Config(sdk = [34], qualifiers = "pt-rBR-w411dp-h891dp-420dpi")
 class OnboardingScreenshotPtBr : ScreenshotTestBase() {
     @Test
     fun `onboarding in Portuguese`() {
@@ -46,7 +46,7 @@ class OnboardingScreenshotPtBr : ScreenshotTestBase() {
     }
 }
 
-@Config(sdk = [34], qualifiers = "fr")
+@Config(sdk = [34], qualifiers = "fr-w411dp-h891dp-420dpi")
 class OnboardingScreenshotFr : ScreenshotTestBase() {
     @Test
     fun `onboarding in French`() {

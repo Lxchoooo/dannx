@@ -16,7 +16,7 @@ import org.robolectric.annotation.Config
  * El tag del idioma entra por el constructor: es lo que distingue los dorados
  * de cada variante (`empty_state_fr.png`, `empty_state_fr_dark.png`, …).
  */
-@Config(sdk = [34], qualifiers = "en")
+@Config(sdk = [34], qualifiers = "en-w411dp-h891dp-420dpi")
 class StateScreenshotEn : StateScreenshotBase("en") {
     @Test fun `empty state in English`() = emptyState()
     @Test fun `empty state in English dark`() = emptyState(dark = true)
@@ -24,7 +24,7 @@ class StateScreenshotEn : StateScreenshotBase("en") {
     @Test fun `error state in English dark`() = errorState(dark = true)
 }
 
-@Config(sdk = [34], qualifiers = "es")
+@Config(sdk = [34], qualifiers = "es-w411dp-h891dp-420dpi")
 class StateScreenshotEs : StateScreenshotBase("es") {
     @Test fun `empty state in Spanish`() = emptyState()
     @Test fun `empty state in Spanish dark`() = emptyState(dark = true)
@@ -32,7 +32,7 @@ class StateScreenshotEs : StateScreenshotBase("es") {
     @Test fun `error state in Spanish dark`() = errorState(dark = true)
 }
 
-@Config(sdk = [34], qualifiers = "pt-rBR")
+@Config(sdk = [34], qualifiers = "pt-rBR-w411dp-h891dp-420dpi")
 class StateScreenshotPtBr : StateScreenshotBase("pt-BR") {
     @Test fun `empty state in Portuguese`() = emptyState()
     @Test fun `empty state in Portuguese dark`() = emptyState(dark = true)
@@ -40,7 +40,7 @@ class StateScreenshotPtBr : StateScreenshotBase("pt-BR") {
     @Test fun `error state in Portuguese dark`() = errorState(dark = true)
 }
 
-@Config(sdk = [34], qualifiers = "fr")
+@Config(sdk = [34], qualifiers = "fr-w411dp-h891dp-420dpi")
 class StateScreenshotFr : StateScreenshotBase("fr") {
     @Test fun `empty state in French`() = emptyState()
     @Test fun `empty state in French dark`() = emptyState(dark = true)
