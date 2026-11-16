@@ -8,10 +8,6 @@ on:
       - "**.md"
       - "docs/**"
       - "LICENSE"
-  # En pull_request no se filtran rutas: si el workflow no se crea, los checks
-  # requeridos por el ruleset de main quedan en "Expected" y el PR no se puede
-  # mergear. El job `changes` decide adentro qué trabajo hace falta.
-  pull_request:
   workflow_dispatch:
 
 concurrency:
@@ -26,116 +22,11 @@ permissions:
   contents: read
 
 jobs:
-  # Decide si el PR toca algo más que documentación. Los jobs pesados se
-  # omiten con un `if`, no con `paths-ignore`: un job omitido se reporta como
-  # éxito y satisface el ruleset, mientras que un workflow que no se crea deja
-  # los checks requeridos en "Expected". Si la detección falla, corre todo.
-  changes:
-    runs-on: ubuntu-24.04
-    timeout-minutes: 5
-    permissions:
-      contents: read
-      pull-requests: read
-    outputs:
-      code: ${{ steps.scope.outputs.code }}
-      benchmark: ${{ steps.scope.outputs.benchmark }}
-    steps:
-      - name: Detect changed files
-        id: scope
-        env:
-          GH_TOKEN: ${{ github.token }}
-          REPO: ${{ github.repository }}
-          PR: ${{ github.event.number }}
-          EVENT: ${{ github.event_name }}
-        run: |
-          set -uo pipefail
-          code=true
-          # Fuera de PR no hay archivos que inspeccionar: se valida todo.
-          benchmark=true
-          if [ "$EVENT" = "pull_request" ] && [ -n "$PR" ]; then
-            files=$(gh api --paginate \
-              "repos/$REPO/pulls/$PR/files?per_page=100" \
-              --jq '.[].filename' 2>/dev/null) || files=""
-            if [ -n "$files" ]; then
-              code=false
-              benchmark=false
-              while IFS= read -r file; do
-                case "$file" in
-                  *.md|docs/*|LICENSE) ;;
-                  *) code=true ;;
-                esac
-                # El módulo de medición solo se compila si el PR lo toca.
-                case "$file" in
-                  benchmark/*|gradle/*|*.gradle.kts|gradle.properties|.github/workflows/*)
-                    benchmark=true ;;
-                esac
-              done <<< "$files"
-            fi
-          fi
-          echo "code=$code" >> "$GITHUB_OUTPUT"
-          echo "benchmark=$benchmark" >> "$GITHUB_OUTPUT"
-          echo "Toca código: $code. Toca el módulo de medición: $benchmark"
-
-  # Modo rápido: APK de prueba en cada PR. En main el job `build` genera el
-  # APK release sin publicar ninguna versión.
-  debug:
-    needs: changes
-    if: >-
-      always() &&
-      github.event_name == 'pull_request' &&
-      (needs.changes.result != 'success' || needs.changes.outputs.code == 'true')
-    runs-on: ubuntu-24.04
-    timeout-minutes: 15
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-        with:
-          persist-credentials: false
-
-      - uses: gradle/actions/wrapper-validation@8da46b539cd8fe6ab27ca75128919a18d757604c # v6.4.1
-
-      - name: Compute version name
-        run: |
-          if [ "$GITHUB_REF_TYPE" = "tag" ]; then
-            echo "VERSION_NAME=${GITHUB_REF_NAME#v}" >> "$GITHUB_ENV"
-          else
-            echo "VERSION_NAME=" >> "$GITHUB_ENV"
-          fi
-
-      - uses: actions/setup-java@77dd5b2ce225ea11469928ac317850245a74ae78 # v6.2.0
-        with:
-          distribution: temurin
-          java-version: "17"
-
-      - uses: gradle/actions/setup-gradle@8da46b539cd8fe6ab27ca75128919a18d757604c # v6
-
-      # Los builds de PR no ven el keystore de release: el APK se firma con la
-      # clave de depuración. Tener la clave en un runner que ejecuta código de
-      # una rama dejaría la firma de la app al alcance de ese código.
-      - name: Build debug APK
-        env:
-          VERSION_CODE: ${{ github.run_number }}
-        run: ./gradlew assembleDebug
-
-      - name: Upload debug APK
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
-        with:
-          name: DannX-debug-${{ github.run_number }}
-          path: app/build/outputs/apk/debug/app-debug.apk
-          if-no-files-found: error
-          retention-days: 7
-
   # Compuerta de corrección: lint y tests. Corre en paralelo con el build
-  # release; la publicación espera a que este job termine bien.
+  # release; la publicación espera a que este job termine bien. No produce
+  # ningún APK instalable: el único artefacto para el teléfono es el release
+  # firmado del job `build`.
   checks:
-    needs: changes
-    if: >-
-      always() &&
-      (github.event_name == 'pull_request' ||
-      github.ref == 'refs/heads/main' ||
-      github.ref_type == 'tag' ||
-      github.event_name == 'workflow_dispatch') &&
-      (needs.changes.result != 'success' || github.event_name != 'pull_request' ||
-      needs.changes.outputs.code == 'true')
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
@@ -161,11 +52,9 @@ jobs:
       - name: Verify screenshots
         run: ./gradlew :app:verifyRoborazziDebug
 
-      # El módulo de medición y la variante `benchmark` de la app solo se
-      # compilan cuando el PR los toca: es un R8 extra que no hace falta en
-      # cada cambio.
+      # El módulo de medición y la variante `benchmark` de la app se compilan
+      # acá para que una rotura del módulo no llegue al job manual.
       - name: Assemble benchmark variant
-        if: needs.changes.outputs.benchmark == 'true'
         run: ./gradlew :benchmark:assembleBenchmark :app:assembleBenchmark
 
       - name: Upload lint report
@@ -189,15 +78,6 @@ jobs:
   # Un solo emulador para el flujo crítico: aplicar un fondo de pantalla.
   # La prueba no cambia el fondo del emulador ni pide permisos extra.
   instrumented:
-    needs: changes
-    if: >-
-      always() &&
-      (github.event_name == 'pull_request' ||
-      github.ref == 'refs/heads/main' ||
-      github.ref_type == 'tag' ||
-      github.event_name == 'workflow_dispatch') &&
-      (needs.changes.result != 'success' || github.event_name != 'pull_request' ||
-      needs.changes.outputs.code == 'true')
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     steps:
