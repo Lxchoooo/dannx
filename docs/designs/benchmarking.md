@@ -37,7 +37,11 @@ variant as `profileable`; the release APK is not.
 
 The benchmark module is self-instrumenting (`android.experimental.self-instrumenting`)
 and compiles separately from the app, so it does not add dependencies or code to
-any published APK. Only its `benchmark` variant is enabled: the others would
+any published APK. Two app build types are enabled for it: `benchmark` (a
+minified copy of `release` signed with the debug key) and `nonMinifiedRelease`
+(the same copy without R8 or resource shrinking), each marked as `profileable`
+by its own manifest (`app/src/benchmark` and `app/src/nonMinifiedRelease`).
+Only those two variants of the test module are enabled: the others would
 install a debuggable app, which Macrobenchmark refuses to measure.
 
 The app's own instrumented tests run with `./gradlew :app:connectedDebugAndroidTest`
@@ -102,14 +106,24 @@ variant, which is minified, so every rule comes out with R8 names
 the R8 mapping when it builds a release APK; a profile that is already obfuscated
 is tied to one exact mapping and goes stale on the next code change.
 
-The correct flow, once the non-minified variant exists:
+The `benchmark` job of `android.yml` now does this automatically. After the
+minified benchmarks it runs the generator against the `nonMinifiedRelease`
+variant:
 
-1.  Generate against a release-like variant **without R8**, so the rules keep
-    readable names.
-2.  Replace `app/src/main/baseline-prof.txt` with that file.
-3.  Re-run `StartupBenchmark` before and after to confirm the change is an
+```bash
+./gradlew :benchmark:connectedNonMinifiedReleaseAndroidTest \
+    -Pandroid.testInstrumentationRunnerArguments.class=\
+com.dannx.walls.benchmark.BaselineProfileGenerator \
+    -Pandroid.testInstrumentationRunnerArguments.androidx.benchmark.suppressErrors=EMULATOR,LOW-BATTERY
+```
+
+and uploads the readable profile as the `baseline-profile-generated` artifact.
+From there the flow is:
+
+1.  Download the artifact and replace `app/src/main/baseline-prof.txt` with it.
+2.  Re-run `StartupBenchmark` before and after to confirm the change is an
     improvement instead of a regression.
-4.  Commit both the profile and the numbers in this document.
+3.  Commit both the profile and the numbers in this document.
 
 ## First measurement (2026-11-15)
 
@@ -146,8 +160,8 @@ future revision can be compared against this row.
     finished green and produced the first numbers below.
 *   `baseline-prof.txt` is still the handwritten list: the generated one is
     obfuscated and tied to one R8 mapping.
-*   Next: generate the profile against a **non-minified** release-like variant
-    (`nonMinifiedRelease`), either by hand or with the `androidx.baselineprofile`
-    plugin, so the rules keep readable names and AGP can apply the mapping.
-*   Then compare `CompilationMode.None` against the default mode on the same APK
-    to isolate how much of startup comes from the profile.
+*   Next: the `benchmark` job now generates the profile against
+    `nonMinifiedRelease` (readable names) and uploads it as the
+    `baseline-profile-generated` artifact; commit that file and compare
+    `CompilationMode.None` against the default mode on the same APK to isolate
+    how much of startup comes from the profile.

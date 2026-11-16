@@ -335,6 +335,26 @@ jobs:
             ./gradlew :benchmark:connectedBenchmarkAndroidTest
             -Pandroid.testInstrumentationRunnerArguments.androidx.benchmark.suppressErrors=EMULATOR,LOW-BATTERY
 
+      # Genera el Baseline Profile contra la variante sin R8, con nombres
+      # legibles que AGP remapea en cada build release. Solo corre el
+      # generador: los benchmarks de arranque miden la variante minificada.
+      - name: Generate baseline profile on API 34
+        if: steps.avd-cache.outputs.cache-hit == 'true' || steps.avd.outcome == 'success'
+        uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d # v2
+        with:
+          api-level: 34
+          target: default
+          arch: x86_64
+          force-avd-creation: false
+          disable-animations: true
+          emulator-options: >-
+            -no-snapshot-save -no-window -no-audio -no-boot-anim
+            -gpu swiftshader_indirect -camera-back none -camera-front none
+          script: >-
+            ./gradlew :benchmark:connectedNonMinifiedReleaseAndroidTest
+            -Pandroid.testInstrumentationRunnerArguments.class=com.dannx.walls.benchmark.BaselineProfileGenerator
+            -Pandroid.testInstrumentationRunnerArguments.androidx.benchmark.suppressErrors=EMULATOR,LOW-BATTERY
+
       - name: Upload benchmark results
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
@@ -343,6 +363,15 @@ jobs:
           path: |
             benchmark/build/outputs/connected_android_test_additional_output
             benchmark/build/reports/androidTests/connected
+          if-no-files-found: ignore
+          retention-days: 14
+
+      - name: Upload generated baseline profile
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: baseline-profile-generated
+          path: benchmark/build/outputs/connected_android_test_additional_output/**/*startup-prof.txt
           if-no-files-found: ignore
           retention-days: 14
 

@@ -14,9 +14,10 @@ import org.junit.runner.RunWith
  *
  * El archivo queda en la salida adicional de los tests instrumentados
  * (`benchmark/build/outputs/connected_android_test_additional_output/...`).
- * Ojo: la variante `benchmark` está minificada, así que los nombres salen
- * ofuscados y solo valen para ese mapping exacto. Para versionar el perfil hay
- * que generarlo contra una variante sin R8.
+ * Correrlo contra la variante `benchmark` (minificada) produce nombres
+ * ofuscados; para versionar el perfil hay que ejecutar
+ * `:benchmark:connectedNonMinifiedReleaseAndroidTest`, que lo genera contra la
+ * copia sin R8 y deja nombres legibles que AGP remapea en cada build.
  */
 @LargeTest
 @RunWith(AndroidJUnit4::class)

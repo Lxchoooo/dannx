@@ -27,6 +27,13 @@ android {
             signingConfig = signingConfigs.getByName("debug")
             matchingFallbacks += listOf("release")
         }
+        // Variante espejo de `nonMinifiedRelease` de la app: se mide la copia
+        // sin R8 para que el perfil generado conserve nombres legibles.
+        create("nonMinifiedRelease") {
+            isDebuggable = true
+            signingConfig = signingConfigs.getByName("debug")
+            matchingFallbacks += listOf("nonMinifiedRelease")
+        }
     }
 
     // El módulo de test compila y se instala solo; no comparte código con :app.
@@ -35,10 +42,10 @@ android {
 }
 
 androidComponents {
-    // Solo la variante `benchmark` tiene sentido: las demás instalarían la
-    // app en modo debug, que Macrobenchmark rechaza.
+    // Solo las variantes `benchmark` y `nonMinifiedRelease` tienen sentido:
+    // las demás instalarían la app en modo debug, que Macrobenchmark rechaza.
     beforeVariants {
-        it.enable = it.buildType == "benchmark"
+        it.enable = it.buildType == "benchmark" || it.buildType == "nonMinifiedRelease"
     }
 }
 
