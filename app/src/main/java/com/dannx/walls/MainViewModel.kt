@@ -148,6 +148,16 @@ class MainViewModel(
     private val _actionState = MutableStateFlow(ActionState())
     val actionState: StateFlow<ActionState> = _actionState.asStateFlow()
 
+    // Bloques extraídos de este ViewModel; mantienen la misma API pública.
+    private val appearanceController = AppearanceController(
+        scope = viewModelScope,
+        state = _state,
+        prefs = prefs,
+        appearance = appearance,
+        appCache = appCache,
+        strings = strings,
+    )
+
     init {
         restoreSession()
         if (isOnline()) {
@@ -3341,82 +3351,28 @@ class MainViewModel(
     }
 
     /** Cambia entre tema del sistema, claro u oscuro. */
-    fun setThemeMode(mode: ThemeMode) {
-        appearance.saveThemeMode(mode)
-        _state.update { it.copy(themeMode = mode) }
-    }
+    fun setThemeMode(mode: ThemeMode) = appearanceController.setThemeMode(mode)
 
     /** Activa o desactiva las animaciones más pesadas. */
-    fun setLiteMode(enabled: Boolean) {
-        appearance.saveLiteMode(enabled)
-        _state.update { it.copy(liteMode = enabled) }
-    }
+    fun setLiteMode(enabled: Boolean) = appearanceController.setLiteMode(enabled)
 
     /** Define si el botón Aplicar abre primero el editor de fondos. */
-    fun setOpenEditorOnApply(enabled: Boolean) {
-        appearance.saveOpenEditorOnApply(enabled)
-        _state.update { it.copy(openEditorOnApply = enabled) }
-    }
+    fun setOpenEditorOnApply(enabled: Boolean) =
+        appearanceController.setOpenEditorOnApply(enabled)
 
     /** Vuelve la apariencia a los valores de fábrica. */
-    fun resetAppearance() {
-        appearance.reset()
-        _state.update {
-            it.copy(
-                themeMode = ThemeMode.SYSTEM,
-                liteMode = false,
-                openEditorOnApply = true,
-                message = strings.get(R.string.msg_settings_reset),
-                messageAction = null,
-            )
-        }
-    }
+    fun resetAppearance() = appearanceController.resetAppearance()
 
     /** Recalcula el espacio que ocupa la caché local. */
-    fun refreshCacheSize() {
-        viewModelScope.launch {
-            val size = readCacheSize()
-            _state.update { it.copy(cacheSizeBytes = size) }
-        }
-    }
+    fun refreshCacheSize() = appearanceController.refreshCacheSize()
 
     /** Borra la copia local del feed y las imágenes descargadas. */
-    fun clearCache() {
-        _state.update { it.copy(cacheSizeBytes = 0L) }
-        viewModelScope.launch {
-            try {
-                appCache.clear()
-            } catch (error: CancellationException) {
-                throw error
-            } catch (_: Exception) {
-                // Si algo no se pudo borrar, el tamaño real se muestra abajo.
-            }
-            val size = readCacheSize()
-            _state.update {
-                it.copy(
-                    cacheSizeBytes = size,
-                    message = strings.get(R.string.msg_cache_cleared),
-                    messageAction = null,
-                )
-            }
-        }
-    }
-
-    private suspend fun readCacheSize(): Long = try {
-        appCache.sizeBytes()
-    } catch (error: CancellationException) {
-        throw error
-    } catch (_: Exception) {
-        0L
-    }
+    fun clearCache() = appearanceController.clearCache()
 
     /**
      * Marca la bienvenida como vista; [UiState.onboardingDone] abre la app.
      */
-    fun completeOnboarding() {
-        prefs.completeOnboarding()
-        _state.update { it.copy(onboardingDone = true) }
-    }
+    fun completeOnboarding() = appearanceController.completeOnboarding()
 
     private fun restoreSession() {
         if (!api.isConfigured) return
