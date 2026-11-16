@@ -11,6 +11,7 @@ import com.dannx.walls.data.AppearanceStore
 import com.dannx.walls.data.ThemeMode
 import com.dannx.walls.R
 import com.dannx.walls.util.StringResolver
+import com.dannx.walls.util.get
 
 /**
  * Ajustes de apariencia y mantenimiento de caché. Es el primer bloque extraído
