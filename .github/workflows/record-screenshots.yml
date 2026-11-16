@@ -1,0 +1,41 @@
+name: Record screenshots
+
+# Grabación de dorados para Roborazzi. Corre a mano: cuando cambie una vista,
+# se dispara este workflow, se descarga el artifact `screenshots-golden` y se
+# reemplaza el contenido de app/src/test/screenshots en el PR.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  record:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+
+      - uses: gradle/actions/wrapper-validation@8da46b539cd8fe6ab27ca75128919a18d757604c # v6.4.1
+
+      - uses: actions/setup-java@77dd5b2ce225ea11469928ac317850245a74ae78 # v6.2.0
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - uses: gradle/actions/setup-gradle@8da46b539cd8fe6ab27ca75128919a18d757604c # v6
+
+      # Robolectric baja su android-all del proxy de Maven en la primera
+      # corrida; no hace falta emulador.
+      - name: Record golden images
+        run: ./gradlew :app:recordRoborazziDebug
+
+      - name: Upload golden images
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: screenshots-golden
+          path: app/src/test/screenshots
+          if-no-files-found: error
+          retention-days: 14
