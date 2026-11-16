@@ -5,6 +5,11 @@
 --   gh workflow run apply-migration.yml -f file=supabase/pg_stat_measure.sql
 -- Los números quedan en el log del job. Requiere la extensión
 -- pg_stat_statements, creada por docs/migraciones/20261121_query_guards.sql.
+--
+-- La Management API devuelve solo el resultado de la última sentencia: el
+-- archivo lleva una sola consulta. Para ver la configuración de roles usar
+-- `select rolname, rolconfig from pg_roles where rolname in
+-- ('anon','authenticated')` como segunda pasada.
 
 create extension if not exists pg_stat_statements;
 
@@ -16,9 +21,3 @@ select calls,
 from pg_stat_statements
 order by total_exec_time desc
 limit 20;
-
--- Configuración vigente, para comparar contra la del diseño.
-select rolname, rolconfig
-from pg_roles
-where rolname in ('anon', 'authenticated')
-order by rolname;
