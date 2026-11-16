@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!--
+      Solo en la variante `nonMinifiedRelease`: permite que Macrobenchmark lea
+      trazas detalladas mientras genera el Baseline Profile con nombres
+      legibles. El APK de release no es profileable.
+    -->
+    <application>
+        <profileable android:shell="true" />
+    </application>
+</manifest>

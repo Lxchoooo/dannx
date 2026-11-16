@@ -87,6 +87,18 @@ android {
             signingConfig = signingConfigs.getByName("debug")
             matchingFallbacks += listOf("release")
         }
+        // Release sin R8 ni shrink, firmada con la clave de depuración. Sirve
+        // para generar el Baseline Profile con nombres legibles: las reglas que
+        // salen de aquí las remapea AGP contra el mapping de cada build
+        // release, y así no quedan atadas a un mapping exacto. Tampoco se
+        // publica y su manifiesto propio la marca como profileable.
+        create("nonMinifiedRelease") {
+            initWith(getByName("release"))
+            isMinifyEnabled = false
+            isShrinkResources = false
+            signingConfig = signingConfigs.getByName("debug")
+            matchingFallbacks += listOf("release")
+        }
     }
 
     compileOptions {
