@@ -1,6 +1,6 @@
 # Rate limiting: what is actually exposed
 
-*   **Status:** design decision; no migration applied
+*   **Status:** design decision; guards applied 2026-11-16
 *   **Date:** 2026-11-15
 
 ---
@@ -140,6 +140,39 @@ cleanup job must delete windows older than a few minutes.
 
 ## Decision
 
-Deferred. The roadmap item stays open until the measurement above exists; adding
-the limiter today would cost a migration, a trigger on every write and a new
-failure mode for bulk edits, without covering the only realistic attack.
+Applied in two steps (2026-11-16):
+
+1.  **No write limiter.** The design above stands: a limiter would only throttle
+    the admin or a stolen admin session, and it would slow bulk Studio edits.
+2.  **Query guards** (`docs/migraciones/20261121_query_guards.sql`, applied via
+    run [`43788499666`](https://github.com/Lxchoooo/dannx/actions/runs/43788499666)):
+
+    ```sql
+    create extension if not exists pg_stat_statements;
+    alter role anon set statement_timeout = '3s';
+    alter role authenticated set statement_timeout = '10s';
+    ```
+
+## Measurement (2026-11-16)
+
+Runs [`43788970041`](https://github.com/Lxchoooo/dannx/actions/runs/43788970041)
+(top by total time) and
+[`43789167877`](https://github.com/Lxchoooo/dannx/actions/runs/43789167877)
+(catalogue queries, by calls). The queries are repeatable:
+`supabase/pg_stat_measure.sql` and `supabase/pg_stat_measure_app.sql`.
+
+*   The **most expensive** statements by total time are Supabase's own
+    introspection (dashboard and auth catalog: `pg_timezone_names`, extension
+    checks, replication helpers), not the app.
+*   **Catalogue reads** (feed pages, collections, collection items, tag
+    categories, app settings): 0.1–0.6 ms mean per statement across hundreds of
+    calls; total under 150 ms each.
+*   The heaviest app RPC is `purge_expired_wallpapers` (2 calls, 127.6 ms mean)
+    and it is admin-only.
+*   The search RPC does not appear in the top 20 by total time, so the design's
+    fear about its sort expression is not confirmed by the data.
+
+Conclusion: the 3 s `anon` timeout sits three orders of magnitude above real
+usage, so it kills runaway loops without touching legitimate traffic. The
+measurement does not justify an index or a cheaper search expression for now;
+re-run the measurement files after catalogue growth or a new expensive feature.

@@ -93,7 +93,8 @@ maintain them.
 
 - [x] RLS tests that prove anonymous users cannot write.
 - [x] Storage policies and cleanup of orphaned images from the trash.
-- [ ] Rate limiting for writes
+- [x] Rate limiting: no write limiter (only the admin can write) and
+      `statement_timeout` plus `pg_stat_statements` measurement
       ([design and decision](../designs/rate-limiting.md)).
 - [x] Supabase setup guide updated
       ([`supabase/README.md`](../supabase/README.md)).

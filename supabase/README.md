@@ -78,6 +78,11 @@ mismo orden. Todos los archivos son idempotentes: repetirlos no rompe nada.
   disponible. Si el proyecto no la tiene, el archivo avisa con un `notice` y la
   purga queda para cuando se habilite.
 - Las RPC atómicas de acciones en bloque, búsqueda y normalización de etiquetas.
+- Los límites de consulta: `statement_timeout` de 3 s para `anon` y 10 s para
+  `authenticated`, más la extensión `pg_stat_statements` para medir
+  (`20261121_query_guards.sql`). Las consultas de medición están en
+  `pg_stat_measure.sql` y `pg_stat_measure_app.sql` y se corren con el workflow
+  pasando la ruta del archivo.
 
 ## 6. Verificar
 
@@ -127,3 +132,4 @@ select user_id, created_at from public.admins;
 | `20261118_tag_casing.sql` | Escritura única de etiquetas |
 | `20261119_tag_integrity.sql` | Coherencia de reglas, auditoría y limpieza |
 | `20261120_storage_bucket.sql` | Bucket `wallpapers` para instalaciones nuevas |
+| `20261121_query_guards.sql` | `statement_timeout` y `pg_stat_statements` |
