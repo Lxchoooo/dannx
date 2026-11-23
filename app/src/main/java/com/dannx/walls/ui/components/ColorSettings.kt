@@ -323,7 +323,7 @@ private fun ColorSwatch(
             } else {
                 Color.White
             }
-            AnimatedVisibility(
+            androidx.compose.animation.AnimatedVisibility(
                 visible = selected,
                 enter = fadeIn(Motion.fade(reduceMotion, MotionDuration.Fast)) +
                     scaleIn(

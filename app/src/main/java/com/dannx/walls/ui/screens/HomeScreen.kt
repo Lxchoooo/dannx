@@ -10,6 +10,8 @@ import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
@@ -121,6 +123,9 @@ import com.dannx.walls.ui.components.StaggeredAppear
 import com.dannx.walls.ui.components.StatefulImage
 import com.dannx.walls.ui.components.WallpaperCard
 import com.dannx.walls.ui.components.animateItemMotion
+import com.dannx.walls.ui.theme.LocalReduceMotion
+import com.dannx.walls.ui.theme.Motion
+import com.dannx.walls.ui.theme.MotionDuration
 import com.dannx.walls.ui.components.wallpaperThumbRequest
 import com.dannx.walls.ui.theme.LocalLiteMode
 import com.dannx.walls.ui.LocalWindowSizeClass
@@ -423,7 +428,20 @@ fun HomeScreen(
                             Icon(Icons.Rounded.Search, contentDescription = null)
                         },
                         trailingIcon = {
-                            if (state.query.isNotEmpty()) {
+                            val reduceMotion = LocalReduceMotion.current
+                            androidx.compose.animation.AnimatedVisibility(
+                                visible = state.query.isNotEmpty(),
+                                enter = fadeIn(Motion.fade(reduceMotion, MotionDuration.Fast)) +
+                                    scaleIn(
+                                        animationSpec = Motion.bouncy(reduceMotion),
+                                        initialScale = 0.6f,
+                                    ),
+                                exit = fadeOut(Motion.fade(reduceMotion, MotionDuration.Fast)) +
+                                    scaleOut(
+                                        animationSpec = Motion.fade(reduceMotion, MotionDuration.Fast),
+                                        targetScale = 0.6f,
+                                    ),
+                            ) {
                                 IconButton(
                                     onClick = {
                                         onQueryChange("")

@@ -118,6 +118,7 @@ import com.dannx.walls.data.WallpaperCollection
 import com.dannx.walls.data.allTags
 import com.dannx.walls.data.collectAllTags
 import com.dannx.walls.data.parseTags
+import com.dannx.walls.ui.components.animateItemMotion
 
 private enum class StudioSection(
     @StringRes val labelRes: Int,
@@ -1898,6 +1899,7 @@ private fun LazyListScope.wallsPanel(
         items(items = walls, key = { it.id }) { wallpaper ->
             StudioWallpaperRow(
                 wallpaper = wallpaper,
+                modifier = animateItemMotion(),
                 categoryName = state.categoryNameFor(wallpaper),
                 selectable = selectionMode,
                 selected = wallpaper.id in selectedIds,
@@ -1972,7 +1974,7 @@ private fun LazyListScope.trashPanel(
 
     items(items = trash, key = { "trash-${it.id}" }) { wallpaper ->
         Card(
-            modifier = Modifier
+            modifier = animateItemMotion()
                 .fillMaxWidth()
                 .padding(bottom = 8.dp),
             shape = MaterialTheme.shapes.large,
@@ -2042,9 +2044,10 @@ private fun StudioWallpaperRow(
     onToggleFeatured: () -> Unit,
     onArchive: () -> Unit,
     onDelete: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     Card(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .padding(bottom = 10.dp)
             .combinedClickable(

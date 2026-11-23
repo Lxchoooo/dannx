@@ -4,6 +4,7 @@ import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.lazy.LazyItemScope
+import androidx.compose.foundation.lazy.grid.LazyGridItemScope
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import com.dannx.walls.ui.theme.EmphasizedEasing
@@ -20,6 +21,31 @@ import com.dannx.walls.ui.theme.StandardEasing
  */
 @Composable
 fun LazyItemScope.animateItemMotion(): Modifier =
+    if (LocalReduceMotion.current) {
+        Modifier
+    } else {
+        Modifier.animateItem(
+            fadeInSpec = tween(
+                durationMillis = MotionDuration.Medium,
+                easing = EmphasizedEasing,
+            ),
+            placementSpec = spring(
+                dampingRatio = Spring.DampingRatioNoBouncy,
+                stiffness = Spring.StiffnessMediumLow,
+            ),
+            fadeOutSpec = tween(
+                durationMillis = MotionDuration.Fast,
+                easing = StandardEasing,
+            ),
+        )
+    }
+
+/**
+ * Variante para grillas (`LazyVerticalGrid`), que usan su propio scope de ítem
+ * pero se comportan igual: acomodo animado salvo con reducir movimiento.
+ */
+@Composable
+fun LazyGridItemScope.animateItemMotion(): Modifier =
     if (LocalReduceMotion.current) {
         Modifier
     } else {
