@@ -1,6 +1,9 @@
 package com.dannx.walls.ui.screens
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -46,7 +49,9 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalIndication
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.semantics.heading
@@ -55,6 +60,8 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
+import com.dannx.walls.ui.theme.LocalReduceMotion
+import com.dannx.walls.ui.theme.Motion
 import com.dannx.walls.R
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.res.pluralStringResource
@@ -68,6 +75,7 @@ import com.dannx.walls.ui.components.EmptyState
 import com.dannx.walls.ui.components.ErrorState
 import com.dannx.walls.ui.components.FeedSkeleton
 import com.dannx.walls.ui.components.StatefulImage
+import com.dannx.walls.ui.components.animateItemMotion
 import com.dannx.walls.ui.components.screenImageSize
 import com.dannx.walls.ui.theme.LocalLiteMode
 
@@ -151,11 +159,13 @@ fun CollectionsScreen(
 
         if (state.collectionItems.isNotEmpty()) {
             items(items = state.collectionItems, key = { it.id }) { collection ->
-                CollectionCard(
-                    state = state,
-                    collection = collection,
-                    onClick = { onOpenCollection(collection) },
-                )
+                Box(Modifier.animateItemMotion()) {
+                    CollectionCard(
+                        state = state,
+                        collection = collection,
+                        onClick = { onOpenCollection(collection) },
+                    )
+                }
             }
         }
     }
@@ -186,10 +196,23 @@ private fun CollectionCard(
     }
     val cover = visibleWallpapers.firstOrNull()
     val mine = state.canEdit(collection) && !state.isDemo
+    val reduceMotion = LocalReduceMotion.current
+    val interactionSource = remember { MutableInteractionSource() }
+    val pressed by interactionSource.collectIsPressedAsState()
+    val pressScale by animateFloatAsState(
+        targetValue = if (pressed && !reduceMotion) 0.98f else 1f,
+        animationSpec = Motion.press(reduceMotion),
+        label = "collectionPress",
+    )
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick),
+            .scale(pressScale)
+            .clickable(
+                interactionSource = interactionSource,
+                indication = LocalIndication.current,
+                onClick = onClick,
+            ),
         shape = MaterialTheme.shapes.extraLarge,
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceContainerLow,

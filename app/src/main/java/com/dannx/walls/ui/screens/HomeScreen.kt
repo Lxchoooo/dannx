@@ -120,6 +120,7 @@ import com.dannx.walls.ui.components.OfflineBanner
 import com.dannx.walls.ui.components.StaggeredAppear
 import com.dannx.walls.ui.components.StatefulImage
 import com.dannx.walls.ui.components.WallpaperCard
+import com.dannx.walls.ui.components.animateItemMotion
 import com.dannx.walls.ui.components.wallpaperThumbRequest
 import com.dannx.walls.ui.theme.LocalLiteMode
 import com.dannx.walls.ui.LocalWindowSizeClass
@@ -802,6 +803,7 @@ fun HomeScreen(
                 ) { index, wallpaper ->
                     StaggeredAppear(
                         index = index,
+                        modifier = Modifier.animateItemMotion(),
                         resetKey = "${state.query}|${state.category}|${state.tags.joinToString(",")}|${state.color?.key}",
                     ) {
                         WallpaperCard(

@@ -1,8 +1,9 @@
 package com.dannx.walls.ui.components
 
 import android.content.Context
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.spring
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -67,6 +68,9 @@ import coil.request.ImageRequest
 import com.dannx.walls.R
 import com.dannx.walls.data.Wallpaper
 import com.dannx.walls.ui.theme.LocalLiteMode
+import com.dannx.walls.ui.theme.LocalReduceMotion
+import com.dannx.walls.ui.theme.Motion
+import com.dannx.walls.ui.theme.MotionDuration
 import java.util.Locale
 
 internal const val ThumbWidth = 540
@@ -147,12 +151,27 @@ fun WallpaperCard(
     compact: Boolean = false,
 ) {
     val interactionSource = remember { MutableInteractionSource() }
-    val liteMode = LocalLiteMode.current
+    val reduceMotion = LocalReduceMotion.current
     val pressed by interactionSource.collectIsPressedAsState()
     val pressScale by animateFloatAsState(
-        targetValue = if (pressed && !liteMode) 0.97f else 1f,
-        animationSpec = spring(dampingRatio = 0.6f, stiffness = 650f),
+        targetValue = if (pressed && !reduceMotion) 0.97f else 1f,
+        animationSpec = Motion.press(reduceMotion),
         label = "cardPress",
+    )
+    // El contorno de selección crece y se tiñe en vez de saltar.
+    val borderWidth by animateDpAsState(
+        targetValue = if (selected) 3.dp else 1.dp,
+        animationSpec = Motion.fade(reduceMotion, MotionDuration.Medium),
+        label = "cardBorderWidth",
+    )
+    val borderColor by animateColorAsState(
+        targetValue = if (selected) {
+            MaterialTheme.colorScheme.primary
+        } else {
+            MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f)
+        },
+        animationSpec = Motion.fade(reduceMotion, MotionDuration.Medium),
+        label = "cardBorderColor",
     )
     val description = stringResource(
         R.string.wallpaper_card_description,
@@ -194,12 +213,8 @@ fun WallpaperCard(
             .background(MaterialTheme.colorScheme.surfaceVariant)
             .then(
                 Modifier.border(
-                    width = if (selected) 3.dp else 1.dp,
-                    color = if (selected) {
-                        MaterialTheme.colorScheme.primary
-                    } else {
-                        MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f)
-                    },
+                    width = borderWidth,
+                    color = borderColor,
                     shape = MaterialTheme.shapes.extraLarge,
                 ),
             )
@@ -297,11 +312,11 @@ fun FeaturedCard(
     heroHeight: Dp = HeroHeight,
 ) {
     val interactionSource = remember { MutableInteractionSource() }
-    val liteMode = LocalLiteMode.current
+    val reduceMotion = LocalReduceMotion.current
     val pressed by interactionSource.collectIsPressedAsState()
     val pressScale by animateFloatAsState(
-        targetValue = if (pressed && !liteMode) 0.975f else 1f,
-        animationSpec = spring(dampingRatio = 0.6f, stiffness = 650f),
+        targetValue = if (pressed && !reduceMotion) 0.975f else 1f,
+        animationSpec = Motion.press(reduceMotion),
         label = "featuredPress",
     )
     val description = stringResource(

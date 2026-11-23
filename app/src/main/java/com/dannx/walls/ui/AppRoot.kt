@@ -3,6 +3,7 @@ package com.dannx.walls.ui
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExitTransition
+import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.Spring
@@ -41,11 +42,13 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.TransformOrigin
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
@@ -87,7 +90,9 @@ import com.dannx.walls.ui.screens.HomeScreen
 import com.dannx.walls.ui.screens.OnboardingScreen
 import com.dannx.walls.ui.screens.SettingsScreen
 import com.dannx.walls.ui.screens.StudioScreen
-import com.dannx.walls.ui.theme.LocalLiteMode
+import com.dannx.walls.ui.theme.EmphasizedEasing
+import com.dannx.walls.ui.theme.LocalReduceMotion
+import com.dannx.walls.ui.theme.MotionDuration
 import com.dannx.walls.ui.update.UpdateState
 import com.dannx.walls.ui.update.UpdateViewModel
 import com.dannx.walls.util.WallpaperFiles
@@ -158,7 +163,13 @@ private fun MainApp(
     val topTabRoutes: Set<String?> = topTabs.map { it.route }.toSet()
     val showBar = currentRoute in topTabRoutes
     val startDestination = if (startTab in topTabs.map { it.route }) startTab else "home"
-    val liteMode = LocalLiteMode.current
+    val reduceMotion = LocalReduceMotion.current
+    // Última pestaña visitada: da dirección al contenido de la siguiente. Se
+    // actualiza después de componer para no pisar la entrada en curso.
+    var previousTabRoute by remember { mutableStateOf(currentRoute) }
+    LaunchedEffect(currentRoute) {
+        if (currentRoute in topTabRoutes) previousTabRoute = currentRoute
+    }
     val snackbarHostState = remember { SnackbarHostState() }
     val haptics = LocalHapticFeedback.current
     // Tacto de confirmación cuando el fondo terminó de aplicarse. Se guarda el
@@ -237,7 +248,7 @@ private fun MainApp(
                         targetState.arguments?.getBoolean("random") == true
                     val detailToDetail = isDetailRoute(initialRoute) && isDetailRoute(targetRoute)
                     when {
-                        liteMode -> fadeIn(tween(120))
+                        reduceMotion -> fadeIn(tween(MotionDuration.Fast))
                         randomDetail -> fadeIn(tween(340))
                         detailToDetail -> fadeIn(tween(300))
                         isDetailRoute(targetRoute) -> {
@@ -278,7 +289,7 @@ private fun MainApp(
                     val detailToDetail = isDetailRoute(initialState.destination.route) &&
                         isDetailRoute(targetRoute)
                     when {
-                        liteMode -> fadeOut(tween(90))
+                        reduceMotion -> fadeOut(tween(MotionDuration.Fast))
                         randomDetail || detailToDetail -> fadeOut(tween(300))
                         isDetailRoute(targetRoute) -> fadeOut(tween(180))
                         isSecondaryRoute(targetRoute) -> {
@@ -300,7 +311,7 @@ private fun MainApp(
                 },
                 popEnterTransition = {
                     when {
-                        liteMode -> fadeIn(tween(120))
+                        reduceMotion -> fadeIn(tween(MotionDuration.Fast))
                         targetState.destination.route in topTabRoutes -> {
                             // La pantalla de atrás ya está quieta y visible; la
                             // que sale es la que hace el movimiento.
@@ -321,7 +332,7 @@ private fun MainApp(
                 popExitTransition = {
                     val leaving = initialState.destination.route
                     when {
-                        liteMode -> fadeOut(tween(90))
+                        reduceMotion -> fadeOut(tween(MotionDuration.Fast))
                         isDetailRoute(leaving) -> {
                             // Al volver, el detalle se va hacia la derecha.
                             slideOutHorizontally(
@@ -353,7 +364,7 @@ private fun MainApp(
                     if (targetState.destination.route in topTabRoutes) {
                         // Volver a una pestaña no mueve la barra.
                         EnterTransition.None
-                    } else if (liteMode) {
+                    } else if (reduceMotion) {
                         fadeIn(tween(120))
                     } else {
                         EnterTransition.None
@@ -367,7 +378,7 @@ private fun MainApp(
                             ExitTransition.None
                         }
 
-                        liteMode -> fadeOut(tween(90))
+                        reduceMotion -> fadeOut(tween(MotionDuration.Fast))
                         isDetailRoute(leaving) -> {
                             slideOutHorizontally(
                                 animationSpec = spring(
@@ -406,6 +417,7 @@ private fun MainApp(
             ) {
                 TopLevelScaffold(
                     selectedRoute = "home",
+                    enterFrom = tabDirection(previousTabRoute, "home"),
                     onNavigate = { route -> navController.navigateTopLevel(route) },
                 ) {
                     HomeScreen(
@@ -461,6 +473,7 @@ private fun MainApp(
             ) {
                 TopLevelScaffold(
                     selectedRoute = "favorites",
+                    enterFrom = tabDirection(previousTabRoute, "favorites"),
                     onNavigate = { route -> navController.navigateTopLevel(route) },
                 ) {
                     FavoritesScreen(
@@ -488,6 +501,7 @@ private fun MainApp(
             ) {
                 TopLevelScaffold(
                     selectedRoute = "collections",
+                    enterFrom = tabDirection(previousTabRoute, "collections"),
                     onNavigate = { route -> navController.navigateTopLevel(route) },
                 ) {
                     CollectionsScreen(
@@ -851,14 +865,33 @@ private fun RouteError(
 private fun TopLevelScaffold(
     selectedRoute: String,
     onNavigate: (String) -> Unit,
+    enterFrom: Int = 0,
     content: @Composable () -> Unit,
 ) {
-    val dockItems = tabs.map { tab ->
-        DockItem(
-            route = tab.route,
-            icon = tab.icon,
-            label = stringResource(tab.labelRes),
-        )
+    val labels = tabs.map { stringResource(it.labelRes) }
+    val dockItems = remember(labels) {
+        tabs.mapIndexed { index, tab ->
+            DockItem(
+                route = tab.route,
+                icon = tab.icon,
+                label = labels[index],
+            )
+        }
+    }
+    val reduceMotion = LocalReduceMotion.current
+    // Entrada direccional del contenido: la barra se queda quieta y el cuerpo
+    // se desliza desde el lado de la pestaña que se dejó atrás.
+    val appear = remember { Animatable(if (enterFrom == 0 || reduceMotion) 1f else 0f) }
+    LaunchedEffect(Unit) {
+        if (appear.value < 1f) {
+            appear.animateTo(
+                targetValue = 1f,
+                animationSpec = tween(
+                    durationMillis = MotionDuration.Medium,
+                    easing = EmphasizedEasing,
+                ),
+            )
+        }
     }
     Scaffold(
         modifier = Modifier.fillMaxSize(),
@@ -889,13 +922,40 @@ private fun TopLevelScaffold(
                 .fillMaxSize()
                 .padding(innerPadding),
         ) {
-            content()
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .graphicsLayer {
+                        val remaining = 1f - appear.value
+                        translationX = enterFrom * size.width * 0.08f * remaining
+                        alpha = 0.82f + 0.18f * appear.value
+                    },
+            ) {
+                content()
+            }
         }
     }
 }
 
 /** Pantallas que se abren desde una pestaña y vuelven con gesto de atrás. */
 private fun isDetailRoute(route: String?): Boolean = route?.startsWith("detail") == true
+
+/** Posición de la pestaña en la barra, o -1 si la ruta no es una pestaña. */
+private fun tabOrder(route: String?): Int = tabs.indexOfFirst { it.route == route }
+
+/**
+ * Sentido del cambio de pestaña: 1 cuando la nueva está a la derecha de la
+ * anterior y -1 al revés. 0 para el primer arranque o cuando no hay cambio.
+ */
+private fun tabDirection(from: String?, to: String?): Int {
+    val start = tabOrder(from)
+    val end = tabOrder(to)
+    return when {
+        start < 0 || end < 0 || start == end -> 0
+        end > start -> 1
+        else -> -1
+    }
+}
 
 /** Ajustes, colecciones, editor y Estudio: aparecen con fade + escala. */
 private fun isSecondaryRoute(route: String?): Boolean =

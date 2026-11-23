@@ -51,6 +51,7 @@ import com.dannx.walls.data.WallpaperCollection
 import com.dannx.walls.ui.components.EmptyState
 import com.dannx.walls.ui.components.SelectionToolbar
 import com.dannx.walls.ui.components.WallpaperCard
+import com.dannx.walls.ui.components.animateItemMotion
 
 @Composable
 fun CollectionDetailScreen(
@@ -234,7 +235,7 @@ fun CollectionDetailScreen(
                 contentType = { _, _ -> "wall" },
             ) { _, wallpaper ->
                 val isSelected = wallpaper.id in selectedSet
-                Box {
+                Box(Modifier.animateItemMotion()) {
                     WallpaperCard(
                         wallpaper = wallpaper,
                         isFavorite = wallpaper.id in state.favorites,

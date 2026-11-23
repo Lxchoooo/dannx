@@ -1,5 +1,6 @@
 package com.dannx.walls.ui.theme
 
+import android.animation.ValueAnimator
 import android.app.WallpaperManager
 import android.os.Build
 import androidx.compose.animation.core.Animatable
@@ -86,14 +87,20 @@ fun DannXTheme(
         }
     }
     val colors = rememberAnimatedScheme(target, enabled = !liteMode)
+    // Lite o "quitar animaciones" del sistema: los dos apagan los resortes.
+    val systemAnimations = remember {
+        runCatching { ValueAnimator.areAnimatorsEnabled() }.getOrDefault(true)
+    }
+    val reduceMotion = liteMode || !systemAnimations
     // En negro puro el tinte de elevación volvería a iluminar el fondo.
     CompositionLocalProvider(
         LocalLiteMode provides liteMode,
+        LocalReduceMotion provides reduceMotion,
         LocalTonalElevationEnabled provides !amoled,
     ) {
         MaterialExpressiveTheme(
             colorScheme = colors,
-            motionScheme = if (liteMode) MotionScheme.standard() else MotionScheme.expressive(),
+            motionScheme = if (reduceMotion) MotionScheme.standard() else MotionScheme.expressive(),
             typography = DannXTypography,
             shapes = DannXShapes,
             content = content,

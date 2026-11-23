@@ -44,6 +44,7 @@ import com.dannx.walls.ui.components.FeedSkeleton
 import com.dannx.walls.ui.components.SelectionToolbar
 import com.dannx.walls.ui.components.StaggeredAppear
 import com.dannx.walls.ui.components.WallpaperCard
+import com.dannx.walls.ui.components.animateItemMotion
 
 @Composable
 fun FavoritesScreen(
@@ -188,7 +189,10 @@ fun FavoritesScreen(
                 contentType = { _, _ -> "wall" },
             ) { index, wallpaper ->
                 val isSelected = wallpaper.id in selectedSet
-                StaggeredAppear(index = index) {
+                StaggeredAppear(
+                    index = index,
+                    modifier = Modifier.animateItemMotion(),
+                ) {
                     WallpaperCard(
                         wallpaper = wallpaper,
                         isFavorite = true,

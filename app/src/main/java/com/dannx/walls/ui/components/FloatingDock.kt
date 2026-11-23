@@ -1,13 +1,16 @@
 package com.dannx.walls.ui.components
 
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.animateContentSize
-import androidx.compose.animation.core.FastOutSlowInEasing
-import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.spring
-import androidx.compose.animation.core.snap
-import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.expandHorizontally
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkHorizontally
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -22,8 +25,10 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.Role
@@ -31,7 +36,9 @@ import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.dannx.walls.ui.theme.LocalLiteMode
+import com.dannx.walls.ui.theme.LocalReduceMotion
+import com.dannx.walls.ui.theme.Motion
+import com.dannx.walls.ui.theme.MotionDuration
 
 /** Una pestaña de la barra flotante. */
 data class DockItem(
@@ -54,7 +61,7 @@ fun FloatingDock(
     onNavigate: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val lite = LocalLiteMode.current
+    val reduceMotion = LocalReduceMotion.current
     Surface(
         modifier = modifier,
         shape = CircleShape,
@@ -69,16 +76,7 @@ fun FloatingDock(
         Row(
             modifier = Modifier
                 .height(60.dp)
-                .animateContentSize(
-                    animationSpec = if (lite) {
-                        snap()
-                    } else {
-                        spring(
-                            dampingRatio = Spring.DampingRatioNoBouncy,
-                            stiffness = Spring.StiffnessMediumLow,
-                        )
-                    },
-                )
+                .animateContentSize(animationSpec = Motion.spatial(reduceMotion))
                 .padding(6.dp),
             horizontalArrangement = Arrangement.spacedBy(4.dp, Alignment.CenterHorizontally),
             verticalAlignment = Alignment.CenterVertically,
@@ -100,9 +98,16 @@ private fun DockEntry(
     selected: Boolean,
     onClick: () -> Unit,
 ) {
-    val lite = LocalLiteMode.current
+    val reduceMotion = LocalReduceMotion.current
     val colors = MaterialTheme.colorScheme
-    val spec = if (lite) snap<Color>() else tween<Color>(240, easing = FastOutSlowInEasing)
+    val interactionSource = remember { MutableInteractionSource() }
+    val pressed by interactionSource.collectIsPressedAsState()
+    val pressScale by animateFloatAsState(
+        targetValue = if (pressed && !reduceMotion) 0.94f else 1f,
+        animationSpec = Motion.press(reduceMotion),
+        label = "dockPress",
+    )
+    val spec = Motion.fade<Color>(reduceMotion, MotionDuration.Medium)
     val container by animateColorAsState(
         targetValue = if (selected) colors.primaryContainer else Color.Transparent,
         animationSpec = spec,
@@ -119,7 +124,10 @@ private fun DockEntry(
         shape = CircleShape,
         color = container,
         contentColor = contentColor,
-        modifier = Modifier.semantics { role = Role.Tab },
+        interactionSource = interactionSource,
+        modifier = Modifier
+            .scale(pressScale)
+            .semantics { role = Role.Tab },
     ) {
         Row(
             modifier = Modifier
@@ -133,14 +141,28 @@ private fun DockEntry(
                 contentDescription = if (selected) null else item.label,
                 modifier = Modifier.size(22.dp),
             )
-            if (selected) {
-                Spacer(Modifier.width(8.dp))
-                Text(
-                    text = item.label,
-                    style = MaterialTheme.typography.labelLargeEmphasized,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
+            AnimatedVisibility(
+                visible = selected,
+                enter = fadeIn(Motion.fade(reduceMotion, MotionDuration.Fast)) +
+                    expandHorizontally(
+                        animationSpec = Motion.spatial(reduceMotion),
+                        expandFrom = Alignment.Start,
+                    ),
+                exit = fadeOut(Motion.fade(reduceMotion, MotionDuration.Fast)) +
+                    shrinkHorizontally(
+                        animationSpec = Motion.spatial(reduceMotion),
+                        shrinkTowards = Alignment.Start,
+                    ),
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Spacer(Modifier.width(8.dp))
+                    Text(
+                        text = item.label,
+                        style = MaterialTheme.typography.labelLargeEmphasized,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
             }
         }
     }
