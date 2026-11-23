@@ -9,7 +9,6 @@ import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
-import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
@@ -104,6 +103,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalLocale
 import androidx.compose.ui.platform.LocalWindowInfo
@@ -125,10 +125,14 @@ import com.dannx.walls.data.Wallpaper
 import com.dannx.walls.data.WallpaperCollection
 import com.dannx.walls.ui.components.ApplyWallpaperSheet
 import com.dannx.walls.ui.components.WallpaperCard
+import com.dannx.walls.ui.theme.EmphasizedEasing
 import com.dannx.walls.ui.components.rememberFavoriteBounce
 import com.dannx.walls.ui.components.rememberWallpaperAccent
 import com.dannx.walls.ui.components.wallpaperThumbRequest
 import com.dannx.walls.ui.theme.LocalLiteMode
+import com.dannx.walls.ui.theme.LocalReduceMotion
+import com.dannx.walls.ui.theme.Motion
+import com.dannx.walls.ui.theme.MotionDuration
 import com.dannx.walls.util.DoubleTapZoom
 import com.dannx.walls.util.MinZoom
 import com.dannx.walls.util.PanOffset
@@ -219,6 +223,8 @@ fun DetailScreen(
     }
     val activity = LocalActivity.current
     val liteMode = LocalLiteMode.current
+    val reduceMotion = LocalReduceMotion.current
+    val density = LocalDensity.current
     BackHandler(enabled = showPreview) { showPreview = false }
     var applyPhase by remember { mutableStateOf(ApplyPhase.Idle) }
     var seenApplyTick by remember { mutableIntStateOf(applySuccessTick) }
@@ -244,18 +250,38 @@ fun DetailScreen(
     LaunchedEffect(Unit) { entered = true }
     val fullImageAlpha by animateFloatAsState(
         targetValue = if (fullImageLoaded) 1f else 0f,
-        animationSpec = tween(durationMillis = 220),
+        animationSpec = Motion.fade(reduceMotion, MotionDuration.Medium),
         label = "detailFullImageAlpha",
     )
     val enterScale by animateFloatAsState(
-        targetValue = if (entered || liteMode) 1f else 1.04f,
-        animationSpec = tween(durationMillis = 420, easing = FastOutSlowInEasing),
+        targetValue = if (entered || reduceMotion) 1f else 1.04f,
+        animationSpec = Motion.fade(reduceMotion, MotionDuration.ExtraSlow),
         label = "detailEnterScale",
     )
     val enterAlpha by animateFloatAsState(
-        targetValue = if (entered || liteMode) 1f else 0f,
-        animationSpec = tween(durationMillis = 280),
+        targetValue = if (entered || reduceMotion) 1f else 0f,
+        animationSpec = Motion.fade(reduceMotion, MotionDuration.Slow),
         label = "detailEnterAlpha",
+    )
+    // Los controles entran un instante después de la foto, con una subida corta.
+    val controlsAlpha by animateFloatAsState(
+        targetValue = if (entered || reduceMotion) 1f else 0f,
+        animationSpec = Motion.fade(
+            reduceMotion = reduceMotion,
+            durationMillis = MotionDuration.Slow,
+            delayMillis = 70,
+        ),
+        label = "detailControlsAlpha",
+    )
+    val controlsRisePx = with(density) { 28.dp.toPx() }
+    val controlsRise by animateFloatAsState(
+        targetValue = if (entered || reduceMotion) 0f else controlsRisePx,
+        animationSpec = Motion.fade(
+            reduceMotion = reduceMotion,
+            durationMillis = MotionDuration.Slow,
+            delayMillis = 70,
+        ),
+        label = "detailControlsRise",
     )
 
     DisposableEffect(activity) {
@@ -336,7 +362,7 @@ fun DetailScreen(
                                 scaleAnimation.snapTo(start.scale)
                                 scaleAnimation.animateTo(
                                     targetValue = target,
-                                    animationSpec = tween(durationMillis = 220),
+                                    animationSpec = Motion.spatial(reduceMotion),
                                 ) {
                                     val current = value
                                     val progress = if (target == start.scale) {
@@ -522,10 +548,29 @@ fun DetailScreen(
                 }
             }
 
+            // Halo con el color de la foto detrás de los controles. Es un
+            // degradado, no un desenfoque: cuesta una fracción de frame.
+            Box(
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .fillMaxWidth()
+                    .height(360.dp)
+                    .background(
+                        Brush.verticalGradient(
+                            0f to Color.Transparent,
+                            0.55f to accent.copy(alpha = 0.14f),
+                            1f to accent.copy(alpha = 0.32f),
+                        ),
+                    ),
+            )
             Column(
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
                     .fillMaxWidth()
+                    .graphicsLayer {
+                        alpha = controlsAlpha
+                        translationY = controlsRise
+                    }
                     .navigationBarsPadding()
                     .padding(horizontal = 20.dp, vertical = 20.dp),
             ) {
@@ -587,7 +632,7 @@ fun DetailScreen(
                     } else {
                         MaterialTheme.colorScheme.secondaryContainer
                     },
-                    animationSpec = tween(durationMillis = if (liteMode) 0 else 220),
+                    animationSpec = Motion.fade(reduceMotion, MotionDuration.Medium),
                     label = "applyButtonColor",
                 )
                 val applyContent = if (applyPhase == ApplyPhase.Done) {
@@ -636,14 +681,7 @@ fun DetailScreen(
                         modifier = Modifier
                             .weight(1f)
                             .animateContentSize(
-                                animationSpec = if (liteMode) {
-                                    tween(0)
-                                } else {
-                                    spring(
-                                        dampingRatio = Spring.DampingRatioNoBouncy,
-                                        stiffness = Spring.StiffnessMedium,
-                                    )
-                                },
+                                animationSpec = Motion.spatial(reduceMotion),
                             ),
                         shape = CircleShape,
                         colors = ButtonDefaults.filledTonalButtonColors(
@@ -656,12 +694,13 @@ fun DetailScreen(
                         AnimatedContent(
                             targetState = applyPhase,
                             transitionSpec = {
-                                if (liteMode) {
-                                    fadeIn(tween(120)) togetherWith fadeOut(tween(90))
+                                if (reduceMotion) {
+                                    fadeIn(tween(MotionDuration.Fast)) togetherWith
+                                        fadeOut(tween(MotionDuration.Fast))
                                 } else {
                                     (
-                                        fadeIn(tween(160)) +
-                                            scaleIn(tween(160), initialScale = 0.9f)
+                                        fadeIn(tween(160, easing = EmphasizedEasing)) +
+                                            scaleIn(spring(), initialScale = 0.9f)
                                         ) togetherWith fadeOut(tween(100))
                                 }
                             },
@@ -804,13 +843,16 @@ fun DetailScreen(
 
         AnimatedVisibility(
             visible = showPreview,
-            enter = if (liteMode) {
-                fadeIn(tween(180))
+            enter = if (reduceMotion) {
+                fadeIn(tween(MotionDuration.Fast))
             } else {
-                fadeIn(tween(200)) +
-                    scaleIn(tween(240, easing = FastOutSlowInEasing), initialScale = 0.92f)
+                fadeIn(tween(MotionDuration.Medium)) +
+                    scaleIn(
+                        tween(MotionDuration.Slow, easing = EmphasizedEasing),
+                        initialScale = 0.92f,
+                    )
             },
-            exit = fadeOut(tween(if (liteMode) 0 else 160)),
+            exit = fadeOut(tween(if (reduceMotion) MotionDuration.Fast else 160)),
             modifier = Modifier.fillMaxSize(),
         ) {
             LockScreenPreview(onDismiss = { showPreview = false })

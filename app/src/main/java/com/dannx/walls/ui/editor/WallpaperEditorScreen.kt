@@ -5,6 +5,7 @@ import android.graphics.Bitmap
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.LocalActivity
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -58,7 +59,8 @@ import androidx.compose.material.icons.rounded.Tune
 import androidx.compose.material.icons.rounded.Visibility
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
-import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -105,6 +107,9 @@ import androidx.annotation.StringRes
 import com.dannx.walls.R
 import com.dannx.walls.data.Wallpaper
 import com.dannx.walls.ui.components.ApplyWallpaperSheet
+import com.dannx.walls.ui.theme.LocalReduceMotion
+import com.dannx.walls.ui.theme.Motion
+import com.dannx.walls.ui.theme.MotionDuration
 import com.dannx.walls.util.WallpaperTarget
 import com.dannx.walls.util.wallpaperTargetSize
 import kotlin.math.roundToInt
@@ -239,6 +244,7 @@ fun WallpaperEditorScreen(
     }
 }
 
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 private fun LoadingState(progress: Int?) {
     Box(
@@ -248,7 +254,7 @@ private fun LoadingState(progress: Int?) {
         contentAlignment = Alignment.Center,
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            CircularProgressIndicator()
+            LoadingIndicator(Modifier.size(44.dp))
             Spacer(Modifier.height(14.dp))
             Text(stringResource(R.string.editor_preparing))
             if (progress != null) {
@@ -289,6 +295,7 @@ private fun ErrorState(message: String, onRetry: () -> Unit) {
     }
 }
 
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 private fun ApplyProgressOverlay(progress: Int) {
     Box(
@@ -309,7 +316,7 @@ private fun ApplyProgressOverlay(progress: Int) {
                 modifier = Modifier.padding(24.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
-                CircularProgressIndicator()
+                LoadingIndicator(Modifier.size(44.dp))
                 Spacer(Modifier.height(14.dp))
                 Text(stringResource(R.string.editor_generating))
                 Spacer(Modifier.height(10.dp))
@@ -896,22 +903,30 @@ private fun ToolButton(
     selected: Boolean,
     onClick: () -> Unit,
 ) {
-    val contentColor = if (selected) {
-        MaterialTheme.colorScheme.primary
-    } else {
-        Color.White
-    }
+    val reduceMotion = LocalReduceMotion.current
+    val contentColor by animateColorAsState(
+        targetValue = if (selected) {
+            MaterialTheme.colorScheme.primary
+        } else {
+            Color.White
+        },
+        animationSpec = Motion.fade(reduceMotion, MotionDuration.Fast),
+        label = "toolContent",
+    )
+    val background by animateColorAsState(
+        targetValue = if (selected) {
+            MaterialTheme.colorScheme.primary.copy(alpha = 0.20f)
+        } else {
+            Color.Transparent
+        },
+        animationSpec = Motion.fade(reduceMotion, MotionDuration.Fast),
+        label = "toolBackground",
+    )
     Column(
         modifier = Modifier
             .width(52.dp)
             .clip(RoundedCornerShape(18.dp))
-            .background(
-                if (selected) {
-                    MaterialTheme.colorScheme.primary.copy(alpha = 0.20f)
-                } else {
-                    Color.Transparent
-                },
-            )
+            .background(background)
             .clickable(onClick = onClick)
             .padding(vertical = 6.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -975,26 +990,35 @@ private fun PreviewModeChip(
     selected: Boolean,
     onClick: () -> Unit,
 ) {
+    val reduceMotion = LocalReduceMotion.current
+    val container by animateColorAsState(
+        targetValue = if (selected) {
+            MaterialTheme.colorScheme.primary
+        } else {
+            Color.White.copy(alpha = 0.10f)
+        },
+        animationSpec = Motion.fade(reduceMotion, MotionDuration.Fast),
+        label = "previewChipContainer",
+    )
+    val content by animateColorAsState(
+        targetValue = if (selected) {
+            MaterialTheme.colorScheme.onPrimary
+        } else {
+            Color.White
+        },
+        animationSpec = Motion.fade(reduceMotion, MotionDuration.Fast),
+        label = "previewChipContent",
+    )
     Box(
         modifier = Modifier
             .clip(RoundedCornerShape(50))
-            .background(
-                if (selected) {
-                    MaterialTheme.colorScheme.primary
-                } else {
-                    Color.White.copy(alpha = 0.10f)
-                },
-            )
+            .background(container)
             .clickable(onClick = onClick)
             .padding(horizontal = 12.dp, vertical = 6.dp),
     ) {
         Text(
             text = label,
-            color = if (selected) {
-                MaterialTheme.colorScheme.onPrimary
-            } else {
-                Color.White
-            },
+            color = content,
             style = MaterialTheme.typography.labelMedium,
         )
     }

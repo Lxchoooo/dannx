@@ -1,6 +1,13 @@
 package com.dannx.walls.ui.components
 
 import androidx.annotation.StringRes
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -61,6 +68,9 @@ import com.dannx.walls.R
 import com.dannx.walls.data.ColorContrast
 import com.dannx.walls.data.ColorPaletteStyle
 import com.dannx.walls.data.WALLPAPER_COLOR_SEED
+import com.dannx.walls.ui.theme.LocalReduceMotion
+import com.dannx.walls.ui.theme.Motion
+import com.dannx.walls.ui.theme.MotionDuration
 import com.dannx.walls.ui.theme.materialScheme
 import com.dannx.walls.ui.theme.rememberSeedColor
 
@@ -246,6 +256,21 @@ private fun ColorSwatch(
     onClick: () -> Unit,
 ) {
     val label = stringResource(preset.label)
+    val reduceMotion = LocalReduceMotion.current
+    val ringWidth by animateDpAsState(
+        targetValue = if (selected) 3.dp else 1.dp,
+        animationSpec = Motion.fade(reduceMotion, MotionDuration.Medium),
+        label = "swatchRingWidth",
+    )
+    val ringColor by animateColorAsState(
+        targetValue = if (selected) {
+            MaterialTheme.colorScheme.primary
+        } else {
+            MaterialTheme.colorScheme.outlineVariant
+        },
+        animationSpec = Motion.fade(reduceMotion, MotionDuration.Medium),
+        label = "swatchRingColor",
+    )
     val fill = if (preset.key == WALLPAPER_COLOR_SEED) {
         val scheme = remember(preset.key, wallpaperSeed, darkTheme, paletteStyle) {
             materialScheme(
@@ -278,12 +303,8 @@ private fun ColorSwatch(
                     contentDescription = label
                 }
                 .border(
-                    width = if (selected) 3.dp else 1.dp,
-                    color = if (selected) {
-                        MaterialTheme.colorScheme.primary
-                    } else {
-                        MaterialTheme.colorScheme.outlineVariant
-                    },
+                    width = ringWidth,
+                    color = ringColor,
                     shape = CircleShape,
                 )
                 .padding(3.dp)
@@ -295,14 +316,26 @@ private fun ColorSwatch(
                 .background(fill, CircleShape),
             contentAlignment = Alignment.Center,
         ) {
-            if (selected) {
-                val tone = if (preset.color == Color.Transparent) {
-                    MaterialTheme.colorScheme.onPrimary
-                } else if (preset.color.luminance() > 0.5f) {
-                    Color.Black
-                } else {
-                    Color.White
-                }
+            val tone = if (preset.color == Color.Transparent) {
+                MaterialTheme.colorScheme.onPrimary
+            } else if (preset.color.luminance() > 0.5f) {
+                Color.Black
+            } else {
+                Color.White
+            }
+            AnimatedVisibility(
+                visible = selected,
+                enter = fadeIn(Motion.fade(reduceMotion, MotionDuration.Fast)) +
+                    scaleIn(
+                        animationSpec = Motion.bouncy(reduceMotion),
+                        initialScale = 0.4f,
+                    ),
+                exit = fadeOut(Motion.fade(reduceMotion, MotionDuration.Fast)) +
+                    scaleOut(
+                        animationSpec = Motion.fade(reduceMotion, MotionDuration.Fast),
+                        targetScale = 0.4f,
+                    ),
+            ) {
                 Icon(
                     Icons.Rounded.Check,
                     contentDescription = null,
