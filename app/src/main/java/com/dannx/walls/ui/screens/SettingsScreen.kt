@@ -5,9 +5,11 @@ import android.content.Intent
 import android.os.Build
 import android.provider.Settings
 import androidx.annotation.RequiresApi
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -24,6 +26,7 @@ import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.OpenInNew
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
@@ -128,9 +131,9 @@ fun SettingsScreen(
         ) {
             item { SectionTitle(stringResource(R.string.settings_appearance)) }
             item {
-                Card(Modifier.fillMaxWidth()) {
+                SettingsCard {
                     Column(Modifier.padding(16.dp)) {
-                        Text(stringResource(R.string.settings_theme), style = MaterialTheme.typography.titleMedium)
+                        Text(stringResource(R.string.settings_theme), style = MaterialTheme.typography.titleMediumEmphasized)
                         Text(
                             stringResource(R.string.settings_theme_hint),
                             style = MaterialTheme.typography.bodySmall,
@@ -155,7 +158,7 @@ fun SettingsScreen(
             }
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                 item {
-                    Card(Modifier.fillMaxWidth()) {
+                    SettingsCard {
                         Row(
                             modifier = Modifier.padding(16.dp),
                             verticalAlignment = Alignment.CenterVertically,
@@ -163,7 +166,7 @@ fun SettingsScreen(
                             Column(Modifier.weight(1f)) {
                                 Text(
                                     stringResource(R.string.settings_language),
-                                    style = MaterialTheme.typography.titleMedium,
+                                    style = MaterialTheme.typography.titleMediumEmphasized,
                                 )
                                 Text(
                                     stringResource(R.string.settings_language_hint),
@@ -193,7 +196,7 @@ fun SettingsScreen(
                 )
             }
             item {
-                Card(Modifier.fillMaxWidth()) {
+                SettingsCard {
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -206,7 +209,7 @@ fun SettingsScreen(
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Column(Modifier.weight(1f)) {
-                            Text(stringResource(R.string.settings_lite), style = MaterialTheme.typography.titleMedium)
+                            Text(stringResource(R.string.settings_lite), style = MaterialTheme.typography.titleMediumEmphasized)
                             Text(
                                 stringResource(R.string.settings_lite_hint),
                                 style = MaterialTheme.typography.bodySmall,
@@ -223,7 +226,7 @@ fun SettingsScreen(
             }
 
             item {
-                Card(Modifier.fillMaxWidth()) {
+                SettingsCard {
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -238,7 +241,7 @@ fun SettingsScreen(
                         Column(Modifier.weight(1f)) {
                             Text(
                                 stringResource(R.string.settings_open_editor),
-                                style = MaterialTheme.typography.titleMedium,
+                                style = MaterialTheme.typography.titleMediumEmphasized,
                             )
                             Text(
                                 stringResource(R.string.settings_open_editor_hint),
@@ -257,13 +260,13 @@ fun SettingsScreen(
 
             item { SectionTitle(stringResource(R.string.settings_storage)) }
             item {
-                Card(Modifier.fillMaxWidth()) {
+                SettingsCard {
                     Row(
                         modifier = Modifier.padding(16.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Column(Modifier.weight(1f)) {
-                            Text(stringResource(R.string.settings_cache), style = MaterialTheme.typography.titleMedium)
+                            Text(stringResource(R.string.settings_cache), style = MaterialTheme.typography.titleMediumEmphasized)
                             Text(
                                 stringResource(R.string.settings_cache_hint),
                                 style = MaterialTheme.typography.bodySmall,
@@ -288,9 +291,9 @@ fun SettingsScreen(
 
             item { SectionTitle(stringResource(R.string.settings_credits)) }
             item {
-                Card(Modifier.fillMaxWidth()) {
+                SettingsCard {
                     Column(Modifier.padding(16.dp)) {
-                        Text(stringResource(R.string.app_name), style = MaterialTheme.typography.titleMedium)
+                        Text(stringResource(R.string.app_name), style = MaterialTheme.typography.titleMediumEmphasized)
                         Text(
                             stringResource(R.string.settings_version, BuildConfig.VERSION_NAME),
                             style = MaterialTheme.typography.bodySmall,
@@ -346,7 +349,7 @@ fun SettingsScreen(
 
             item { SectionTitle(stringResource(R.string.settings_advanced)) }
             item {
-                Card(Modifier.fillMaxWidth()) {
+                SettingsCard {
                     Column(Modifier.padding(horizontal = 8.dp, vertical = 8.dp)) {
                         TextButton(onClick = onResetAppearance) {
                             Text(stringResource(R.string.settings_reset))
@@ -385,9 +388,26 @@ fun SettingsScreen(
 private fun SectionTitle(text: String) {
     Text(
         text = text,
-        style = MaterialTheme.typography.labelLarge,
+        style = MaterialTheme.typography.titleSmallEmphasized,
         color = MaterialTheme.colorScheme.primary,
         modifier = Modifier.padding(top = 8.dp, start = 4.dp),
+    )
+}
+
+/** Tarjeta de Ajustes con el contorno fino que comparten las del resto de la app. */
+@Composable
+private fun SettingsCard(content: @Composable ColumnScope.() -> Unit) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = MaterialTheme.shapes.extraLarge,
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+        ),
+        border = BorderStroke(
+            1.dp,
+            MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f),
+        ),
+        content = content,
     )
 }
 

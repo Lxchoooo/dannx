@@ -104,11 +104,21 @@ fun ColorSettingsCard(
     // un preset elegido: así se puede volver a él viendo lo que se recupera.
     val wallpaperSeed = rememberSeedColor(WALLPAPER_COLOR_SEED, darkTheme)
     var showStyles by rememberSaveable { mutableStateOf(false) }
-    Card(Modifier.fillMaxWidth()) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = MaterialTheme.shapes.extraLarge,
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+        ),
+        border = BorderStroke(
+            1.dp,
+            MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f),
+        ),
+    ) {
         Column(Modifier.padding(16.dp)) {
             Text(
                 stringResource(R.string.settings_color),
-                style = MaterialTheme.typography.titleMedium,
+                style = MaterialTheme.typography.titleMediumEmphasized,
             )
             Text(
                 stringResource(R.string.settings_color_hint),
