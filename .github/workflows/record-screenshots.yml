@@ -1,8 +1,9 @@
 name: Record screenshots
 
-# Grabación de dorados para Roborazzi. Corre a mano: cuando cambie una vista,
-# se dispara este workflow, se descarga el artifact `screenshots-golden` y se
-# reemplaza el contenido de app/src/test/screenshots en el PR.
+# Grabación de dorados para Roborazzi. Corre solo a mano, cuando haga falta
+# revisar la UI o actualizar las capturas: nunca en push ni en tags, para no
+# alargar el CI. Se dispara este workflow, se descarga el artifact
+# `screenshots-golden` y se reemplaza app/src/test/screenshots en el repo.
 on:
   workflow_dispatch:
 

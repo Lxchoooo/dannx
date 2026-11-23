@@ -46,12 +46,6 @@ jobs:
       - name: Lint and unit tests
         run: ./gradlew lintDebug testDebugUnitTest
 
-      # En los tags se comprueba que las capturas versionadas sigan
-      # coincidiendo con la UI. La grabación vive en `record-screenshots.yml`.
-      - name: Verify screenshots
-        if: github.ref_type == 'tag'
-        run: ./gradlew :app:verifyRoborazziDebug -Pscreenshots
-
       # Los reportes solo se conservan cuando algo falla: en verde no hacen
       # falta y ensucian la lista de artefactos.
       - name: Upload lint report

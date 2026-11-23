@@ -127,8 +127,8 @@ android {
             isIncludeAndroidResources = true
             all {
                 it.systemProperties["robolectric.pixelCopyRenderMode"] = "hardware"
-                // Las capturas son las pruebas más lentas: se validan en los
-                // tags o a mano (workflow de capturas), no en cada push.
+                // Las capturas son las pruebas más lentas: corren solo a mano
+                // (workflow de capturas), nunca en push ni en tags.
                 it.filter {
                     if (providers.gradleProperty("screenshots").isPresent) {
                         includeTestsMatching("com.dannx.walls.ui.screenshot.*")
