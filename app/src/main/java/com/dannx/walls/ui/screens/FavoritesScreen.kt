@@ -89,7 +89,7 @@ fun FavoritesScreen(
                     Column(Modifier.weight(1f)) {
                         Text(
                             text = stringResource(R.string.favorites_title),
-                            style = MaterialTheme.typography.displayMedium,
+                            style = MaterialTheme.typography.displayMediumEmphasized,
                             modifier = Modifier.semantics { heading() },
                         )
                         Text(

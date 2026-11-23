@@ -105,7 +105,7 @@ fun CollectionDetailScreen(
                     Column(Modifier.weight(1f)) {
                         Text(
                             text = collection.name,
-                            style = MaterialTheme.typography.headlineMedium,
+                            style = MaterialTheme.typography.headlineMediumEmphasized,
                             modifier = Modifier.semantics { heading() },
                         )
                         Text(

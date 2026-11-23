@@ -1,5 +1,6 @@
 package com.dannx.walls.ui.screens
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -99,7 +100,7 @@ fun CollectionsScreen(
             Column(Modifier.fillMaxWidth()) {
                 Text(
                     text = stringResource(R.string.collections_title),
-                    style = MaterialTheme.typography.displayMedium,
+                    style = MaterialTheme.typography.displayMediumEmphasized,
                     modifier = Modifier.semantics { heading() },
                 )
                 Text(
@@ -193,6 +194,10 @@ private fun CollectionCard(
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
         ),
+        border = BorderStroke(
+            1.dp,
+            MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f),
+        ),
     ) {
         Box(
             modifier = Modifier
@@ -265,7 +270,7 @@ private fun CollectionCard(
             ) {
                 Text(
                     text = collection.name,
-                    style = MaterialTheme.typography.headlineSmall,
+                    style = MaterialTheme.typography.headlineSmallEmphasized,
                     color = Color.White,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
