@@ -803,7 +803,7 @@ fun HomeScreen(
                 ) { index, wallpaper ->
                     StaggeredAppear(
                         index = index,
-                        modifier = Modifier.animateItemMotion(),
+                        modifier = animateItemMotion(),
                         resetKey = "${state.query}|${state.category}|${state.tags.joinToString(",")}|${state.color?.key}",
                     ) {
                         WallpaperCard(

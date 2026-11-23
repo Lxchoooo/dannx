@@ -51,7 +51,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
-import androidx.compose.ui.platform.LocalIndication
+import androidx.compose.foundation.LocalIndication
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.semantics.heading
@@ -159,7 +159,7 @@ fun CollectionsScreen(
 
         if (state.collectionItems.isNotEmpty()) {
             items(items = state.collectionItems, key = { it.id }) { collection ->
-                Box(Modifier.animateItemMotion()) {
+                Box(modifier = animateItemMotion()) {
                     CollectionCard(
                         state = state,
                         collection = collection,

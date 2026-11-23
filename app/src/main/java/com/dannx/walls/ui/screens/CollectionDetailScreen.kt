@@ -235,7 +235,7 @@ fun CollectionDetailScreen(
                 contentType = { _, _ -> "wall" },
             ) { _, wallpaper ->
                 val isSelected = wallpaper.id in selectedSet
-                Box(Modifier.animateItemMotion()) {
+                Box(modifier = animateItemMotion()) {
                     WallpaperCard(
                         wallpaper = wallpaper,
                         isFavorite = wallpaper.id in state.favorites,

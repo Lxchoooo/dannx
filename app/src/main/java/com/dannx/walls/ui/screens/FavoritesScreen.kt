@@ -191,7 +191,7 @@ fun FavoritesScreen(
                 val isSelected = wallpaper.id in selectedSet
                 StaggeredAppear(
                     index = index,
-                    modifier = Modifier.animateItemMotion(),
+                    modifier = animateItemMotion(),
                 ) {
                     WallpaperCard(
                         wallpaper = wallpaper,
