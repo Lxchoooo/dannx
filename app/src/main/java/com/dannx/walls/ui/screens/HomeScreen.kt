@@ -181,6 +181,7 @@ fun HomeScreen(
     val availableTags = remember(state.tagCatalog, state.wallpapers) { state.availableTags }
     val context = LocalContext.current
     val liteMode = LocalLiteMode.current
+    val reduceMotion = LocalReduceMotion.current
     val focusManager = LocalFocusManager.current
     var searchFocused by remember { mutableStateOf(false) }
     val showColorFilters = searchFocused || state.query.isNotBlank()
@@ -201,8 +202,8 @@ fun HomeScreen(
         }
         wasRefreshing = state.refreshing
     }
-    // Balanceo suave del dado de "Sorpréndeme". En lite queda quieto.
-    val surpriseWiggle = if (liteMode) {
+    // Balanceo suave del dado de "Sorpréndeme". Con reducir movimiento quieto.
+    val surpriseWiggle = if (reduceMotion) {
         0f
     } else {
         val transition = rememberInfiniteTransition(label = "surprise")
@@ -428,7 +429,6 @@ fun HomeScreen(
                             Icon(Icons.Rounded.Search, contentDescription = null)
                         },
                         trailingIcon = {
-                            val reduceMotion = LocalReduceMotion.current
                             androidx.compose.animation.AnimatedVisibility(
                                 visible = state.query.isNotEmpty(),
                                 enter = fadeIn(Motion.fade(reduceMotion, MotionDuration.Fast)) +
@@ -467,15 +467,15 @@ fun HomeScreen(
                             unfocusedBorderColor = MaterialTheme.colorScheme.surfaceContainerHigh,
                         ),
                     )
-                    AnimatedVisibility(
+                    androidx.compose.animation.AnimatedVisibility(
                         visible = showColorFilters,
-                        enter = if (liteMode) {
-                            fadeIn()
+                        enter = if (reduceMotion) {
+                            fadeIn(Motion.fade(reduceMotion, MotionDuration.Fast))
                         } else {
                             expandVertically() + fadeIn()
                         },
-                        exit = if (liteMode) {
-                            fadeOut()
+                        exit = if (reduceMotion) {
+                            fadeOut(Motion.fade(reduceMotion, MotionDuration.Fast))
                         } else {
                             shrinkVertically() + fadeOut()
                         },
