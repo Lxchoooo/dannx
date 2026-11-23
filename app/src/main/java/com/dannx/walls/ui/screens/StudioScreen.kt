@@ -126,6 +126,7 @@ import com.dannx.walls.data.parseTags
 import com.dannx.walls.ui.components.animateItemMotion
 import com.dannx.walls.ui.theme.LocalReduceMotion
 import com.dannx.walls.ui.theme.Motion
+import com.dannx.walls.ui.theme.MotionDuration
 
 private enum class StudioSection(
     @StringRes val labelRes: Int,
@@ -1624,15 +1625,37 @@ private fun LazyListScope.wallsPanel(
                     },
                     shape = CircleShape,
                 )
+                val reduceMotion = LocalReduceMotion.current
                 IconButton(onClick = onToggleSelectionMode) {
-                    Icon(
-                        imageVector = if (selectionMode) {
-                            Icons.Rounded.Close
-                        } else {
-                            Icons.Rounded.Check
+                    // El ícono de selección se cambia con un pop corto en vez
+                    // de saltar de una forma a la otra.
+                    AnimatedContent(
+                        targetState = selectionMode,
+                        transitionSpec = {
+                            if (reduceMotion) {
+                                fadeIn(tween(MotionDuration.Fast)) togetherWith
+                                    fadeOut(tween(MotionDuration.Fast))
+                            } else {
+                                (
+                                    fadeIn(tween(MotionDuration.Fast)) +
+                                        scaleIn(tween(MotionDuration.Medium), initialScale = 0.6f)
+                                    ) togetherWith (
+                                    fadeOut(tween(MotionDuration.Fast)) +
+                                        scaleOut(tween(MotionDuration.Medium), targetScale = 0.6f)
+                                    )
+                            }
                         },
-                        contentDescription = stringResource(R.string.studio_select),
-                    )
+                        label = "studioSelectionMode",
+                    ) { selecting ->
+                        Icon(
+                            imageVector = if (selecting) {
+                                Icons.Rounded.Close
+                            } else {
+                                Icons.Rounded.Check
+                            },
+                            contentDescription = stringResource(R.string.studio_select),
+                        )
+                    }
                 }
             }
             Spacer(Modifier.height(4.dp))
@@ -1666,7 +1689,7 @@ private fun LazyListScope.wallsPanel(
 
     if (selectionMode) {
         item(key = "walls-bulk") {
-            Column {
+            Column(Modifier.animateItemMotion()) {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     shape = MaterialTheme.shapes.large,
