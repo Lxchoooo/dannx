@@ -176,6 +176,7 @@
     <string name="detail_preview">Prévia na tela de bloqueio</string>
     <string name="detail_preview_close">Fechar prévia</string>
     <string name="detail_related_title">Você também pode gostar</string>
+    <string name="detail_resolution">%1$d × %2$d</string>
 
     <!-- Settings -->
     <string name="settings_title">Configurações</string>

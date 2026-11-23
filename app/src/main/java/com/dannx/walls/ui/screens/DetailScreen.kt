@@ -18,6 +18,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.rememberTransformableState
 import androidx.compose.foundation.gestures.transformable
@@ -26,6 +27,8 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -150,7 +153,7 @@ private enum class ApplyPhase { Idle, Loading, Done }
 /** Verde suave para confirmar que el fondo se aplicó. */
 private val ApplySuccessGreen = Color(0xFF2E7D32)
 
-@OptIn(ExperimentalMaterial3ExpressiveApi::class)
+@OptIn(ExperimentalMaterial3ExpressiveApi::class, ExperimentalLayoutApi::class)
 @Composable
 fun DetailScreen(
     wallpaper: Wallpaper,
@@ -526,16 +529,25 @@ fun DetailScreen(
                     .navigationBarsPadding()
                     .padding(horizontal = 20.dp, vertical = 20.dp),
             ) {
-                Text(
-                    text = wallpaper.category.uppercase(Locale.ROOT),
-                    style = MaterialTheme.typography.labelLarge,
-                    color = Color.White.copy(alpha = 0.75f),
-                    fontWeight = FontWeight.Bold,
-                )
-                Spacer(Modifier.height(6.dp))
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    DetailPill(wallpaper.category.uppercase(Locale.ROOT))
+                    if (wallpaper.width > 0 && wallpaper.height > 0) {
+                        DetailPill(
+                            stringResource(
+                                R.string.detail_resolution,
+                                wallpaper.width,
+                                wallpaper.height,
+                            ),
+                        )
+                    }
+                }
+                Spacer(Modifier.height(10.dp))
                 Text(
                     text = wallpaper.title,
-                    style = MaterialTheme.typography.headlineLarge,
+                    style = MaterialTheme.typography.headlineLargeEmphasized,
                     color = Color.White,
                 )
                 Spacer(Modifier.height(4.dp))
@@ -545,12 +557,20 @@ fun DetailScreen(
                     color = Color.White.copy(alpha = 0.72f),
                 )
                 if (wallpaper.tags.isNotEmpty()) {
-                    Spacer(Modifier.height(6.dp))
-                    Text(
-                        text = wallpaper.tags.joinToString("   ") { "#$it" },
-                        style = MaterialTheme.typography.labelLarge,
-                        color = Color.White.copy(alpha = 0.72f),
-                    )
+                    val visibleTags = wallpaper.tags.take(MaxTagChips)
+                    Spacer(Modifier.height(10.dp))
+                    FlowRow(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalArrangement = Arrangement.spacedBy(6.dp),
+                    ) {
+                        visibleTags.forEach { tag ->
+                            DetailPill("#$tag")
+                        }
+                        val hidden = wallpaper.tags.size - visibleTags.size
+                        if (hidden > 0) {
+                            DetailPill("+$hidden")
+                        }
+                    }
                 }
                 Spacer(Modifier.height(20.dp))
                 if (offline) {
@@ -755,9 +775,8 @@ fun DetailScreen(
                     Spacer(Modifier.height(18.dp))
                     Text(
                         text = stringResource(R.string.detail_related_title),
-                        style = MaterialTheme.typography.titleMedium,
+                        style = MaterialTheme.typography.titleMediumEmphasized,
                         color = Color.White.copy(alpha = 0.92f),
-                        fontWeight = FontWeight.Bold,
                     )
                     Spacer(Modifier.height(10.dp))
                     LazyRow(
@@ -1073,6 +1092,31 @@ private fun NewCollectionDialog(
             }
         },
     )
+}
+
+/** Cuántas etiquetas se muestran como píldoras antes de resumir el resto. */
+private const val MaxTagChips = 6
+
+/** Píldora translúcida sobre la foto: categoría, resolución y etiquetas. */
+@Composable
+private fun DetailPill(text: String) {
+    Box(
+        modifier = Modifier
+            .background(Color.White.copy(alpha = 0.10f), CircleShape)
+            .border(
+                width = 1.dp,
+                color = Color.White.copy(alpha = 0.30f),
+                shape = CircleShape,
+            )
+            .padding(horizontal = 12.dp, vertical = 5.dp),
+    ) {
+        Text(
+            text = text,
+            style = MaterialTheme.typography.labelMedium,
+            color = Color.White.copy(alpha = 0.92f),
+            maxLines = 1,
+        )
+    }
 }
 
 /**
