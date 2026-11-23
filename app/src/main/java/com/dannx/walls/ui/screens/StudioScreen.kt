@@ -1689,7 +1689,7 @@ private fun LazyListScope.wallsPanel(
 
     if (selectionMode) {
         item(key = "walls-bulk") {
-            Column(Modifier.animateItemMotion()) {
+            Column(modifier = animateItemMotion()) {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     shape = MaterialTheme.shapes.large,
