@@ -73,6 +73,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.dannx.walls.R
+import com.dannx.walls.ui.theme.LocalReduceMotion
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlin.math.abs
@@ -85,6 +86,8 @@ import kotlin.math.sin
  */
 @Composable
 fun OnboardingScreen(liteMode: Boolean, onFinish: () -> Unit) {
+    // Lite o animaciones del sistema desactivadas: misma entrada tranquila.
+    val motionOff = liteMode || LocalReduceMotion.current
     val pages = remember {
         listOf(
             OnboardingPage(
@@ -144,7 +147,7 @@ fun OnboardingScreen(liteMode: Boolean, onFinish: () -> Unit) {
             .statusBarsPadding()
             .navigationBarsPadding(),
     ) {
-        AnimatedBackdrop(accent = backdropAccent, liteMode = liteMode)
+        AnimatedBackdrop(accent = backdropAccent, liteMode = motionOff)
 
         Column(
             modifier = Modifier
@@ -185,7 +188,7 @@ fun OnboardingScreen(liteMode: Boolean, onFinish: () -> Unit) {
                     index = index,
                     accent = accents[index],
                     pagerState = pagerState,
-                    liteMode = liteMode,
+                    liteMode = motionOff,
                 )
             }
 
@@ -222,7 +225,7 @@ fun OnboardingScreen(liteMode: Boolean, onFinish: () -> Unit) {
             Button(
                 onClick = {
                     when {
-                        isLast && liteMode -> onFinish()
+                        isLast && motionOff -> onFinish()
                         isLast -> finishing = true
                         else -> scope.launch {
                             pagerState.animateScrollToPage(

@@ -6,6 +6,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -13,10 +14,13 @@ import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.background
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -95,6 +99,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.layout.ContentScale
@@ -119,6 +124,8 @@ import com.dannx.walls.data.allTags
 import com.dannx.walls.data.collectAllTags
 import com.dannx.walls.data.parseTags
 import com.dannx.walls.ui.components.animateItemMotion
+import com.dannx.walls.ui.theme.LocalReduceMotion
+import com.dannx.walls.ui.theme.Motion
 
 private enum class StudioSection(
     @StringRes val labelRes: Int,
@@ -2046,11 +2053,25 @@ private fun StudioWallpaperRow(
     onDelete: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val reduceMotion = LocalReduceMotion.current
+    val interactionSource = remember { MutableInteractionSource() }
+    val pressed by interactionSource.collectIsPressedAsState()
+    val pressScale by animateFloatAsState(
+        targetValue = if (pressed && !reduceMotion) 0.98f else 1f,
+        animationSpec = Motion.press(reduceMotion),
+        label = "studioRowPress",
+    )
     Card(
         modifier = modifier
             .fillMaxWidth()
+            .graphicsLayer {
+                scaleX = pressScale
+                scaleY = pressScale
+            }
             .padding(bottom = 10.dp)
             .combinedClickable(
+                interactionSource = interactionSource,
+                indication = LocalIndication.current,
                 onClick = { if (selectable) onToggleSelected() },
                 onLongClick = { if (!selectable) onStartSelection() },
             ),

@@ -412,29 +412,42 @@ private fun StyleCard(
     selected: Boolean,
     onClick: () -> Unit,
 ) {
+    val reduceMotion = LocalReduceMotion.current
+    val container by animateColorAsState(
+        targetValue = if (selected) {
+            MaterialTheme.colorScheme.primaryContainer
+        } else {
+            MaterialTheme.colorScheme.surfaceContainerHigh
+        },
+        animationSpec = Motion.fade(reduceMotion, MotionDuration.Medium),
+        label = "styleContainer",
+    )
+    val content by animateColorAsState(
+        targetValue = if (selected) {
+            MaterialTheme.colorScheme.onPrimaryContainer
+        } else {
+            MaterialTheme.colorScheme.onSurface
+        },
+        animationSpec = Motion.fade(reduceMotion, MotionDuration.Medium),
+        label = "styleContent",
+    )
+    val borderColor by animateColorAsState(
+        targetValue = if (selected) {
+            MaterialTheme.colorScheme.primary
+        } else {
+            MaterialTheme.colorScheme.outlineVariant
+        },
+        animationSpec = Motion.fade(reduceMotion, MotionDuration.Medium),
+        label = "styleBorder",
+    )
     Card(
         onClick = onClick,
         shape = MaterialTheme.shapes.large,
         colors = CardDefaults.cardColors(
-            containerColor = if (selected) {
-                MaterialTheme.colorScheme.primaryContainer
-            } else {
-                MaterialTheme.colorScheme.surfaceContainerHigh
-            },
-            contentColor = if (selected) {
-                MaterialTheme.colorScheme.onPrimaryContainer
-            } else {
-                MaterialTheme.colorScheme.onSurface
-            },
+            containerColor = container,
+            contentColor = content,
         ),
-        border = BorderStroke(
-            width = 1.dp,
-            color = if (selected) {
-                MaterialTheme.colorScheme.primary
-            } else {
-                MaterialTheme.colorScheme.outlineVariant
-            },
-        ),
+        border = BorderStroke(width = 1.dp, color = borderColor),
         modifier = Modifier.fillMaxWidth(),
     ) {
         Row(
@@ -453,13 +466,27 @@ private fun StyleCard(
                     style = MaterialTheme.typography.bodySmall,
                 )
             }
-            if (selected) {
-                Spacer(Modifier.width(10.dp))
-                Icon(
-                    Icons.Rounded.Check,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary,
-                )
+            androidx.compose.animation.AnimatedVisibility(
+                visible = selected,
+                enter = fadeIn(Motion.fade(reduceMotion, MotionDuration.Fast)) +
+                    scaleIn(
+                        animationSpec = Motion.bouncy(reduceMotion),
+                        initialScale = 0.4f,
+                    ),
+                exit = fadeOut(Motion.fade(reduceMotion, MotionDuration.Fast)) +
+                    scaleOut(
+                        animationSpec = Motion.fade(reduceMotion, MotionDuration.Fast),
+                        targetScale = 0.4f,
+                    ),
+            ) {
+                Row {
+                    Spacer(Modifier.width(10.dp))
+                    Icon(
+                        Icons.Rounded.Check,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                    )
+                }
             }
         }
     }
