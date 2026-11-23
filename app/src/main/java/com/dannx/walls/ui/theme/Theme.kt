@@ -118,7 +118,7 @@ private fun wallpaperSeed(context: android.content.Context): Color? =
         WallpaperManager.getInstance(context)
             .getWallpaperColors(WallpaperManager.FLAG_SYSTEM)
             ?.primaryColor
-    }.getOrNull()?.let { Color(it) }
+    }.getOrNull()?.let { Color(it.toArgb()) }
 
 private fun systemSeed(context: android.content.Context, darkTheme: Boolean): Color {
     if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) return DefaultSeed
