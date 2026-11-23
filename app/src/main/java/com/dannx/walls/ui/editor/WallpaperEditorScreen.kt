@@ -4,14 +4,17 @@ import android.app.Application
 import android.graphics.Bitmap
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.LocalActivity
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.BorderStroke
@@ -107,6 +110,7 @@ import androidx.annotation.StringRes
 import com.dannx.walls.R
 import com.dannx.walls.data.Wallpaper
 import com.dannx.walls.ui.components.ApplyWallpaperSheet
+import com.dannx.walls.ui.theme.EmphasizedEasing
 import com.dannx.walls.ui.theme.LocalReduceMotion
 import com.dannx.walls.ui.theme.Motion
 import com.dannx.walls.ui.theme.MotionDuration
@@ -1096,33 +1100,55 @@ private fun ToolPanel(
                     style = MaterialTheme.typography.bodySmall,
                 )
             }
-            Column(
+            val reduceMotion = LocalReduceMotion.current
+            AnimatedContent(
+                targetState = selected,
+                transitionSpec = {
+                    if (reduceMotion) {
+                        fadeIn(tween(MotionDuration.Fast)) togetherWith
+                            fadeOut(tween(MotionDuration.Fast))
+                    } else {
+                        (
+                            fadeIn(tween(MotionDuration.Medium)) +
+                                slideInVertically(
+                                    animationSpec = tween(
+                                        durationMillis = MotionDuration.Medium,
+                                        easing = EmphasizedEasing,
+                                    ),
+                                    initialOffsetY = { it / 14 },
+                                )
+                            ) togetherWith fadeOut(tween(MotionDuration.Fast))
+                    }
+                },
+                label = "editorToolPanel",
                 modifier = Modifier
                     .weight(1f, fill = false)
                     .verticalScroll(rememberScrollState())
                     .padding(horizontal = 20.dp)
                     .padding(top = 4.dp, bottom = 16.dp),
-            ) {
-                when (selected) {
-                    EditorTool.CROP -> CropPanel(
-                        crop = settings.crop,
-                        onChange = onCropChange,
-                    )
-                    EditorTool.ADJUSTMENTS -> AdjustmentsPanel(
-                        adjustments = settings.adjustments,
-                        onChange = onAdjustmentsChange,
-                    )
-                    EditorTool.FILTERS -> FiltersPanel(
-                        thumbs = thumbs,
-                        selectedId = settings.filterId,
-                        intensity = settings.filterIntensity,
-                        onSelect = onFilterPicked,
-                        onIntensityChange = onFilterIntensity,
-                    )
-                    EditorTool.BLUR -> BlurPanel(
-                        blur = settings.blur,
-                        onChange = onBlurChange,
-                    )
+            ) { tool ->
+                Column {
+                    when (tool) {
+                        EditorTool.CROP -> CropPanel(
+                            crop = settings.crop,
+                            onChange = onCropChange,
+                        )
+                        EditorTool.ADJUSTMENTS -> AdjustmentsPanel(
+                            adjustments = settings.adjustments,
+                            onChange = onAdjustmentsChange,
+                        )
+                        EditorTool.FILTERS -> FiltersPanel(
+                            thumbs = thumbs,
+                            selectedId = settings.filterId,
+                            intensity = settings.filterIntensity,
+                            onSelect = onFilterPicked,
+                            onIntensityChange = onFilterIntensity,
+                        )
+                        EditorTool.BLUR -> BlurPanel(
+                            blur = settings.blur,
+                            onChange = onBlurChange,
+                        )
+                    }
                 }
             }
         }

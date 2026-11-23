@@ -18,6 +18,7 @@ import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -26,6 +27,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.dannx.walls.data.ColorContrast
 import com.dannx.walls.data.ColorPaletteStyle
 import com.dannx.walls.data.WALLPAPER_COLOR_SEED
@@ -86,12 +90,19 @@ fun DannXTheme(
             )
         }
     }
-    val colors = rememberAnimatedScheme(target, enabled = !liteMode)
-    // Lite o "quitar animaciones" del sistema: los dos apagan los resortes.
-    val systemAnimations = remember {
-        runCatching { ValueAnimator.areAnimatorsEnabled() }.getOrDefault(true)
+    // Lite o "quitar animaciones" del sistema: los dos apagan los resortes. Se
+    // vuelve a leer al reanudar para tomar el cambio sin reiniciar la app.
+    var systemAnimations by remember { mutableStateOf(animatorsEnabled()) }
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) systemAnimations = animatorsEnabled()
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
     val reduceMotion = liteMode || !systemAnimations
+    val colors = rememberAnimatedScheme(target, enabled = !reduceMotion)
     // En negro puro el tinte de elevación volvería a iluminar el fondo.
     CompositionLocalProvider(
         LocalLiteMode provides liteMode,
@@ -119,6 +130,10 @@ internal fun rememberSeedColor(colorSeed: String, darkTheme: Boolean): Color {
         parseSeedColor(colorSeed) ?: wallpaperSeed(context) ?: systemSeed(context, darkTheme)
     }
 }
+
+/** Escala de animaciones del sistema; en versiones viejas se asume activa. */
+private fun animatorsEnabled(): Boolean =
+    runCatching { ValueAnimator.areAnimatorsEnabled() }.getOrDefault(true)
 
 private fun wallpaperSeed(context: android.content.Context): Color? =
     runCatching {
