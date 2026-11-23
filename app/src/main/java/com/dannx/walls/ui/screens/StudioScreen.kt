@@ -12,6 +12,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
 import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
@@ -275,7 +276,7 @@ fun StudioScreen(
                 }
                 Text(
                     text = stringResource(R.string.studio_title),
-                    style = MaterialTheme.typography.displayMedium,
+                    style = MaterialTheme.typography.displayMediumEmphasized,
                 )
                 Text(
                     text = if (session == null) {
@@ -767,11 +768,15 @@ private fun StudioOverview(
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
         ),
+        border = BorderStroke(
+            1.dp,
+            MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f),
+        ),
     ) {
         Column(Modifier.padding(16.dp)) {
             Text(
                 text = stringResource(R.string.studio_overview),
-                style = MaterialTheme.typography.titleMedium,
+                style = MaterialTheme.typography.titleMediumEmphasized,
             )
             Spacer(Modifier.height(10.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -804,29 +809,49 @@ private fun StudioOverview(
                 )
             }
             Spacer(Modifier.height(6.dp))
-            LazyRow(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+            LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 item(key = "overview-publish") {
-                    TextButton(onClick = onOpenPublish) {
+                    OutlinedButton(
+                        onClick = onOpenPublish,
+                        shape = CircleShape,
+                        contentPadding = PaddingValues(horizontal = 14.dp, vertical = 6.dp),
+                    ) {
                         Text(stringResource(R.string.studio_new_wallpaper))
                     }
                 }
                 item(key = "overview-archived") {
-                    TextButton(onClick = onOpenArchived) {
+                    OutlinedButton(
+                        onClick = onOpenArchived,
+                        shape = CircleShape,
+                        contentPadding = PaddingValues(horizontal = 14.dp, vertical = 6.dp),
+                    ) {
                         Text(stringResource(R.string.studio_archived))
                     }
                 }
                 item(key = "overview-featured") {
-                    TextButton(onClick = onOpenFeatured) {
+                    OutlinedButton(
+                        onClick = onOpenFeatured,
+                        shape = CircleShape,
+                        contentPadding = PaddingValues(horizontal = 14.dp, vertical = 6.dp),
+                    ) {
                         Text(stringResource(R.string.studio_featured))
                     }
                 }
                 item(key = "overview-featured-order") {
-                    TextButton(onClick = onOpenFeaturedOrder) {
+                    OutlinedButton(
+                        onClick = onOpenFeaturedOrder,
+                        shape = CircleShape,
+                        contentPadding = PaddingValues(horizontal = 14.dp, vertical = 6.dp),
+                    ) {
                         Text(stringResource(R.string.studio_order_featured))
                     }
                 }
                 item(key = "overview-trash") {
-                    TextButton(onClick = onOpenTrash) {
+                    OutlinedButton(
+                        onClick = onOpenTrash,
+                        shape = CircleShape,
+                        contentPadding = PaddingValues(horizontal = 14.dp, vertical = 6.dp),
+                    ) {
                         Text(
                             stringResource(
                                 R.string.studio_trash_count,
@@ -886,7 +911,7 @@ private fun ContentPanel(
 
     Text(
         stringResource(R.string.studio_content),
-        style = MaterialTheme.typography.headlineMedium,
+        style = MaterialTheme.typography.headlineMediumEmphasized,
     )
     Spacer(Modifier.height(6.dp))
     Text(
@@ -1022,7 +1047,7 @@ private fun FeaturedOrderPanel(
 
     Text(
         stringResource(R.string.studio_featured_order),
-        style = MaterialTheme.typography.headlineMedium,
+        style = MaterialTheme.typography.headlineMediumEmphasized,
     )
     Spacer(Modifier.height(6.dp))
     Text(
@@ -1130,6 +1155,10 @@ private fun SetupCard(onRefresh: () -> Unit) {
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
         ),
+        border = BorderStroke(
+            1.dp,
+            MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f),
+        ),
     ) {
         Column(Modifier.padding(20.dp)) {
             Icon(
@@ -1141,7 +1170,7 @@ private fun SetupCard(onRefresh: () -> Unit) {
             Spacer(Modifier.height(12.dp))
             Text(
                 text = stringResource(R.string.studio_setup_title),
-                style = MaterialTheme.typography.headlineMedium,
+                style = MaterialTheme.typography.headlineMediumEmphasized,
             )
             Spacer(Modifier.height(6.dp))
             Text(
@@ -1171,6 +1200,10 @@ private fun LoginCard(
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
         ),
+        border = BorderStroke(
+            1.dp,
+            MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f),
+        ),
     ) {
         Column(Modifier.padding(20.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -1182,7 +1215,7 @@ private fun LoginCard(
                 Spacer(Modifier.width(8.dp))
                 Text(
                     text = stringResource(R.string.studio_admin_only),
-                    style = MaterialTheme.typography.titleMedium,
+                    style = MaterialTheme.typography.titleMediumEmphasized,
                 )
             }
             Spacer(Modifier.height(6.dp))
@@ -1292,7 +1325,7 @@ private fun PublishPanel(
 
     Text(
         text = stringResource(R.string.studio_new_wallpaper),
-        style = MaterialTheme.typography.headlineMedium,
+        style = MaterialTheme.typography.headlineMediumEmphasized,
     )
     Spacer(Modifier.height(12.dp))
     Card(
@@ -1555,7 +1588,7 @@ private fun LazyListScope.wallsPanel(
             ) {
                 Text(
                     text = stringResource(R.string.studio_my_walls),
-                    style = MaterialTheme.typography.headlineMedium,
+                    style = MaterialTheme.typography.headlineMediumEmphasized,
                     modifier = Modifier.weight(1f),
                 )
                 FilterChip(
@@ -1895,7 +1928,7 @@ private fun LazyListScope.trashPanel(
             ) {
                 Text(
                     text = stringResource(R.string.studio_trash),
-                    style = MaterialTheme.typography.headlineMedium,
+                    style = MaterialTheme.typography.headlineMediumEmphasized,
                     modifier = Modifier.weight(1f),
                 )
                 if (trash.isNotEmpty()) {
@@ -2163,7 +2196,7 @@ private fun CategoriesPanel(
     }
     Text(
         stringResource(R.string.studio_categories),
-        style = MaterialTheme.typography.headlineMedium,
+        style = MaterialTheme.typography.headlineMediumEmphasized,
     )
     Spacer(Modifier.height(6.dp))
     Text(
@@ -2318,7 +2351,7 @@ private fun TagsPanel(
     ) {
         Text(
             text = stringResource(R.string.studio_section_tags),
-            style = MaterialTheme.typography.headlineMedium,
+            style = MaterialTheme.typography.headlineMediumEmphasized,
             modifier = Modifier.weight(1f),
         )
         Button(onClick = onCreate, shape = CircleShape) {
@@ -2474,7 +2507,7 @@ private fun CollectionsPanel(
     ) {
         Text(
             text = stringResource(R.string.studio_collections),
-            style = MaterialTheme.typography.headlineMedium,
+            style = MaterialTheme.typography.headlineMediumEmphasized,
             modifier = Modifier.weight(1f),
         )
         Button(onClick = onCreate, shape = CircleShape) {

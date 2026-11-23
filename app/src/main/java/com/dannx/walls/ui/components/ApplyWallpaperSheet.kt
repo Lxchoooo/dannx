@@ -1,5 +1,6 @@
 package com.dannx.walls.ui.components
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -42,7 +43,7 @@ fun ApplyWallpaperSheet(
         ) {
             Text(
                 text = stringResource(R.string.apply_sheet_title),
-                style = MaterialTheme.typography.headlineMedium,
+                style = MaterialTheme.typography.headlineMediumEmphasized,
             )
             Spacer(Modifier.height(12.dp))
             ApplyOption(
@@ -81,6 +82,10 @@ private fun ApplyOption(
         shape = MaterialTheme.shapes.large,
         color = MaterialTheme.colorScheme.surfaceContainerHigh,
         modifier = Modifier.fillMaxWidth(),
+        border = BorderStroke(
+            1.dp,
+            MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f),
+        ),
     ) {
         Row(
             modifier = Modifier.padding(horizontal = 18.dp, vertical = 16.dp),
@@ -94,7 +99,7 @@ private fun ApplyOption(
             )
             Spacer(Modifier.width(16.dp))
             Column(Modifier.weight(1f)) {
-                Text(text = title, style = MaterialTheme.typography.titleMedium)
+                Text(text = title, style = MaterialTheme.typography.titleMediumEmphasized)
                 Text(
                     text = hint,
                     style = MaterialTheme.typography.bodyMedium,

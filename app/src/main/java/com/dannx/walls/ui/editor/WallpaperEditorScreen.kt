@@ -13,6 +13,7 @@ import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -803,6 +804,8 @@ private fun BottomFloatingControls(
             shape = RoundedCornerShape(50),
             color = Color.Black.copy(alpha = 0.42f),
             contentColor = Color.White,
+            shadowElevation = 6.dp,
+            border = BorderStroke(1.dp, Color.White.copy(alpha = 0.18f)),
         ) {
             Text(
                 text = stringResource(R.string.editor_hold_compare),
@@ -846,6 +849,8 @@ private fun FloatingToolBar(
         shape = RoundedCornerShape(26.dp),
         color = Color.Black.copy(alpha = 0.58f),
         contentColor = Color.White,
+        shadowElevation = 10.dp,
+        border = BorderStroke(1.dp, Color.White.copy(alpha = 0.16f)),
     ) {
         Row(
             modifier = Modifier.padding(horizontal = 6.dp, vertical = 4.dp),
@@ -938,6 +943,8 @@ private fun PreviewModeSelector(
         shape = RoundedCornerShape(50),
         color = Color.Black.copy(alpha = 0.58f),
         contentColor = Color.White,
+        shadowElevation = 8.dp,
+        border = BorderStroke(1.dp, Color.White.copy(alpha = 0.16f)),
     ) {
         Row(
             modifier = Modifier.padding(4.dp),
@@ -1038,7 +1045,7 @@ private fun ToolPanel(
             ) {
                 Text(
                     text = stringResource(selected.labelRes),
-                    style = MaterialTheme.typography.titleMedium,
+                    style = MaterialTheme.typography.titleMediumEmphasized,
                     modifier = Modifier.weight(1f),
                 )
                 Button(
