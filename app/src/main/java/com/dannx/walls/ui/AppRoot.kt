@@ -20,6 +20,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
@@ -28,10 +29,7 @@ import androidx.compose.material.icons.rounded.CollectionsBookmark
 import androidx.compose.material.icons.rounded.Explore
 import androidx.compose.material.icons.rounded.FavoriteBorder
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -75,7 +73,9 @@ import com.dannx.walls.MessageAction
 import com.dannx.walls.R
 import com.dannx.walls.UiState
 import com.dannx.walls.ui.components.DebugFpsOverlay
+import com.dannx.walls.ui.components.DockItem
 import com.dannx.walls.ui.components.ErrorState
+import com.dannx.walls.ui.components.FloatingDock
 import com.dannx.walls.ui.editor.WallpaperEditorScreen
 import com.dannx.walls.ui.screens.AboutScreen
 import com.dannx.walls.ui.screens.CollectionDetailScreen
@@ -222,7 +222,7 @@ private fun MainApp(
                 hostState = snackbarHostState,
                 modifier = Modifier
                     .navigationBarsPadding()
-                    .padding(bottom = if (showBar) 80.dp else 0.dp),
+                    .padding(bottom = if (showBar) 96.dp else 0.dp),
             )
         },
     ) { innerPadding ->
@@ -853,32 +853,34 @@ private fun TopLevelScaffold(
     onNavigate: (String) -> Unit,
     content: @Composable () -> Unit,
 ) {
+    val dockItems = tabs.map { tab ->
+        DockItem(
+            route = tab.route,
+            icon = tab.icon,
+            label = stringResource(tab.labelRes),
+        )
+    }
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         containerColor = MaterialTheme.colorScheme.background,
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
         bottomBar = {
-            NavigationBar(
-                containerColor = MaterialTheme.colorScheme.surfaceContainer,
-                tonalElevation = 0.dp,
+            // La píldora flota sobre el fondo: el Scaffold reserva su altura
+            // y el contenido no queda tapado por la barra.
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .navigationBarsPadding()
+                    .padding(horizontal = 22.dp, vertical = 12.dp),
+                contentAlignment = Alignment.Center,
             ) {
-                tabs.forEach { tab ->
-                    val selected = selectedRoute == tab.route
-                    NavigationBarItem(
-                        selected = selected,
-                        onClick = {
-                            if (!selected) {
-                                onNavigate(tab.route)
-                            }
-                        },
-                        icon = {
-                            Icon(tab.icon, contentDescription = null)
-                        },
-                        label = {
-                            Text(stringResource(tab.labelRes))
-                        },
-                    )
-                }
+                FloatingDock(
+                    items = dockItems,
+                    selectedRoute = selectedRoute,
+                    onNavigate = { route ->
+                        if (route != selectedRoute) onNavigate(route)
+                    },
+                )
             }
         },
     ) { innerPadding ->

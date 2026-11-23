@@ -193,15 +193,15 @@ fun WallpaperCard(
             .clip(MaterialTheme.shapes.extraLarge)
             .background(MaterialTheme.colorScheme.surfaceVariant)
             .then(
-                if (selected) {
-                    Modifier.border(
-                        width = 3.dp,
-                        color = MaterialTheme.colorScheme.primary,
-                        shape = MaterialTheme.shapes.extraLarge,
-                    )
-                } else {
-                    Modifier
-                },
+                Modifier.border(
+                    width = if (selected) 3.dp else 1.dp,
+                    color = if (selected) {
+                        MaterialTheme.colorScheme.primary
+                    } else {
+                        MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f)
+                    },
+                    shape = MaterialTheme.shapes.extraLarge,
+                ),
             )
             // Una sola frase para TalkBack en cada tarjeta, en vez de leer
             // piezas sueltas.
@@ -318,6 +318,11 @@ fun FeaturedCard(
             }
             .clip(MaterialTheme.shapes.extraLarge)
             .background(MaterialTheme.colorScheme.surfaceVariant)
+            .border(
+                width = 1.dp,
+                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f),
+                shape = MaterialTheme.shapes.extraLarge,
+            )
             .semantics(mergeDescendants = true) {
                 contentDescription = description
                 role = Role.Button
