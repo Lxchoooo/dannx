@@ -36,7 +36,14 @@ class MainActivity : ComponentActivity() {
                 ThemeMode.DARK -> true
             }
             val windowSizeClass = calculateWindowSizeClass(this)
-            DannXTheme(darkTheme = darkTheme, liteMode = state.liteMode) {
+            DannXTheme(
+                darkTheme = darkTheme,
+                liteMode = state.liteMode,
+                colorSeed = state.colorSeed,
+                paletteStyle = state.paletteStyle,
+                contrastLevel = state.contrastLevel,
+                amoled = state.amoled,
+            ) {
                 CompositionLocalProvider(LocalWindowSizeClass provides windowSizeClass) {
                     AppRoot(viewModel = viewModel, startTab = startTab)
                 }

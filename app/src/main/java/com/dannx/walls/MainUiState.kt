@@ -4,6 +4,8 @@ import androidx.compose.runtime.Immutable
 import com.dannx.walls.data.AdminSession
 import com.dannx.walls.data.AppSettings
 import com.dannx.walls.data.CategoryFeatured
+import com.dannx.walls.data.ColorContrast
+import com.dannx.walls.data.ColorPaletteStyle
 import com.dannx.walls.data.TagCategory
 import com.dannx.walls.data.ThemeMode
 import com.dannx.walls.data.Wallpaper
@@ -153,6 +155,11 @@ data class UiState(
     val themeMode: ThemeMode = ThemeMode.SYSTEM,
     val liteMode: Boolean = false,
     val openEditorOnApply: Boolean = true,
+    /** Semilla del color; vacío = color del fondo de pantalla. */
+    val colorSeed: String = "",
+    val paletteStyle: ColorPaletteStyle = ColorPaletteStyle.TONAL_SPOT,
+    val contrastLevel: ColorContrast = ColorContrast.STANDARD,
+    val amoled: Boolean = false,
     /** Espacio que ocupa la caché local, en bytes. */
     val cacheSizeBytes: Long = 0L,
     val appSettings: AppSettings = AppSettings(),

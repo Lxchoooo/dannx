@@ -8,7 +8,10 @@ import kotlinx.coroutines.launch
 import com.dannx.walls.data.AppCacheStore
 import com.dannx.walls.data.LocalStore
 import com.dannx.walls.data.AppearanceStore
+import com.dannx.walls.data.ColorContrast
+import com.dannx.walls.data.ColorPaletteStyle
 import com.dannx.walls.data.ThemeMode
+import com.dannx.walls.data.WALLPAPER_COLOR_SEED
 import com.dannx.walls.R
 import com.dannx.walls.util.StringResolver
 import com.dannx.walls.util.get
@@ -46,6 +49,30 @@ class AppearanceController(
         state.update { it.copy(openEditorOnApply = enabled) }
     }
 
+    /** Elige la semilla del color; vacío usa el fondo de pantalla. */
+    fun setColorSeed(seed: String) {
+        appearance.saveColorSeed(seed)
+        state.update { it.copy(colorSeed = seed) }
+    }
+
+    /** Cambia el estilo de la paleta generada. */
+    fun setPaletteStyle(style: ColorPaletteStyle) {
+        appearance.savePaletteStyle(style)
+        state.update { it.copy(paletteStyle = style) }
+    }
+
+    /** Sube o baja el contraste del esquema. */
+    fun setContrastLevel(level: ColorContrast) {
+        appearance.saveContrastLevel(level)
+        state.update { it.copy(contrastLevel = level) }
+    }
+
+    /** Negro puro para pantallas OLED. */
+    fun setAmoled(enabled: Boolean) {
+        appearance.saveAmoled(enabled)
+        state.update { it.copy(amoled = enabled) }
+    }
+
     /** Vuelve la apariencia a los valores de fábrica. */
     fun resetAppearance() {
         appearance.reset()
@@ -54,6 +81,10 @@ class AppearanceController(
                 themeMode = ThemeMode.SYSTEM,
                 liteMode = false,
                 openEditorOnApply = true,
+                colorSeed = WALLPAPER_COLOR_SEED,
+                paletteStyle = ColorPaletteStyle.TONAL_SPOT,
+                contrastLevel = ColorContrast.STANDARD,
+                amoled = false,
                 message = strings.get(R.string.msg_settings_reset),
                 messageAction = null,
             )

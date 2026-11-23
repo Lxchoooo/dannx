@@ -5,6 +5,7 @@ import android.content.Intent
 import android.os.Build
 import android.provider.Settings
 import androidx.annotation.RequiresApi
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -51,7 +52,10 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.dannx.walls.BuildConfig
 import com.dannx.walls.R
 import com.dannx.walls.UiState
+import com.dannx.walls.data.ColorContrast
+import com.dannx.walls.data.ColorPaletteStyle
 import com.dannx.walls.data.ThemeMode
+import com.dannx.walls.ui.components.ColorSettingsCard
 import com.dannx.walls.ui.components.UpdateDialog
 import com.dannx.walls.ui.update.UpdateState
 import com.dannx.walls.ui.update.UpdateViewModel
@@ -71,6 +75,10 @@ fun SettingsScreen(
     onThemeModeChange: (ThemeMode) -> Unit,
     onLiteModeChange: (Boolean) -> Unit,
     onOpenEditorOnApplyChange: (Boolean) -> Unit,
+    onColorSeedChange: (String) -> Unit,
+    onPaletteStyleChange: (ColorPaletteStyle) -> Unit,
+    onContrastLevelChange: (ColorContrast) -> Unit,
+    onAmoledChange: (Boolean) -> Unit,
     onRefreshCacheSize: () -> Unit,
     onClearCache: () -> Unit,
     onOpenAbout: () -> Unit,
@@ -78,6 +86,11 @@ fun SettingsScreen(
     onSignOut: () -> Unit,
 ) {
     val context = LocalContext.current
+    val darkTheme = when (state.themeMode) {
+        ThemeMode.SYSTEM -> isSystemInDarkTheme()
+        ThemeMode.LIGHT -> false
+        ThemeMode.DARK -> true
+    }
     val updateState by updateViewModel.state.collectAsStateWithLifecycle()
     LaunchedEffect(Unit) {
         onRefreshCacheSize()
@@ -165,6 +178,19 @@ fun SettingsScreen(
                         }
                     }
                 }
+            }
+            item {
+                ColorSettingsCard(
+                    colorSeed = state.colorSeed,
+                    paletteStyle = state.paletteStyle,
+                    contrastLevel = state.contrastLevel,
+                    amoled = state.amoled,
+                    darkTheme = darkTheme,
+                    onColorSeedChange = onColorSeedChange,
+                    onPaletteStyleChange = onPaletteStyleChange,
+                    onContrastLevelChange = onContrastLevelChange,
+                    onAmoledChange = onAmoledChange,
+                )
             }
             item {
                 Card(Modifier.fillMaxWidth()) {

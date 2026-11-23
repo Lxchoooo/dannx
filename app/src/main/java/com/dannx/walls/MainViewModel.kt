@@ -21,6 +21,8 @@ import com.dannx.walls.data.CategoryAll
 import com.dannx.walls.data.CategoryFeatured
 import com.dannx.walls.data.ColorCachePrefs
 import com.dannx.walls.data.ColorCacheStore
+import com.dannx.walls.data.ColorContrast
+import com.dannx.walls.data.ColorPaletteStyle
 import com.dannx.walls.data.CoilImageCache
 import com.dannx.walls.data.CoilWallpaperColorResolver
 import com.dannx.walls.data.CollectionDescriptionLimit
@@ -141,6 +143,10 @@ class MainViewModel(
             themeMode = appearance.themeMode(),
             liteMode = appearance.liteMode(),
             openEditorOnApply = appearance.openEditorOnApply(),
+            colorSeed = appearance.colorSeed(),
+            paletteStyle = appearance.paletteStyle(),
+            contrastLevel = appearance.contrastLevel(),
+            amoled = appearance.amoled(),
             appSettings = prefs.appSettings(),
         ),
     )
@@ -3359,6 +3365,20 @@ class MainViewModel(
     /** Define si el botón Aplicar abre primero el editor de fondos. */
     fun setOpenEditorOnApply(enabled: Boolean) =
         appearanceController.setOpenEditorOnApply(enabled)
+
+    /** Color semilla elegido; vacío usa el fondo de pantalla. */
+    fun setColorSeed(seed: String) = appearanceController.setColorSeed(seed)
+
+    /** Estilo de paleta Material 3. */
+    fun setPaletteStyle(style: ColorPaletteStyle) =
+        appearanceController.setPaletteStyle(style)
+
+    /** Contraste del esquema generado. */
+    fun setContrastLevel(level: ColorContrast) =
+        appearanceController.setContrastLevel(level)
+
+    /** Negro puro para pantallas OLED. */
+    fun setAmoled(enabled: Boolean) = appearanceController.setAmoled(enabled)
 
     /** Vuelve la apariencia a los valores de fábrica. */
     fun resetAppearance() = appearanceController.resetAppearance()

@@ -46,11 +46,27 @@ jobs:
       - name: Lint and unit tests
         run: ./gradlew lintDebug testDebugUnitTest
 
-      # Los dorados de Roborazzi se versionan en app/src/test/screenshots;
-      # una diferencia visual rompe el PR. Regrabar con el workflow
-      # `Record screenshots` cuando el cambio sea intencional.
+      # En main los dorados se regraban en cada corrida porque la tipografía
+      # y los colores todavía están en movimiento; el artefacto
+      # `screenshots-golden` se descarga y se versiona. Los tags verifican
+      # contra el árbol congelado: si algo cambió sin regrabar, el release no
+      # sale.
+      - name: Record screenshots
+        if: github.ref_type != 'tag'
+        run: ./gradlew :app:recordRoborazziDebug
+
       - name: Verify screenshots
+        if: github.ref_type == 'tag'
         run: ./gradlew :app:verifyRoborazziDebug
+
+      - name: Upload golden screenshots
+        if: github.ref_type != 'tag'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: screenshots-golden
+          path: app/src/test/screenshots
+          if-no-files-found: ignore
+          retention-days: 7
 
       # El módulo de medición y la variante `benchmark` de la app se compilan
       # acá para que una rotura del módulo no llegue al job manual.

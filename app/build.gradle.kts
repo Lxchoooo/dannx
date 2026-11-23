@@ -158,6 +158,7 @@ dependencies {
     implementation(libs.compose.material3)
     implementation(libs.compose.material3.window.size)
     implementation(libs.compose.material.icons)
+    implementation(libs.material.color.utilities)
 
     implementation(libs.coil.compose)
     implementation(libs.androidx.profileinstaller)

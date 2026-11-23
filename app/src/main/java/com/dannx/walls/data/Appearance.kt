@@ -14,9 +14,17 @@ interface AppearanceStore {
     fun themeMode(): ThemeMode
     fun liteMode(): Boolean
     fun openEditorOnApply(): Boolean
+    fun colorSeed(): String
+    fun paletteStyle(): ColorPaletteStyle
+    fun contrastLevel(): ColorContrast
+    fun amoled(): Boolean
     fun saveThemeMode(mode: ThemeMode)
     fun saveLiteMode(enabled: Boolean)
     fun saveOpenEditorOnApply(enabled: Boolean)
+    fun saveColorSeed(seed: String)
+    fun savePaletteStyle(style: ColorPaletteStyle)
+    fun saveContrastLevel(level: ColorContrast)
+    fun saveAmoled(enabled: Boolean)
     fun reset()
 }
 
@@ -35,6 +43,16 @@ class AppearancePrefs(context: Context) : AppearanceStore {
 
     override fun openEditorOnApply(): Boolean = prefs.getBoolean(KEY_OPEN_EDITOR, true)
 
+    override fun colorSeed(): String = prefs.getString(KEY_COLOR_SEED, null).orEmpty()
+
+    override fun paletteStyle(): ColorPaletteStyle =
+        ColorPaletteStyle.fromName(prefs.getString(KEY_PALETTE_STYLE, null))
+
+    override fun contrastLevel(): ColorContrast =
+        ColorContrast.fromName(prefs.getString(KEY_CONTRAST, null))
+
+    override fun amoled(): Boolean = prefs.getBoolean(KEY_AMOLED, false)
+
     override fun saveThemeMode(mode: ThemeMode) {
         prefs.edit { putString(KEY_THEME, mode.name) }
     }
@@ -47,6 +65,22 @@ class AppearancePrefs(context: Context) : AppearanceStore {
         prefs.edit { putBoolean(KEY_OPEN_EDITOR, enabled) }
     }
 
+    override fun saveColorSeed(seed: String) {
+        prefs.edit { putString(KEY_COLOR_SEED, seed) }
+    }
+
+    override fun savePaletteStyle(style: ColorPaletteStyle) {
+        prefs.edit { putString(KEY_PALETTE_STYLE, style.name) }
+    }
+
+    override fun saveContrastLevel(level: ColorContrast) {
+        prefs.edit { putString(KEY_CONTRAST, level.name) }
+    }
+
+    override fun saveAmoled(enabled: Boolean) {
+        prefs.edit { putBoolean(KEY_AMOLED, enabled) }
+    }
+
     override fun reset() {
         prefs.edit { clear() }
     }
@@ -55,6 +89,10 @@ class AppearancePrefs(context: Context) : AppearanceStore {
         const val KEY_THEME = "theme_mode"
         const val KEY_LITE = "lite_mode"
         const val KEY_OPEN_EDITOR = "open_editor_on_apply"
+        const val KEY_COLOR_SEED = "color_seed"
+        const val KEY_PALETTE_STYLE = "palette_style"
+        const val KEY_CONTRAST = "contrast_level"
+        const val KEY_AMOLED = "amoled"
     }
 }
 
@@ -63,12 +101,24 @@ class InMemoryAppearanceStore(
     private var theme: ThemeMode = ThemeMode.SYSTEM,
     private var lite: Boolean = false,
     private var openEditor: Boolean = true,
+    private var seed: String = WALLPAPER_COLOR_SEED,
+    private var style: ColorPaletteStyle = ColorPaletteStyle.TONAL_SPOT,
+    private var contrast: ColorContrast = ColorContrast.STANDARD,
+    private var pureBlack: Boolean = false,
 ) : AppearanceStore {
     override fun themeMode(): ThemeMode = theme
 
     override fun liteMode(): Boolean = lite
 
     override fun openEditorOnApply(): Boolean = openEditor
+
+    override fun colorSeed(): String = seed
+
+    override fun paletteStyle(): ColorPaletteStyle = style
+
+    override fun contrastLevel(): ColorContrast = contrast
+
+    override fun amoled(): Boolean = pureBlack
 
     override fun saveThemeMode(mode: ThemeMode) {
         theme = mode
@@ -82,9 +132,29 @@ class InMemoryAppearanceStore(
         openEditor = enabled
     }
 
+    override fun saveColorSeed(seed: String) {
+        this.seed = seed
+    }
+
+    override fun savePaletteStyle(style: ColorPaletteStyle) {
+        this.style = style
+    }
+
+    override fun saveContrastLevel(level: ColorContrast) {
+        contrast = level
+    }
+
+    override fun saveAmoled(enabled: Boolean) {
+        pureBlack = enabled
+    }
+
     override fun reset() {
         theme = ThemeMode.SYSTEM
         lite = false
         openEditor = true
+        seed = WALLPAPER_COLOR_SEED
+        style = ColorPaletteStyle.TONAL_SPOT
+        contrast = ColorContrast.STANDARD
+        pureBlack = false
     }
 }
