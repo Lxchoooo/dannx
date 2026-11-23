@@ -2,19 +2,18 @@ package com.dannx.walls.ui
 
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.ExitTransition
+import androidx.compose.animation.SharedTransitionLayout
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearEasing
-import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
 import androidx.compose.animation.slideInHorizontally
-import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -80,6 +79,8 @@ import com.dannx.walls.ui.components.DebugFpsOverlay
 import com.dannx.walls.ui.components.DockItem
 import com.dannx.walls.ui.components.ErrorState
 import com.dannx.walls.ui.components.FloatingDock
+import com.dannx.walls.ui.components.LocalSharedTransitionScope
+import com.dannx.walls.ui.components.ProvideSharedVisibilityScope
 import com.dannx.walls.ui.editor.WallpaperEditorScreen
 import com.dannx.walls.ui.screens.AboutScreen
 import com.dannx.walls.ui.screens.CollectionDetailScreen
@@ -137,6 +138,7 @@ fun AppRoot(viewModel: MainViewModel, startTab: String = "home") {
     }
 }
 
+@OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
 private fun MainApp(
     viewModel: MainViewModel,
@@ -239,596 +241,594 @@ private fun MainApp(
         },
     ) { innerPadding ->
         Box(Modifier.fillMaxSize().padding(innerPadding)) {
-            NavHost(
-                navController = navController,
-                startDestination = startDestination,
-                enterTransition = {
-                    val targetRoute = targetState.destination.route
-                    val initialRoute = initialState.destination.route
-                    val randomDetail = isDetailRoute(targetRoute) &&
-                        targetState.arguments?.getBoolean("random") == true
-                    val detailToDetail = isDetailRoute(initialRoute) && isDetailRoute(targetRoute)
-                    when {
-                        reduceMotion -> fadeIn(tween(MotionDuration.Fast))
-                        randomDetail -> fadeIn(tween(340))
-                        detailToDetail -> fadeIn(tween(300))
-                        isDetailRoute(targetRoute) -> {
-                            // Del feed al detalle: entra desde la derecha con resorte.
-                            slideInHorizontally(
-                                animationSpec = spring(
-                                    dampingRatio = Spring.DampingRatioNoBouncy,
-                                    stiffness = Spring.StiffnessMediumLow,
-                                ),
-                            ) { it } + fadeIn(tween(200))
-                        }
+            SharedTransitionLayout(Modifier.fillMaxSize()) {
+                CompositionLocalProvider(LocalSharedTransitionScope provides this) {
+                    NavHost(
+                        navController = navController,
+                        startDestination = startDestination,
+                        enterTransition = {
+                            val targetRoute = targetState.destination.route
+                            val initialRoute = initialState.destination.route
+                            val randomDetail = isDetailRoute(targetRoute) &&
+                                targetState.arguments?.getBoolean("random") == true
+                            val detailToDetail = isDetailRoute(initialRoute) && isDetailRoute(targetRoute)
+                            when {
+                                reduceMotion -> fadeIn(tween(MotionDuration.Fast))
+                                randomDetail -> fadeIn(tween(340))
+                                detailToDetail -> fadeIn(tween(300))
+                                isDetailRoute(targetRoute) -> {
+                                    // La foto viaja sola de la tarjeta al detalle;
+                                    // el resto de la pantalla solo aparece.
+                                    fadeIn(tween(MotionDuration.Medium))
+                                }
 
-                        isSecondaryRoute(targetRoute) -> {
-                            // Ajustes, colecciones y editor: aparecen sin empujar.
-                            fadeIn(tween(240)) +
-                                scaleIn(
-                                    animationSpec = tween(260, easing = FastOutSlowInEasing),
-                                    initialScale = 0.95f,
-                                )
-                        }
+                                isSecondaryRoute(targetRoute) -> {
+                                    // Ajustes, colecciones y editor: aparecen sin empujar.
+                                    fadeIn(tween(240)) +
+                                        scaleIn(
+                                            animationSpec = tween(260, easing = FastOutSlowInEasing),
+                                            initialScale = 0.95f,
+                                        )
+                                }
 
-                        else -> {
-                            fadeIn(tween(240)) +
-                                slideInHorizontally(
-                                    animationSpec = tween(280, easing = FastOutSlowInEasing),
-                                ) { it / 14 } +
-                                scaleIn(
-                                    animationSpec = tween(280, easing = FastOutSlowInEasing),
-                                    initialScale = 0.985f,
-                                )
-                        }
-                    }
-                },
-                exitTransition = {
-                    val targetRoute = targetState.destination.route
-                    val randomDetail = isDetailRoute(targetRoute) &&
-                        targetState.arguments?.getBoolean("random") == true
-                    val detailToDetail = isDetailRoute(initialState.destination.route) &&
-                        isDetailRoute(targetRoute)
-                    when {
-                        reduceMotion -> fadeOut(tween(MotionDuration.Fast))
-                        randomDetail || detailToDetail -> fadeOut(tween(300))
-                        isDetailRoute(targetRoute) -> fadeOut(tween(180))
-                        isSecondaryRoute(targetRoute) -> {
-                            fadeOut(tween(180)) +
-                                scaleOut(
-                                    animationSpec = tween(220, easing = FastOutSlowInEasing),
-                                    targetScale = 0.98f,
-                                )
-                        }
-
-                        else -> {
-                            fadeOut(tween(160)) +
-                                scaleOut(
-                                    animationSpec = tween(220, easing = FastOutSlowInEasing),
-                                    targetScale = 0.99f,
-                                )
-                        }
-                    }
-                },
-                popEnterTransition = {
-                    when {
-                        reduceMotion -> fadeIn(tween(MotionDuration.Fast))
-                        targetState.destination.route in topTabRoutes -> {
-                            // La pantalla de atrás ya está quieta y visible; la
-                            // que sale es la que hace el movimiento.
-                            EnterTransition.None
-                        }
-
-                        isSecondaryRoute(initialState.destination.route) -> {
-                            fadeIn(tween(220)) +
-                                scaleIn(
-                                    animationSpec = tween(240, easing = FastOutSlowInEasing),
-                                    initialScale = 0.98f,
-                                )
-                        }
-
-                        else -> EnterTransition.None
-                    }
-                },
-                popExitTransition = {
-                    val leaving = initialState.destination.route
-                    when {
-                        reduceMotion -> fadeOut(tween(MotionDuration.Fast))
-                        isDetailRoute(leaving) -> {
-                            // Al volver, el detalle se va hacia la derecha.
-                            slideOutHorizontally(
-                                animationSpec = spring(
-                                    dampingRatio = Spring.DampingRatioNoBouncy,
-                                    stiffness = Spring.StiffnessMediumLow,
-                                ),
-                            ) { it } + fadeOut(tween(200))
-                        }
-
-                        isSecondaryRoute(leaving) -> {
-                            fadeOut(tween(180)) +
-                                scaleOut(
-                                    animationSpec = tween(220, easing = FastOutSlowInEasing),
-                                    targetScale = 0.97f,
-                                )
-                        }
-
-                        else -> {
-                            scaleOut(
-                                animationSpec = tween(220, easing = LinearEasing),
-                                targetScale = 0.9f,
-                                transformOrigin = TransformOrigin.Center,
-                            )
-                        }
-                    }
-                },
-                predictivePopEnterTransition = {
-                    if (targetState.destination.route in topTabRoutes) {
-                        // Volver a una pestaña no mueve la barra.
-                        EnterTransition.None
-                    } else if (reduceMotion) {
-                        fadeIn(tween(120))
-                    } else {
-                        EnterTransition.None
-                    }
-                },
-                predictivePopExitTransition = {
-                    val leaving = initialState.destination.route
-                    when {
-                        leaving in topTabRoutes -> {
-                            // Salir de una pestaña hacia otra no escala la barra.
-                            ExitTransition.None
-                        }
-
-                        reduceMotion -> fadeOut(tween(MotionDuration.Fast))
-                        isDetailRoute(leaving) -> {
-                            slideOutHorizontally(
-                                animationSpec = spring(
-                                    dampingRatio = Spring.DampingRatioNoBouncy,
-                                    stiffness = Spring.StiffnessMediumLow,
-                                ),
-                            ) { it } + fadeOut(tween(200))
-                        }
-
-                        isSecondaryRoute(leaving) -> {
-                            fadeOut(tween(180)) +
-                                scaleOut(
-                                    animationSpec = tween(220, easing = FastOutSlowInEasing),
-                                    targetScale = 0.97f,
-                                )
-                        }
-
-                        else -> {
-                            scaleOut(
-                                animationSpec = tween(220, easing = LinearEasing),
-                                targetScale = 0.9f,
-                                transformOrigin = TransformOrigin.Center,
-                            )
-                        }
-                    }
-                },
-            ) {
-            composable(
-                route = "home",
-                // La barra de cada pestaña no se anima al cambiar de pestaña:
-                // se queda quieta y solo cambia el ítem marcado.
-                enterTransition = { EnterTransition.None },
-                exitTransition = { ExitTransition.None },
-                popEnterTransition = { EnterTransition.None },
-                popExitTransition = { ExitTransition.None },
-            ) {
-                TopLevelScaffold(
-                    selectedRoute = "home",
-                    enterFrom = tabDirection(previousTabRoute, "home"),
-                    onNavigate = { route -> navController.navigateTopLevel(route) },
-                ) {
-                    HomeScreen(
-                        state = state,
-                        onClearFilters = {
-                            viewModel.setQuery("")
-                            viewModel.setCategory(null)
-                            viewModel.toggleTag(null)
-                            viewModel.setColor(null)
-                        },
-                        onQueryChange = viewModel::setQuery,
-                        onCategoryChange = viewModel::setCategory,
-                        onTagChange = viewModel::toggleTag,
-                        onColorChange = viewModel::setColor,
-                        onRefresh = viewModel::refresh,
-                        onOpenWallpaper = { wallpaper ->
-                            viewModel.rememberCurrentSearch()
-                            navController.navigate("detail/${wallpaper.id}") {
-                                launchSingleTop = true
+                                else -> {
+                                    fadeIn(tween(240)) +
+                                        slideInHorizontally(
+                                            animationSpec = tween(280, easing = FastOutSlowInEasing),
+                                        ) { it / 14 } +
+                                        scaleIn(
+                                            animationSpec = tween(280, easing = FastOutSlowInEasing),
+                                            initialScale = 0.985f,
+                                        )
+                                }
                             }
                         },
-                        onRandomWallpaper = { wallpaper ->
-                            viewModel.rememberCurrentSearch()
-                            navController.navigate("detail/${wallpaper.id}?random=true") {
-                                launchSingleTop = true
+                        exitTransition = {
+                            val targetRoute = targetState.destination.route
+                            val randomDetail = isDetailRoute(targetRoute) &&
+                                targetState.arguments?.getBoolean("random") == true
+                            val detailToDetail = isDetailRoute(initialState.destination.route) &&
+                                isDetailRoute(targetRoute)
+                            when {
+                                reduceMotion -> fadeOut(tween(MotionDuration.Fast))
+                                randomDetail || detailToDetail -> fadeOut(tween(300))
+                                isDetailRoute(targetRoute) -> fadeOut(tween(180))
+                                isSecondaryRoute(targetRoute) -> {
+                                    fadeOut(tween(180)) +
+                                        scaleOut(
+                                            animationSpec = tween(220, easing = FastOutSlowInEasing),
+                                            targetScale = 0.98f,
+                                        )
+                                }
+
+                                else -> {
+                                    fadeOut(tween(160)) +
+                                        scaleOut(
+                                            animationSpec = tween(220, easing = FastOutSlowInEasing),
+                                            targetScale = 0.99f,
+                                        )
+                                }
                             }
                         },
-                        onToggleFavorite = viewModel::toggleFavorite,
-                        onOpenStudio = {
-                            if (state.session != null || state.isDemo) {
-                                navController.navigateTopLevel("studio")
+                        popEnterTransition = {
+                            when {
+                                reduceMotion -> fadeIn(tween(MotionDuration.Fast))
+                                targetState.destination.route in topTabRoutes -> {
+                                    // La pantalla de atrás ya está quieta y visible; la
+                                    // que sale es la que hace el movimiento.
+                                    EnterTransition.None
+                                }
+
+                                isSecondaryRoute(initialState.destination.route) -> {
+                                    fadeIn(tween(220)) +
+                                        scaleIn(
+                                            animationSpec = tween(240, easing = FastOutSlowInEasing),
+                                            initialScale = 0.98f,
+                                        )
+                                }
+
+                                else -> EnterTransition.None
+                            }
+                        },
+                        popExitTransition = {
+                            val leaving = initialState.destination.route
+                            when {
+                                reduceMotion -> fadeOut(tween(MotionDuration.Fast))
+                                isDetailRoute(leaving) -> {
+                                    // La foto vuelve a la tarjeta; el detalle se apaga.
+                                    fadeOut(tween(MotionDuration.Medium))
+                                }
+
+                                isSecondaryRoute(leaving) -> {
+                                    fadeOut(tween(180)) +
+                                        scaleOut(
+                                            animationSpec = tween(220, easing = FastOutSlowInEasing),
+                                            targetScale = 0.97f,
+                                        )
+                                }
+
+                                else -> {
+                                    scaleOut(
+                                        animationSpec = tween(220, easing = LinearEasing),
+                                        targetScale = 0.9f,
+                                        transformOrigin = TransformOrigin.Center,
+                                    )
+                                }
+                            }
+                        },
+                        predictivePopEnterTransition = {
+                            if (targetState.destination.route in topTabRoutes) {
+                                // Volver a una pestaña no mueve la barra.
+                                EnterTransition.None
+                            } else if (reduceMotion) {
+                                fadeIn(tween(120))
                             } else {
-                                viewModel.rememberDecoyOpened()
-                                navController.navigate("decoy") {
-                                    launchSingleTop = true
+                                EnterTransition.None
+                            }
+                        },
+                        predictivePopExitTransition = {
+                            val leaving = initialState.destination.route
+                            when {
+                                leaving in topTabRoutes -> {
+                                    // Salir de una pestaña hacia otra no escala la barra.
+                                    ExitTransition.None
+                                }
+
+                                reduceMotion -> fadeOut(tween(MotionDuration.Fast))
+                                isDetailRoute(leaving) -> {
+                                    fadeOut(tween(MotionDuration.Medium))
+                                }
+
+                                isSecondaryRoute(leaving) -> {
+                                    fadeOut(tween(180)) +
+                                        scaleOut(
+                                            animationSpec = tween(220, easing = FastOutSlowInEasing),
+                                            targetScale = 0.97f,
+                                        )
+                                }
+
+                                else -> {
+                                    scaleOut(
+                                        animationSpec = tween(220, easing = LinearEasing),
+                                        targetScale = 0.9f,
+                                        transformOrigin = TransformOrigin.Center,
+                                    )
                                 }
                             }
                         },
-                        onOpenSettings = { navController.navigate("settings") },
-                        updateAvailable = updateAvailable,
-                        onSearchSubmit = viewModel::rememberCurrentSearch,
-                        onClearRecentSearches = viewModel::clearRecentSearches,
-                        onLoadMore = viewModel::loadMore,
-                    )
-                }
-            }
-            composable(
-                route = "favorites",
-                enterTransition = { EnterTransition.None },
-                exitTransition = { ExitTransition.None },
-                popEnterTransition = { EnterTransition.None },
-                popExitTransition = { ExitTransition.None },
-            ) {
-                TopLevelScaffold(
-                    selectedRoute = "favorites",
-                    enterFrom = tabDirection(previousTabRoute, "favorites"),
-                    onNavigate = { route -> navController.navigateTopLevel(route) },
-                ) {
-                    FavoritesScreen(
-                        state = state,
-                        onRefresh = viewModel::refresh,
-                        onOpenWallpaper = { wallpaper ->
-                            navController.navigate("detail/${wallpaper.id}") {
-                                launchSingleTop = true
-                            }
-                        },
-                        onToggleFavorite = viewModel::toggleFavorite,
-                        onExplore = { navController.navigateTopLevel("home") },
-                        onDownloadMany = viewModel::downloadMany,
-                        onShareMany = viewModel::shareMany,
-                        onRemoveFavorites = viewModel::removeFavorites,
-                    )
-                }
-            }
-            composable(
-                route = "collections",
-                enterTransition = { EnterTransition.None },
-                exitTransition = { ExitTransition.None },
-                popEnterTransition = { EnterTransition.None },
-                popExitTransition = { ExitTransition.None },
-            ) {
-                TopLevelScaffold(
-                    selectedRoute = "collections",
-                    enterFrom = tabDirection(previousTabRoute, "collections"),
-                    onNavigate = { route -> navController.navigateTopLevel(route) },
-                ) {
-                    CollectionsScreen(
-                        state = state,
-                        onRefresh = viewModel::refresh,
-                        onOpenCollection = { collection ->
-                            navController.navigate("collection/${collection.id}") {
-                                launchSingleTop = true
-                            }
-                        },
-                        onCreateCollection = { name, description, isPublic, onDevice ->
-                            viewModel.createCollection(name, description, isPublic, onDevice)
-                        },
-                    )
-                }
-            }
-            composable(
-                route = "collection/{id}",
-                arguments = listOf(
-                    navArgument("id") { type = NavType.StringType },
-                ),
-            ) { entry ->
-                val id = entry.arguments?.getString("id").orEmpty()
-                LaunchedEffect(id) {
-                    viewModel.loadCollectionDetail(id)
-                }
-                val detail = state.detailCollection
-                    ?.takeIf { state.detailCollectionId == id }
-                when (detail) {
-                    is LoadState.Content -> {
-                        val data = detail.data
-                        CollectionDetailScreen(
-                            state = state,
-                            collection = data.collection,
-                            items = data.wallpapers,
-                            onBack = {
-                                viewModel.clearCollectionDetail()
-                                navController.popBackStack()
-                            },
-                            onOpenWallpaper = { wallpaper ->
-                                navController.navigate("detail/${wallpaper.id}") {
-                                    launchSingleTop = true
-                                }
-                            },
-                            onToggleFavorite = viewModel::toggleFavorite,
-                            onRemove = { wallpaperId ->
-                                viewModel.removeFromCollection(data.collection.id, wallpaperId)
-                            },
-                            onDelete = { viewModel.deleteCollection(data.collection.id) },
-                            onExplore = {
-                                viewModel.clearCollectionDetail()
-                                navController.navigateTopLevel("home")
-                            },
-                            onDownloadMany = viewModel::downloadMany,
-                            onShareMany = viewModel::shareMany,
-                            onRemoveMany = { ids ->
-                                viewModel.setCollectionWallpapers(
-                                    data.collection.id,
-                                    data.collection.wallpaperIds.filterNot { it in ids },
+                    ) {
+                    composable(
+                        route = "home",
+                        // La barra de cada pestaña no se anima al cambiar de pestaña:
+                        // se queda quieta y solo cambia el ítem marcado.
+                        enterTransition = { EnterTransition.None },
+                        exitTransition = { ExitTransition.None },
+                        popEnterTransition = { EnterTransition.None },
+                        popExitTransition = { ExitTransition.None },
+                    ) {
+                        ProvideSharedVisibilityScope {
+                            TopLevelScaffold(
+                                selectedRoute = "home",
+                                enterFrom = tabDirection(previousTabRoute, "home"),
+                                onNavigate = { route -> navController.navigateTopLevel(route) },
+                            ) {
+                                HomeScreen(
+                                    state = state,
+                                    onClearFilters = {
+                                        viewModel.setQuery("")
+                                        viewModel.setCategory(null)
+                                        viewModel.toggleTag(null)
+                                        viewModel.setColor(null)
+                                    },
+                                    onQueryChange = viewModel::setQuery,
+                                    onCategoryChange = viewModel::setCategory,
+                                    onTagChange = viewModel::toggleTag,
+                                    onColorChange = viewModel::setColor,
+                                    onRefresh = viewModel::refresh,
+                                    onOpenWallpaper = { wallpaper ->
+                                        viewModel.rememberCurrentSearch()
+                                        navController.navigate("detail/${wallpaper.id}") {
+                                            launchSingleTop = true
+                                        }
+                                    },
+                                    onRandomWallpaper = { wallpaper ->
+                                        viewModel.rememberCurrentSearch()
+                                        navController.navigate("detail/${wallpaper.id}?random=true") {
+                                            launchSingleTop = true
+                                        }
+                                    },
+                                    onToggleFavorite = viewModel::toggleFavorite,
+                                    onOpenStudio = {
+                                        if (state.session != null || state.isDemo) {
+                                            navController.navigateTopLevel("studio")
+                                        } else {
+                                            viewModel.rememberDecoyOpened()
+                                            navController.navigate("decoy") {
+                                                launchSingleTop = true
+                                            }
+                                        }
+                                    },
+                                    onOpenSettings = { navController.navigate("settings") },
+                                    updateAvailable = updateAvailable,
+                                    onSearchSubmit = viewModel::rememberCurrentSearch,
+                                    onClearRecentSearches = viewModel::clearRecentSearches,
+                                    onLoadMore = viewModel::loadMore,
                                 )
-                            },
-                        )
-                    }
-
-                    is LoadState.Error -> RouteError(
-                        message = detail.message,
-                        onRetry = { viewModel.loadCollectionDetail(id, force = true) },
-                        onBack = { navController.popBackStack() },
-                    )
-
-                    else -> RouteLoading()
-                }
-            }
-            composable("settings") {
-                SettingsScreen(
-                    state = state,
-                    updateViewModel = updateViewModel,
-                    onBack = { navController.popBackStack() },
-                    onThemeModeChange = viewModel::setThemeMode,
-                    onLiteModeChange = viewModel::setLiteMode,
-                    onOpenEditorOnApplyChange = viewModel::setOpenEditorOnApply,
-                    onColorSeedChange = viewModel::setColorSeed,
-                    onPaletteStyleChange = viewModel::setPaletteStyle,
-                    onContrastLevelChange = viewModel::setContrastLevel,
-                    onAmoledChange = viewModel::setAmoled,
-                    onRefreshCacheSize = viewModel::refreshCacheSize,
-                    onClearCache = viewModel::clearCache,
-                    onOpenAbout = { navController.navigate("about") },
-                    onResetAppearance = viewModel::resetAppearance,
-                    onSignOut = {
-                        viewModel.signOut()
-                        navController.popBackStack()
-                    },
-                )
-            }
-            composable("about") {
-                AboutScreen(onBack = { navController.popBackStack() })
-            }
-            composable("decoy") {
-                if (viewModel.decoyVisited) {
-                    DecoyScreen(
-                        onBack = { navController.popBackStack() },
-                        onOpenStudio = {
-                            navController.navigate("studio") {
-                                launchSingleTop = true
                             }
-                        },
-                    )
-                } else {
-                    // Restaurada desde estado guardado de un proceso anterior:
-                    // el señuelo nunca se restaura, siempre vuelve al Inicio.
-                    LaunchedEffect(Unit) {
-                        navController.popBackStack("home", inclusive = false)
-                    }
-                }
-            }
-            composable("studio") {
-                // Al restaurar la app el Estudio se conserva solo con sesión
-                // iniciada o si se entró por el señuelo durante esta corrida
-                // del proceso. Sin eso, se vuelve al Inicio.
-                val enteredThroughDecoy = viewModel.decoyVisited
-                if (!state.isDemo && state.session == null && !enteredThroughDecoy) {
-                    LaunchedEffect(Unit) {
-                        navController.popBackStack("home", inclusive = false)
-                    }
-                } else {
-                    StudioScreen(
-                        state = state,
-                        onSignIn = viewModel::signIn,
-                        onSignOut = viewModel::signOut,
-                        onUpload = viewModel::uploadWallpaper,
-                        onRefresh = viewModel::refresh,
-                        onSelectUploadUri = { uri -> viewModel.setSelectedUploadUri(uri?.toString()) },
-                        onBack = { navController.popBackStack() },
-                        onLoadStudio = viewModel::loadStudio,
-                        onCreateCategory = viewModel::createCategory,
-                        onUpdateCategory = viewModel::updateCategory,
-                        onMoveCategory = viewModel::moveCategory,
-                        onDeleteCategory = viewModel::deleteCategory,
-                        onUpdateWallpaper = viewModel::updateWallpaper,
-                        onUpdateWallpaperNow = { wallpaperId, title, category, categoryId, author, tags, featured ->
-                            viewModel.updateWallpaperNow(
-                                wallpaperId = wallpaperId,
-                                title = title,
-                                categoryInput = category,
-                                categoryId = categoryId,
-                                author = author,
-                                tags = tags,
-                                featured = featured,
-                            )
-                            Unit
-                        },
-                        onBulkEditTags = viewModel::bulkEditTags,
-                        onClearBulkResult = viewModel::clearBulkResult,
-                        onReplaceImage = viewModel::replaceWallpaperImage,
-                        onArchiveWallpaper = viewModel::archiveWallpaper,
-                        onDeleteWallpaper = viewModel::deleteWallpaper,
-                        onRestoreWallpapers = viewModel::restoreWallpapers,
-                        onPurgeWallpaper = viewModel::purgeWallpaper,
-                        onEmptyTrash = viewModel::emptyTrash,
-                        onBulkSetFeatured = viewModel::bulkSetFeatured,
-                        onBulkSetArchived = viewModel::bulkSetArchived,
-                        onBulkDeleteWallpapers = viewModel::bulkDeleteWallpapers,
-                        onBulkSetCategory = viewModel::bulkSetCategory,
-                        onSaveAppSettings = viewModel::saveAppSettings,
-                        onMoveFeatured = viewModel::moveFeatured,
-                        onCreateCollection = { name, description, isPublic ->
-                            viewModel.createCollection(name, description, isPublic, onDevice = false)
-                        },
-                        onUpdateCollection = viewModel::updateCollection,
-                        onDeleteCollection = viewModel::deleteCollection,
-                        onSetCollectionWallpapers = viewModel::setCollectionWallpapers,
-                        onReorderCollection = viewModel::reorderCollection,
-                        onAddTag = viewModel::addTag,
-                        onUpdateTagGroup = viewModel::updateTagGroup,
-                        onClearTagRule = viewModel::clearTagRule,
-                        onDeleteTag = viewModel::deleteTag,
-                        onOpenCollection = { collection ->
-                            navController.navigate("collection/${collection.id}") {
-                                launchSingleTop = true
-                            }
-                        },
-                    )
-                }
-            }
-            composable(
-                route = "detail/{id}?random={random}",
-                arguments = listOf(
-                    navArgument("id") { type = NavType.StringType },
-                    navArgument("random") {
-                        type = NavType.BoolType
-                        defaultValue = false
-                    },
-                ),
-            ) { entry ->
-                val id = entry.arguments?.getString("id").orEmpty()
-                LaunchedEffect(id) {
-                    viewModel.loadWallpaperDetail(id)
-                }
-                val detail = state.detailWallpaper
-                    ?.takeIf { state.detailWallpaperId == id }
-                when (detail) {
-                    is LoadState.Content -> {
-                        val wallpaper = detail.data
-                        LaunchedEffect(wallpaper.id) {
-                            viewModel.loadRelatedWallpapers(wallpaper)
                         }
-                        val detailIndex = state.wallpapers.indexOfFirst { it.id == wallpaper.id }
-                        val previous = state.wallpapers.getOrNull(detailIndex - 1)
-                        val next = state.wallpapers.getOrNull(detailIndex + 1)
-                        val detailDestinationId = entry.destination.id
-                        DetailScreen(
-                            wallpaper = wallpaper,
-                            isFavorite = wallpaper.id in state.favorites,
-                            collections = state.myCollections,
-                            canManageCollections = true,
-                            canChooseCollectionDestination = state.session != null,
-                            collectionBusy = state.collectionBusy,
-                            actionState = actionState,
-                            applySuccessTick = state.applyTick,
-                            downloadPrompt = state.downloadPrompt
-                                ?.takeIf { it.wallpaperId == wallpaper.id },
-                            alreadyDownloaded = wallpaper.id in state.downloadedIds,
-                            offline = state.offline,
-                            openEditorOnApply = state.openEditorOnApply,
-                            onBack = {
-                                viewModel.clearWallpaperDetail()
-                                navController.popBackStack()
-                            },
-                            onToggleFavorite = { viewModel.toggleFavorite(wallpaper.id) },
-                            onDownload = { viewModel.download(wallpaper) },
-                            onOpenEditor = {
-                                navController.navigate("editor/${wallpaper.id}") {
-                                    launchSingleTop = true
-                                }
-                            },
-                            onSetWallpaper = { target -> viewModel.setWallpaper(wallpaper, target) },
-                            onShare = { viewModel.share(wallpaper) },
-                            onCancelAction = { viewModel.cancelAction() },
-                            onOpenFile = { uri ->
-                                if (!wallpaperFiles.open(uri)) {
-                                    viewModel.notifyFileOpenFailed()
-                                }
-                            },
-                            onDownloadAgain = { id -> viewModel.downloadAgain(id) },
-                            onDismissDownloadPrompt = { viewModel.dismissDownloadPrompt() },
-                            onAddToCollection = { collectionId ->
-                                viewModel.addToCollection(collectionId, wallpaper)
-                            },
-                            onCreateCollection = { name, description, isPublic, onDevice ->
-                                viewModel.createCollection(
-                                    name,
-                                    description,
-                                    isPublic,
-                                    onDevice,
+                    }
+                    composable(
+                        route = "favorites",
+                        enterTransition = { EnterTransition.None },
+                        exitTransition = { ExitTransition.None },
+                        popEnterTransition = { EnterTransition.None },
+                        popExitTransition = { ExitTransition.None },
+                    ) {
+                        ProvideSharedVisibilityScope {
+                            TopLevelScaffold(
+                                selectedRoute = "favorites",
+                                enterFrom = tabDirection(previousTabRoute, "favorites"),
+                                onNavigate = { route -> navController.navigateTopLevel(route) },
+                            ) {
+                                FavoritesScreen(
+                                    state = state,
+                                    onRefresh = viewModel::refresh,
+                                    onOpenWallpaper = { wallpaper ->
+                                        navController.navigate("detail/${wallpaper.id}") {
+                                            launchSingleTop = true
+                                        }
+                                    },
+                                    onToggleFavorite = viewModel::toggleFavorite,
+                                    onExplore = { navController.navigateTopLevel("home") },
+                                    onDownloadMany = viewModel::downloadMany,
+                                    onShareMany = viewModel::shareMany,
+                                    onRemoveFavorites = viewModel::removeFavorites,
                                 )
-                            },
-                            onPrevious = previous?.let { target ->
-                                {
-                                    navController.navigate("detail/${target.id}") {
-                                        launchSingleTop = true
-                                        popUpTo(detailDestinationId) { inclusive = true }
-                                    }
-                                }
-                            },
-                            onNext = next?.let { target ->
-                                {
-                                    navController.navigate("detail/${target.id}") {
-                                        launchSingleTop = true
-                                        popUpTo(detailDestinationId) { inclusive = true }
-                                    }
-                                }
-                            },
-                            related = state.detailRelated,
-                            onOpenRelated = { target ->
-                                navController.navigate("detail/${target.id}") {
-                                    launchSingleTop = true
-                                    popUpTo(detailDestinationId) { inclusive = true }
-                                }
-                            },
-                        )
+                            }
+                        }
                     }
+                    composable(
+                        route = "collections",
+                        enterTransition = { EnterTransition.None },
+                        exitTransition = { ExitTransition.None },
+                        popEnterTransition = { EnterTransition.None },
+                        popExitTransition = { ExitTransition.None },
+                    ) {
+                        TopLevelScaffold(
+                            selectedRoute = "collections",
+                            enterFrom = tabDirection(previousTabRoute, "collections"),
+                            onNavigate = { route -> navController.navigateTopLevel(route) },
+                        ) {
+                            CollectionsScreen(
+                                state = state,
+                                onRefresh = viewModel::refresh,
+                                onOpenCollection = { collection ->
+                                    navController.navigate("collection/${collection.id}") {
+                                        launchSingleTop = true
+                                    }
+                                },
+                                onCreateCollection = { name, description, isPublic, onDevice ->
+                                    viewModel.createCollection(name, description, isPublic, onDevice)
+                                },
+                            )
+                        }
+                    }
+                    composable(
+                        route = "collection/{id}",
+                        arguments = listOf(
+                            navArgument("id") { type = NavType.StringType },
+                        ),
+                    ) { entry ->
+                        ProvideSharedVisibilityScope {
+                            val id = entry.arguments?.getString("id").orEmpty()
+                            LaunchedEffect(id) {
+                                viewModel.loadCollectionDetail(id)
+                            }
+                            val detail = state.detailCollection
+                                ?.takeIf { state.detailCollectionId == id }
+                            when (detail) {
+                                is LoadState.Content -> {
+                                    val data = detail.data
+                                    CollectionDetailScreen(
+                                        state = state,
+                                        collection = data.collection,
+                                        items = data.wallpapers,
+                                        onBack = {
+                                            viewModel.clearCollectionDetail()
+                                            navController.popBackStack()
+                                        },
+                                        onOpenWallpaper = { wallpaper ->
+                                            navController.navigate("detail/${wallpaper.id}") {
+                                                launchSingleTop = true
+                                            }
+                                        },
+                                        onToggleFavorite = viewModel::toggleFavorite,
+                                        onRemove = { wallpaperId ->
+                                            viewModel.removeFromCollection(data.collection.id, wallpaperId)
+                                        },
+                                        onDelete = { viewModel.deleteCollection(data.collection.id) },
+                                        onExplore = {
+                                            viewModel.clearCollectionDetail()
+                                            navController.navigateTopLevel("home")
+                                        },
+                                        onDownloadMany = viewModel::downloadMany,
+                                        onShareMany = viewModel::shareMany,
+                                        onRemoveMany = { ids ->
+                                            viewModel.setCollectionWallpapers(
+                                                data.collection.id,
+                                                data.collection.wallpaperIds.filterNot { it in ids },
+                                            )
+                                        },
+                                    )
+                                }
 
-                    is LoadState.Error -> RouteError(
-                        message = detail.message,
-                        onRetry = { viewModel.loadWallpaperDetail(id, force = true) },
-                        onBack = { navController.popBackStack() },
-                    )
+                                is LoadState.Error -> RouteError(
+                                    message = detail.message,
+                                    onRetry = { viewModel.loadCollectionDetail(id, force = true) },
+                                    onBack = { navController.popBackStack() },
+                                )
 
-                    else -> RouteLoading()
-                }
-            }
-            composable(
-                route = "editor/{id}",
-                arguments = listOf(
-                    navArgument("id") { type = NavType.StringType },
-                ),
-            ) { entry ->
-                val id = entry.arguments?.getString("id").orEmpty()
-                LaunchedEffect(id) {
-                    viewModel.loadWallpaperDetail(id)
-                }
-                val detail = state.detailWallpaper
-                    ?.takeIf { state.detailWallpaperId == id }
-                when (detail) {
-                    is LoadState.Content -> {
-                        WallpaperEditorScreen(
-                            wallpaper = detail.data,
+                                else -> RouteLoading()
+                            }
+                        }
+                    }
+                    composable("settings") {
+                        SettingsScreen(
+                            state = state,
+                            updateViewModel = updateViewModel,
                             onBack = { navController.popBackStack() },
-                            onApplied = { target ->
-                                viewModel.onWallpaperApplied(target)
+                            onThemeModeChange = viewModel::setThemeMode,
+                            onLiteModeChange = viewModel::setLiteMode,
+                            onOpenEditorOnApplyChange = viewModel::setOpenEditorOnApply,
+                            onColorSeedChange = viewModel::setColorSeed,
+                            onPaletteStyleChange = viewModel::setPaletteStyle,
+                            onContrastLevelChange = viewModel::setContrastLevel,
+                            onAmoledChange = viewModel::setAmoled,
+                            onRefreshCacheSize = viewModel::refreshCacheSize,
+                            onClearCache = viewModel::clearCache,
+                            onOpenAbout = { navController.navigate("about") },
+                            onResetAppearance = viewModel::resetAppearance,
+                            onSignOut = {
+                                viewModel.signOut()
                                 navController.popBackStack()
                             },
                         )
                     }
+                    composable("about") {
+                        AboutScreen(onBack = { navController.popBackStack() })
+                    }
+                    composable("decoy") {
+                        if (viewModel.decoyVisited) {
+                            DecoyScreen(
+                                onBack = { navController.popBackStack() },
+                                onOpenStudio = {
+                                    navController.navigate("studio") {
+                                        launchSingleTop = true
+                                    }
+                                },
+                            )
+                        } else {
+                            // Restaurada desde estado guardado de un proceso anterior:
+                            // el señuelo nunca se restaura, siempre vuelve al Inicio.
+                            LaunchedEffect(Unit) {
+                                navController.popBackStack("home", inclusive = false)
+                            }
+                        }
+                    }
+                    composable("studio") {
+                        // Al restaurar la app el Estudio se conserva solo con sesión
+                        // iniciada o si se entró por el señuelo durante esta corrida
+                        // del proceso. Sin eso, se vuelve al Inicio.
+                        val enteredThroughDecoy = viewModel.decoyVisited
+                        if (!state.isDemo && state.session == null && !enteredThroughDecoy) {
+                            LaunchedEffect(Unit) {
+                                navController.popBackStack("home", inclusive = false)
+                            }
+                        } else {
+                            StudioScreen(
+                                state = state,
+                                onSignIn = viewModel::signIn,
+                                onSignOut = viewModel::signOut,
+                                onUpload = viewModel::uploadWallpaper,
+                                onRefresh = viewModel::refresh,
+                                onSelectUploadUri = { uri -> viewModel.setSelectedUploadUri(uri?.toString()) },
+                                onBack = { navController.popBackStack() },
+                                onLoadStudio = viewModel::loadStudio,
+                                onCreateCategory = viewModel::createCategory,
+                                onUpdateCategory = viewModel::updateCategory,
+                                onMoveCategory = viewModel::moveCategory,
+                                onDeleteCategory = viewModel::deleteCategory,
+                                onUpdateWallpaper = viewModel::updateWallpaper,
+                                onUpdateWallpaperNow = { wallpaperId, title, category, categoryId, author, tags, featured ->
+                                    viewModel.updateWallpaperNow(
+                                        wallpaperId = wallpaperId,
+                                        title = title,
+                                        categoryInput = category,
+                                        categoryId = categoryId,
+                                        author = author,
+                                        tags = tags,
+                                        featured = featured,
+                                    )
+                                    Unit
+                                },
+                                onBulkEditTags = viewModel::bulkEditTags,
+                                onClearBulkResult = viewModel::clearBulkResult,
+                                onReplaceImage = viewModel::replaceWallpaperImage,
+                                onArchiveWallpaper = viewModel::archiveWallpaper,
+                                onDeleteWallpaper = viewModel::deleteWallpaper,
+                                onRestoreWallpapers = viewModel::restoreWallpapers,
+                                onPurgeWallpaper = viewModel::purgeWallpaper,
+                                onEmptyTrash = viewModel::emptyTrash,
+                                onBulkSetFeatured = viewModel::bulkSetFeatured,
+                                onBulkSetArchived = viewModel::bulkSetArchived,
+                                onBulkDeleteWallpapers = viewModel::bulkDeleteWallpapers,
+                                onBulkSetCategory = viewModel::bulkSetCategory,
+                                onSaveAppSettings = viewModel::saveAppSettings,
+                                onMoveFeatured = viewModel::moveFeatured,
+                                onCreateCollection = { name, description, isPublic ->
+                                    viewModel.createCollection(name, description, isPublic, onDevice = false)
+                                },
+                                onUpdateCollection = viewModel::updateCollection,
+                                onDeleteCollection = viewModel::deleteCollection,
+                                onSetCollectionWallpapers = viewModel::setCollectionWallpapers,
+                                onReorderCollection = viewModel::reorderCollection,
+                                onAddTag = viewModel::addTag,
+                                onUpdateTagGroup = viewModel::updateTagGroup,
+                                onClearTagRule = viewModel::clearTagRule,
+                                onDeleteTag = viewModel::deleteTag,
+                                onOpenCollection = { collection ->
+                                    navController.navigate("collection/${collection.id}") {
+                                        launchSingleTop = true
+                                    }
+                                },
+                            )
+                        }
+                    }
+                    composable(
+                        route = "detail/{id}?random={random}",
+                        arguments = listOf(
+                            navArgument("id") { type = NavType.StringType },
+                            navArgument("random") {
+                                type = NavType.BoolType
+                                defaultValue = false
+                            },
+                        ),
+                    ) { entry ->
+                        ProvideSharedVisibilityScope {
+                            val id = entry.arguments?.getString("id").orEmpty()
+                            LaunchedEffect(id) {
+                                viewModel.loadWallpaperDetail(id)
+                            }
+                            val detail = state.detailWallpaper
+                                ?.takeIf { state.detailWallpaperId == id }
+                            when (detail) {
+                                is LoadState.Content -> {
+                                    val wallpaper = detail.data
+                                    LaunchedEffect(wallpaper.id) {
+                                        viewModel.loadRelatedWallpapers(wallpaper)
+                                    }
+                                    val detailIndex = state.wallpapers.indexOfFirst { it.id == wallpaper.id }
+                                    val previous = state.wallpapers.getOrNull(detailIndex - 1)
+                                    val next = state.wallpapers.getOrNull(detailIndex + 1)
+                                    val detailDestinationId = entry.destination.id
+                                    DetailScreen(
+                                        wallpaper = wallpaper,
+                                        isFavorite = wallpaper.id in state.favorites,
+                                        collections = state.myCollections,
+                                        canManageCollections = true,
+                                        canChooseCollectionDestination = state.session != null,
+                                        collectionBusy = state.collectionBusy,
+                                        actionState = actionState,
+                                        applySuccessTick = state.applyTick,
+                                        downloadPrompt = state.downloadPrompt
+                                            ?.takeIf { it.wallpaperId == wallpaper.id },
+                                        alreadyDownloaded = wallpaper.id in state.downloadedIds,
+                                        offline = state.offline,
+                                        openEditorOnApply = state.openEditorOnApply,
+                                        onBack = {
+                                            viewModel.clearWallpaperDetail()
+                                            navController.popBackStack()
+                                        },
+                                        onToggleFavorite = { viewModel.toggleFavorite(wallpaper.id) },
+                                        onDownload = { viewModel.download(wallpaper) },
+                                        onOpenEditor = {
+                                            navController.navigate("editor/${wallpaper.id}") {
+                                                launchSingleTop = true
+                                            }
+                                        },
+                                        onSetWallpaper = { target -> viewModel.setWallpaper(wallpaper, target) },
+                                        onShare = { viewModel.share(wallpaper) },
+                                        onCancelAction = { viewModel.cancelAction() },
+                                        onOpenFile = { uri ->
+                                            if (!wallpaperFiles.open(uri)) {
+                                                viewModel.notifyFileOpenFailed()
+                                            }
+                                        },
+                                        onDownloadAgain = { id -> viewModel.downloadAgain(id) },
+                                        onDismissDownloadPrompt = { viewModel.dismissDownloadPrompt() },
+                                        onAddToCollection = { collectionId ->
+                                            viewModel.addToCollection(collectionId, wallpaper)
+                                        },
+                                        onCreateCollection = { name, description, isPublic, onDevice ->
+                                            viewModel.createCollection(
+                                                name,
+                                                description,
+                                                isPublic,
+                                                onDevice,
+                                            )
+                                        },
+                                        onPrevious = previous?.let { target ->
+                                            {
+                                                navController.navigate("detail/${target.id}") {
+                                                    launchSingleTop = true
+                                                    popUpTo(detailDestinationId) { inclusive = true }
+                                                }
+                                            }
+                                        },
+                                        onNext = next?.let { target ->
+                                            {
+                                                navController.navigate("detail/${target.id}") {
+                                                    launchSingleTop = true
+                                                    popUpTo(detailDestinationId) { inclusive = true }
+                                                }
+                                            }
+                                        },
+                                        related = state.detailRelated,
+                                        onOpenRelated = { target ->
+                                            navController.navigate("detail/${target.id}") {
+                                                launchSingleTop = true
+                                                popUpTo(detailDestinationId) { inclusive = true }
+                                            }
+                                        },
+                                    )
+                                }
 
-                    is LoadState.Error -> RouteError(
-                        message = detail.message,
-                        onRetry = { viewModel.loadWallpaperDetail(id, force = true) },
-                        onBack = { navController.popBackStack() },
-                    )
+                                is LoadState.Error -> RouteError(
+                                    message = detail.message,
+                                    onRetry = { viewModel.loadWallpaperDetail(id, force = true) },
+                                    onBack = { navController.popBackStack() },
+                                )
 
-                    else -> RouteLoading()
+                                else -> RouteLoading()
+                            }
+                        }
+                    }
+                    composable(
+                        route = "editor/{id}",
+                        arguments = listOf(
+                            navArgument("id") { type = NavType.StringType },
+                        ),
+                    ) { entry ->
+                        val id = entry.arguments?.getString("id").orEmpty()
+                        LaunchedEffect(id) {
+                            viewModel.loadWallpaperDetail(id)
+                        }
+                        val detail = state.detailWallpaper
+                            ?.takeIf { state.detailWallpaperId == id }
+                        when (detail) {
+                            is LoadState.Content -> {
+                                WallpaperEditorScreen(
+                                    wallpaper = detail.data,
+                                    onBack = { navController.popBackStack() },
+                                    onApplied = { target ->
+                                        viewModel.onWallpaperApplied(target)
+                                        navController.popBackStack()
+                                    },
+                                )
+                            }
+
+                            is LoadState.Error -> RouteError(
+                                message = detail.message,
+                                onRetry = { viewModel.loadWallpaperDetail(id, force = true) },
+                                onBack = { navController.popBackStack() },
+                            )
+
+                            else -> RouteLoading()
+                        }
+                    }
+                }
                 }
             }
-        }
             DebugFpsOverlay(Modifier.fillMaxSize())
         }
     }

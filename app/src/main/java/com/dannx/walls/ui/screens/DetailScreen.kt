@@ -127,6 +127,7 @@ import com.dannx.walls.ui.components.ApplyWallpaperSheet
 import com.dannx.walls.ui.components.WallpaperCard
 import com.dannx.walls.ui.theme.EmphasizedEasing
 import com.dannx.walls.ui.components.rememberFavoriteBounce
+import com.dannx.walls.ui.components.sharedWallpaperImage
 import com.dannx.walls.ui.components.rememberWallpaperAccent
 import com.dannx.walls.ui.components.wallpaperThumbRequest
 import com.dannx.walls.ui.theme.LocalLiteMode
@@ -389,21 +390,29 @@ fun DetailScreen(
                     )
                 },
         ) {
-            AsyncImage(
-                model = thumbnailRequest,
-                contentDescription = null,
-                contentScale = ContentScale.Crop,
-                modifier = Modifier.fillMaxSize(),
-            )
-            AsyncImage(
-                model = imageRequest,
-                contentDescription = wallpaper.title,
-                contentScale = ContentScale.Crop,
+            // Esta capa es la que viaja desde la tarjeta hasta acá y vuelve al
+            // salir; el zoom y el fundido viven en el contenedor de arriba.
+            Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .graphicsLayer { alpha = fullImageAlpha },
-                onSuccess = { fullImageLoaded = true },
-            )
+                    .sharedWallpaperImage(wallpaper.id),
+            ) {
+                AsyncImage(
+                    model = thumbnailRequest,
+                    contentDescription = null,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier.fillMaxSize(),
+                )
+                AsyncImage(
+                    model = imageRequest,
+                    contentDescription = wallpaper.title,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .graphicsLayer { alpha = fullImageAlpha },
+                    onSuccess = { fullImageLoaded = true },
+                )
+            }
         }
 
         Box(

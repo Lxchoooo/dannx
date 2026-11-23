@@ -234,7 +234,7 @@ fun WallpaperCard(
                 onLongClickLabel = longClickLabel,
             ),
     ) {
-        WallpaperImage(wallpaper, isHero = false)
+        WallpaperImage(wallpaper, isHero = false, share = !compact)
         val scrim = remember {
             Brush.verticalGradient(
                 colors = listOf(
@@ -428,9 +428,21 @@ fun FeaturedCard(
 }
 
 @Composable
-private fun WallpaperImage(wallpaper: Wallpaper, isHero: Boolean, heroHeight: Dp = HeroHeight) {
+private fun WallpaperImage(
+    wallpaper: Wallpaper,
+    isHero: Boolean,
+    share: Boolean = true,
+    heroHeight: Dp = HeroHeight,
+) {
     val context = LocalContext.current
     val lite = LocalLiteMode.current
+    // La tarjeta normal comparte su foto con el detalle; el hero y las filas
+    // compactas no, porque pueden convivir con otra copia del mismo fondo.
+    val sharedModifier = if (isHero || !share) {
+        Modifier
+    } else {
+        Modifier.sharedWallpaperImage(wallpaper.id)
+    }
     val heroSize = if (isHero) screenImageSize(heroHeight) else null
     val model = remember(wallpaper.id, wallpaper.thumbnailUrl, isHero, heroSize, lite) {
         if (heroSize != null) {
@@ -453,7 +465,7 @@ private fun WallpaperImage(wallpaper: Wallpaper, isHero: Boolean, heroHeight: Dp
         // El tile ya describe el contenido por el texto superpuesto.
         contentDescription = null,
         contentScale = ContentScale.Crop,
-        modifier = Modifier
+        modifier = sharedModifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.surfaceVariant),
     )
