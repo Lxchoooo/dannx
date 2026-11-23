@@ -46,35 +46,16 @@ jobs:
       - name: Lint and unit tests
         run: ./gradlew lintDebug testDebugUnitTest
 
-      # En main los dorados se regraban en cada corrida porque la tipografía
-      # y los colores todavía están en movimiento; el artefacto
-      # `screenshots-golden` se descarga y se versiona. Los tags verifican
-      # contra el árbol congelado: si algo cambió sin regrabar, el release no
-      # sale.
-      - name: Record screenshots
-        if: github.ref_type != 'tag'
-        run: ./gradlew :app:recordRoborazziDebug
-
+      # En los tags se comprueba que las capturas versionadas sigan
+      # coincidiendo con la UI. La grabación vive en `record-screenshots.yml`.
       - name: Verify screenshots
         if: github.ref_type == 'tag'
-        run: ./gradlew :app:verifyRoborazziDebug
+        run: ./gradlew :app:verifyRoborazziDebug -Pscreenshots
 
-      - name: Upload golden screenshots
-        if: github.ref_type != 'tag'
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
-        with:
-          name: screenshots-golden
-          path: app/src/test/screenshots
-          if-no-files-found: ignore
-          retention-days: 7
-
-      # El módulo de medición y la variante `benchmark` de la app se compilan
-      # acá para que una rotura del módulo no llegue al job manual.
-      - name: Assemble benchmark variant
-        run: ./gradlew :benchmark:assembleBenchmark :app:assembleBenchmark
-
+      # Los reportes solo se conservan cuando algo falla: en verde no hacen
+      # falta y ensucian la lista de artefactos.
       - name: Upload lint report
-        if: always()
+        if: failure()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: lint-report
@@ -83,7 +64,7 @@ jobs:
           retention-days: 7
 
       - name: Upload test report
-        if: always()
+        if: failure()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: test-report
@@ -94,6 +75,9 @@ jobs:
   # Un solo emulador para el flujo crítico: aplicar un fondo de pantalla.
   # La prueba no cambia el fondo del emulador ni pide permisos extra.
   instrumented:
+    if: >-
+      github.ref_type == 'tag' ||
+      github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     steps:
@@ -158,124 +142,13 @@ jobs:
           script: ./gradlew :app:connectedDebugAndroidTest
 
       - name: Upload instrumented report
-        if: always()
+        if: failure()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: androidtest-report
           path: app/build/reports/androidTests/connected
           if-no-files-found: ignore
           retention-days: 7
-
-  # Macrobenchmark: arranque y fluidez del feed sobre la variante release.
-  # No corre en PRs ni en main: un emulador no da números representativos y
-  # cada corrida cuesta varios minutos de runner. Se dispara a mano desde
-  # Actions ("Run workflow") o con `gh workflow run android.yml`.
-  benchmark:
-    if: github.event_name == 'workflow_dispatch'
-    runs-on: ubuntu-24.04
-    timeout-minutes: 45
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-        with:
-          persist-credentials: false
-
-      - uses: gradle/actions/wrapper-validation@8da46b539cd8fe6ab27ca75128919a18d757604c # v6.4.1
-
-      - uses: actions/setup-java@77dd5b2ce225ea11469928ac317850245a74ae78 # v6.2.0
-        with:
-          distribution: temurin
-          java-version: "17"
-
-      - uses: gradle/actions/setup-gradle@8da46b539cd8fe6ab27ca75128919a18d757604c # v6
-
-      - name: Enable KVM
-        run: |
-          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' |
-            sudo tee /etc/udev/rules.d/99-kvm4all.rules
-          sudo udevadm control --reload-rules
-          sudo udevadm trigger --name-match=kvm
-
-      # API 34 o superior: desde Android 14 la librería puede reiniciar el
-      # estado de compilación entre iteraciones sin reinstalar el APK.
-      - name: AVD cache
-        id: avd-cache
-        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
-        with:
-          path: |
-            ~/.android/avd/*
-            ~/.android/adb*
-          key: avd-34-default-x86_64
-
-      - name: Create AVD and save snapshot
-        id: avd
-        if: steps.avd-cache.outputs.cache-hit != 'true'
-        uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d # v2
-        with:
-          api-level: 34
-          target: default
-          arch: x86_64
-          force-avd-creation: false
-          disable-animations: true
-          emulator-options: >-
-            -no-window -no-audio -no-boot-anim
-            -gpu swiftshader_indirect -camera-back none -camera-front none
-          script: echo "AVD ready to cache."
-
-      - name: Macrobenchmarks on API 34
-        if: steps.avd-cache.outputs.cache-hit == 'true' || steps.avd.outcome == 'success'
-        uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d # v2
-        with:
-          api-level: 34
-          target: default
-          arch: x86_64
-          force-avd-creation: false
-          disable-animations: true
-          emulator-options: >-
-            -no-snapshot-save -no-window -no-audio -no-boot-anim
-            -gpu swiftshader_indirect -camera-back none -camera-front none
-          script: >-
-            ./gradlew :benchmark:connectedBenchmarkAndroidTest
-            -Pandroid.testInstrumentationRunnerArguments.androidx.benchmark.suppressErrors=EMULATOR,LOW-BATTERY
-
-      # Genera el Baseline Profile contra la variante sin R8, con nombres
-      # legibles que AGP remapea en cada build release. Solo corre el
-      # generador: los benchmarks de arranque miden la variante minificada.
-      - name: Generate baseline profile on API 34
-        if: steps.avd-cache.outputs.cache-hit == 'true' || steps.avd.outcome == 'success'
-        uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d # v2
-        with:
-          api-level: 34
-          target: default
-          arch: x86_64
-          force-avd-creation: false
-          disable-animations: true
-          emulator-options: >-
-            -no-snapshot-save -no-window -no-audio -no-boot-anim
-            -gpu swiftshader_indirect -camera-back none -camera-front none
-          script: >-
-            ./gradlew :benchmark:connectedNonMinifiedReleaseAndroidTest
-            -Pandroid.testInstrumentationRunnerArguments.class=com.dannx.walls.benchmark.BaselineProfileGenerator
-            -Pandroid.testInstrumentationRunnerArguments.androidx.benchmark.suppressErrors=EMULATOR,LOW-BATTERY
-
-      - name: Upload benchmark results
-        if: always()
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
-        with:
-          name: benchmark-results
-          path: |
-            benchmark/build/outputs/connected_android_test_additional_output
-            benchmark/build/reports/androidTests/connected
-          if-no-files-found: ignore
-          retention-days: 14
-
-      - name: Upload generated baseline profile
-        if: always()
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
-        with:
-          name: baseline-profile-generated
-          path: benchmark/build/outputs/connected_android_test_additional_output/**/*startup-prof.txt
-          if-no-files-found: ignore
-          retention-days: 14
 
   # Build release sin lint ni tests: esas compuertas viven en `checks`.
   # lintVitalRelease se excluye porque lintDebug ya es la compuerta completa.
@@ -327,27 +200,6 @@ jobs:
           VERSION_CODE: ${{ github.run_number }}
         run: ./gradlew assembleRelease -x lintVitalRelease
 
-      - name: Normalize compose reports
-        if: always()
-        continue-on-error: true
-        run: |
-          if [ -d app/build/compose-reports ]; then
-            find app/build/compose-reports -type f -name '*:*' -print0 |
-              while IFS= read -r -d '' file; do
-                mv "$file" "${file//:/_}"
-              done
-          fi
-
-      - name: Upload compose reports
-        if: always()
-        continue-on-error: true
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
-        with:
-          name: compose-reports
-          path: app/build/compose-reports
-          if-no-files-found: ignore
-          retention-days: 7
-
       - name: Upload release APK
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
@@ -356,13 +208,15 @@ jobs:
           if-no-files-found: error
           retention-days: 7
 
+      # El mapping solo viaja en tags: en main no se usa y pesa 4 MB.
       - name: Upload R8 mapping
+        if: github.ref_type == 'tag'
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: r8-mapping-${{ github.run_number }}
           path: app/build/outputs/mapping/release/mapping.txt
           if-no-files-found: warn
-          retention-days: 30
+          retention-days: 1
 
       - name: Remove keystore
         if: always()
@@ -395,6 +249,13 @@ jobs:
           name: DannX-release-${{ github.run_number }}
           path: release
 
+      - name: Download R8 mapping
+        if: github.ref_type == 'tag'
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: r8-mapping-${{ github.run_number }}
+          path: mapping
+
       - name: Generate release notes
         env:
           VERSION_NAME: ${{ github.ref_type == 'tag' && github.ref_name || '' }}
@@ -415,7 +276,10 @@ jobs:
           cp "$APK" DannX.apk
           sha256sum DannX.apk > DannX.apk.sha256
           cat DannX.apk.sha256
-          gh release create "$GITHUB_REF_NAME" DannX.apk DannX.apk.sha256 \
+          MAPPING=$(find mapping -name 'mapping.txt' -print -quit)
+          test -n "$MAPPING"
+          cp "$MAPPING" DannX-mapping.txt
+          gh release create "$GITHUB_REF_NAME" DannX.apk DannX.apk.sha256 DannX-mapping.txt \
             --title "DannX $GITHUB_REF_NAME" \
             --notes-file RELEASE_NOTES.md \
             --verify-tag

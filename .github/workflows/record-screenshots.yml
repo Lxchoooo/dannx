@@ -30,7 +30,7 @@ jobs:
       # Robolectric baja su android-all del proxy de Maven en la primera
       # corrida; no hace falta emulador.
       - name: Record golden images
-        run: ./gradlew :app:recordRoborazziDebug
+        run: ./gradlew :app:recordRoborazziDebug -Pscreenshots
 
       - name: Upload golden images
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
