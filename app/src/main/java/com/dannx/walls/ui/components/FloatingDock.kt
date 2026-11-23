@@ -1,6 +1,7 @@
 package com.dannx.walls.ui.components
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.Crossfade
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.animateFloatAsState
@@ -44,6 +45,7 @@ import com.dannx.walls.ui.theme.MotionDuration
 data class DockItem(
     val route: String,
     val icon: ImageVector,
+    val selectedIcon: ImageVector = icon,
     val label: String,
 )
 
@@ -135,12 +137,19 @@ private fun DockEntry(
                 .padding(horizontal = 14.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Icon(
-                imageVector = item.icon,
-                // Con la etiqueta a la vista, TalkBack ya la lee del texto.
-                contentDescription = if (selected) null else item.label,
-                modifier = Modifier.size(22.dp),
-            )
+            // Relleno solo en la pestaña activa; outlined en el resto.
+            Crossfade(
+                targetState = selected,
+                animationSpec = Motion.fade(reduceMotion, MotionDuration.Fast),
+                label = "dockIcon",
+            ) { isSelected ->
+                Icon(
+                    imageVector = if (isSelected) item.selectedIcon else item.icon,
+                    // Con la etiqueta a la vista, TalkBack ya la lee del texto.
+                    contentDescription = if (isSelected) null else item.label,
+                    modifier = Modifier.size(22.dp),
+                )
+            }
             AnimatedVisibility(
                 visible = selected,
                 enter = fadeIn(Motion.fade(reduceMotion, MotionDuration.Fast)) +

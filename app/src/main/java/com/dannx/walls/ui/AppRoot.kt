@@ -25,8 +25,11 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.CollectionsBookmark
+import androidx.compose.material.icons.outlined.Explore
 import androidx.compose.material.icons.rounded.CollectionsBookmark
 import androidx.compose.material.icons.rounded.Explore
+import androidx.compose.material.icons.rounded.Favorite
 import androidx.compose.material.icons.rounded.FavoriteBorder
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.LoadingIndicator
@@ -104,12 +107,28 @@ private data class TopLevelTab(
     val route: String,
     @StringRes val labelRes: Int,
     val icon: ImageVector,
+    val selectedIcon: ImageVector,
 )
 
 private val tabs = listOf(
-    TopLevelTab("home", R.string.home_section_explore, Icons.Rounded.Explore),
-    TopLevelTab("collections", R.string.collections_title, Icons.Rounded.CollectionsBookmark),
-    TopLevelTab("favorites", R.string.favorites_title, Icons.Rounded.FavoriteBorder),
+    TopLevelTab(
+        "home",
+        R.string.home_section_explore,
+        Icons.Outlined.Explore,
+        Icons.Rounded.Explore,
+    ),
+    TopLevelTab(
+        "collections",
+        R.string.collections_title,
+        Icons.Outlined.CollectionsBookmark,
+        Icons.Rounded.CollectionsBookmark,
+    ),
+    TopLevelTab(
+        "favorites",
+        R.string.favorites_title,
+        Icons.Rounded.FavoriteBorder,
+        Icons.Rounded.Favorite,
+    ),
 )
 
 @Composable
@@ -877,6 +896,7 @@ private fun TopLevelScaffold(
             DockItem(
                 route = tab.route,
                 icon = tab.icon,
+                selectedIcon = tab.selectedIcon,
                 label = labels[index],
             )
         }

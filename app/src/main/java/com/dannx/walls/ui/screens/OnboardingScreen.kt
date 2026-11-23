@@ -68,6 +68,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
@@ -214,7 +215,9 @@ fun OnboardingScreen(liteMode: Boolean, onFinish: () -> Unit) {
                                 if (selected) {
                                     accents[index]
                                 } else {
-                                    MaterialTheme.colorScheme.outlineVariant
+                                    // El inactivo tiene que verse sin confundirse
+                                    // con el activo: outlineVariant daba 1.6:1.
+                                    MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
                                 },
                             ),
                     )
@@ -365,6 +368,25 @@ private fun PageContent(
     }
 }
 
+/**
+ * Miniaturas del logo. En claro son los containers pastel; en oscuro esos
+ * containers son marrones y verdes apagados, así que se usan los acentos
+ * claros del tema, que conservan el aire pastel sobre el fondo negro.
+ */
+@Composable
+private fun logoColors(): List<Color> {
+    val scheme = MaterialTheme.colorScheme
+    return if (scheme.background.luminance() < 0.5f) {
+        listOf(scheme.primary, scheme.tertiary, scheme.secondary)
+    } else {
+        listOf(
+            scheme.primaryContainer,
+            scheme.tertiaryContainer,
+            scheme.secondaryContainer,
+        )
+    }
+}
+
 /** Marca de la primera pantalla: palabra grande y miniaturas decorativas. */
 @Composable
 private fun WordmarkRow(accent: Color, liteMode: Boolean) {
@@ -402,18 +424,15 @@ private fun WordmarkContent(accent: Color, drift: State<Float>?) {
             color = accent,
         )
         Spacer(Modifier.height(22.dp))
+        val colors = logoColors()
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            listOf(
-                Triple(-8f, MaterialTheme.colorScheme.primaryContainer, 64.dp),
-                Triple(0f, MaterialTheme.colorScheme.tertiaryContainer, 64.dp),
-                Triple(8f, MaterialTheme.colorScheme.secondaryContainer, 64.dp),
-            ).forEachIndexed { index, (rotation, color, size) ->
+            colors.forEachIndexed { index, color ->
                 Box(
                     Modifier
-                        .size(width = size, height = size * 1.5f)
+                        .size(width = 64.dp, height = 96.dp)
                         .graphicsLayer {
                             val t = drift?.value ?: 0f
-                            rotationZ = rotation + (index - 1) * 3f * t
+                            rotationZ = -8f + index * 8f + (index - 1) * 3f * t
                         }
                         .clip(RoundedCornerShape(22.dp))
                         .background(color),
@@ -461,11 +480,7 @@ private fun FinishStage(accent: Color) {
             )
             Spacer(Modifier.height(26.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                listOf(
-                    MaterialTheme.colorScheme.primaryContainer,
-                    MaterialTheme.colorScheme.tertiaryContainer,
-                    MaterialTheme.colorScheme.secondaryContainer,
-                ).forEachIndexed { index, color ->
+                logoColors().forEachIndexed { index, color ->
                     Box(
                         Modifier
                             .size(width = 64.dp, height = 96.dp)

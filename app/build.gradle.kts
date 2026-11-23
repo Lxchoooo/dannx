@@ -129,8 +129,12 @@ android {
                 it.systemProperties["robolectric.pixelCopyRenderMode"] = "hardware"
                 // Las capturas son las pruebas más lentas: se validan en los
                 // tags o a mano (workflow de capturas), no en cada push.
-                if (!providers.gradleProperty("screenshots").isPresent) {
-                    it.filter.excludeTestsMatching("com.dannx.walls.ui.screenshot.*")
+                it.filter {
+                    if (providers.gradleProperty("screenshots").isPresent) {
+                        includeTestsMatching("com.dannx.walls.ui.screenshot.*")
+                    } else {
+                        excludeTestsMatching("com.dannx.walls.ui.screenshot.*")
+                    }
                 }
             }
         }

@@ -5,8 +5,11 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.CollectionsBookmark
+import androidx.compose.material.icons.outlined.Explore
 import androidx.compose.material.icons.rounded.CollectionsBookmark
 import androidx.compose.material.icons.rounded.Explore
+import androidx.compose.material.icons.rounded.Favorite
 import androidx.compose.material.icons.rounded.FavoriteBorder
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
@@ -56,17 +59,20 @@ abstract class DockScreenshotBase(private val tag: String) : ScreenshotTestBase(
         val items = listOf(
             DockItem(
                 route = "home",
-                icon = Icons.Rounded.Explore,
+                icon = Icons.Outlined.Explore,
+                selectedIcon = Icons.Rounded.Explore,
                 label = stringResource(R.string.home_section_explore),
             ),
             DockItem(
                 route = "collections",
-                icon = Icons.Rounded.CollectionsBookmark,
+                icon = Icons.Outlined.CollectionsBookmark,
+                selectedIcon = Icons.Rounded.CollectionsBookmark,
                 label = stringResource(R.string.collections_title),
             ),
             DockItem(
                 route = "favorites",
                 icon = Icons.Rounded.FavoriteBorder,
+                selectedIcon = Icons.Rounded.Favorite,
                 label = stringResource(R.string.favorites_title),
             ),
         )
