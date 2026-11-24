@@ -4,11 +4,12 @@ import androidx.annotation.StringRes
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.AnimationVector1D
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.StartOffset
-import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.infiniteRepeatable
@@ -21,6 +22,7 @@ import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -36,7 +38,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.navigationBarsPadding
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.rememberScrollState
@@ -44,7 +45,9 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.ArrowForward
 import androidx.compose.material.icons.rounded.AutoAwesome
+import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Wallpaper
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -66,14 +69,18 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.dannx.walls.R
+import com.dannx.walls.ui.theme.EmphasizedEasing
 import com.dannx.walls.ui.theme.LocalReduceMotion
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -111,6 +118,18 @@ fun OnboardingScreen(liteMode: Boolean, onFinish: () -> Unit) {
     val pagerState = rememberPagerState(pageCount = { pages.size })
     val scope = rememberCoroutineScope()
     var finishing by remember { mutableStateOf(false) }
+
+    // Entrada en cascada: marca, título y mensaje suben a su turno. En lite o
+    // con movimiento reducido arranca terminada, sin capturas a medio camino.
+    val intro = remember { Animatable(if (motionOff) 1f else 0f) }
+    LaunchedEffect(Unit) {
+        if (!motionOff) {
+            intro.animateTo(
+                targetValue = 1f,
+                animationSpec = tween(durationMillis = 760, easing = EmphasizedEasing),
+            )
+        }
+    }
 
     val accents = listOf(
         MaterialTheme.colorScheme.primary,
@@ -163,6 +182,11 @@ fun OnboardingScreen(liteMode: Boolean, onFinish: () -> Unit) {
                 TextButton(
                     onClick = onFinish,
                     enabled = !finishing,
+                    modifier = Modifier.graphicsLayer {
+                        val p = stage(intro.value, 0.15f, 0.6f)
+                        alpha = p
+                        translationY = (1f - p) * -8.dp.toPx()
+                    },
                 ) {
                     Text(
                         text = stringResource(R.string.onboarding_skip),
@@ -187,35 +211,40 @@ fun OnboardingScreen(liteMode: Boolean, onFinish: () -> Unit) {
                     accent = accents[index],
                     pagerState = pagerState,
                     liteMode = motionOff,
+                    intro = intro,
                 )
             }
 
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(bottom = 18.dp),
+                    .padding(bottom = 18.dp)
+                    .graphicsLayer {
+                        val p = stage(intro.value, 0.4f, 0.9f)
+                        alpha = p
+                        translationY = (1f - p) * 12.dp.toPx()
+                    },
                 horizontalArrangement = Arrangement.Center,
             ) {
                 pages.indices.forEach { index ->
-                    val selected = index == pagerState.currentPage
-                    val width by animateDpAsState(
-                        targetValue = if (selected) 24.dp else 8.dp,
-                        animationSpec = tween(260, easing = FastOutSlowInEasing),
-                        label = "dotWidth",
-                    )
+                    // El ancho sigue al dedo: el punto crece mientras la página
+                    // se acerca, sin esperar al asentamiento.
+                    val distance = abs(
+                        (pagerState.currentPage - index) + pagerState.currentPageOffsetFraction,
+                    ).coerceIn(0f, 1f)
+                    val presence = 1f - distance
+                    val dotWidth = 8.dp + 22.dp * presence
                     Box(
                         Modifier
                             .padding(horizontal = 4.dp)
-                            .size(width = width, height = 8.dp)
+                            .size(width = dotWidth, height = 8.dp)
                             .clip(CircleShape)
                             .background(
-                                if (selected) {
-                                    accents[index]
-                                } else {
-                                    // El inactivo tiene que verse sin confundirse
-                                    // con el activo: outlineVariant daba 1.6:1.
-                                    MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
-                                },
+                                lerp(
+                                    MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
+                                    accents[index],
+                                    presence,
+                                ),
                             ),
                     )
                 }
@@ -241,7 +270,12 @@ fun OnboardingScreen(liteMode: Boolean, onFinish: () -> Unit) {
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 24.dp)
-                    .height(56.dp),
+                    .height(56.dp)
+                    .graphicsLayer {
+                        val p = stage(intro.value, 0.45f, 1f)
+                        alpha = p
+                        translationY = (1f - p) * 18.dp.toPx()
+                    },
                 enabled = !finishing,
                 shape = CircleShape,
                 colors = ButtonDefaults.buttonColors(
@@ -257,12 +291,26 @@ fun OnboardingScreen(liteMode: Boolean, onFinish: () -> Unit) {
                     },
                     label = "onboardingButtonLabel",
                 ) { last ->
-                    Text(
-                        text = stringResource(
-                            if (last) R.string.onboarding_start else R.string.onboarding_next,
-                        ),
-                        style = MaterialTheme.typography.titleMedium,
-                    )
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    ) {
+                        Text(
+                            text = stringResource(
+                                if (last) R.string.onboarding_start else R.string.onboarding_next,
+                            ),
+                            style = MaterialTheme.typography.titleMedium,
+                        )
+                        Icon(
+                            imageVector = if (last) {
+                                Icons.Rounded.Check
+                            } else {
+                                Icons.Rounded.ArrowForward
+                            },
+                            contentDescription = null,
+                            modifier = Modifier.size(20.dp),
+                        )
+                    }
                 }
             }
         }
@@ -283,7 +331,6 @@ private data class OnboardingPage(
     val icon: ImageVector?,
 )
 
-@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 private fun PageContent(
     page: OnboardingPage,
@@ -291,6 +338,7 @@ private fun PageContent(
     accent: Color,
     pagerState: androidx.compose.foundation.pager.PagerState,
     liteMode: Boolean,
+    intro: Animatable<Float, AnimationVector1D>,
 ) {
     BoxWithConstraints(
         modifier = Modifier
@@ -317,40 +365,132 @@ private fun PageContent(
             verticalArrangement = Arrangement.Center,
         ) {
             if (index == 0) {
-                WordmarkRow(accent = accent, liteMode = liteMode)
+                Reveal(intro, start = 0f, end = 0.6f, rise = 14f) {
+                    WordmarkRow(accent = accent, liteMode = liteMode)
+                }
                 Spacer(Modifier.height(28.dp))
             } else {
-                Box(
-                    modifier = Modifier
-                        .size(104.dp)
-                        .clip(RoundedCornerShape(40.dp))
-                        .background(accent.copy(alpha = 0.16f)),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    page.icon?.let {
-                        Icon(
-                            imageVector = it,
-                            contentDescription = null,
-                            modifier = Modifier.size(52.dp),
-                            tint = accent,
-                        )
-                    }
+                Reveal(intro, start = 0.06f, end = 0.62f, rise = 22f) {
+                    PageBadge(icon = page.icon, accent = accent, liteMode = liteMode)
                 }
                 Spacer(Modifier.height(22.dp))
             }
 
-            Text(
-                text = stringResource(page.title),
-                style = MaterialTheme.typography.displayMedium,
-                textAlign = TextAlign.Center,
-                color = MaterialTheme.colorScheme.onBackground,
-            )
+            // Cada capa entra a su turno: la insignia primero, el título
+            // después y el mensaje al final, como si se posaran.
+            Reveal(intro, start = 0.16f, end = 0.76f, rise = 16f) {
+                Text(
+                    text = stringResource(page.title),
+                    style = MaterialTheme.typography.displayMedium,
+                    textAlign = TextAlign.Center,
+                    color = MaterialTheme.colorScheme.onBackground,
+                )
+            }
             Spacer(Modifier.height(14.dp))
-            Text(
-                text = stringResource(page.message),
-                style = MaterialTheme.typography.bodyLarge,
-                textAlign = TextAlign.Center,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            Reveal(intro, start = 0.3f, end = 0.92f, rise = 12f) {
+                Text(
+                    text = stringResource(page.message),
+                    style = MaterialTheme.typography.bodyLarge,
+                    textAlign = TextAlign.Center,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
+    }
+}
+
+/**
+ * Envoltorio de entrada: aparece y sube dentro de la ventana que le toca de la
+ * animación global. La lectura ocurre en `graphicsLayer`, así que la capa se
+ * actualiza sin recomponer el contenido.
+ */
+@Composable
+private fun Reveal(
+    progress: Animatable<Float, AnimationVector1D>,
+    start: Float,
+    end: Float,
+    rise: Float,
+    content: @Composable () -> Unit,
+) {
+    Box(
+        modifier = Modifier.graphicsLayer {
+            val p = stage(progress.value, start, end)
+            alpha = p
+            translationY = (1f - p) * rise.dp.toPx()
+        },
+    ) {
+        content()
+    }
+}
+
+/**
+ * Insignia de las páginas de descubrimiento: tarjeta con gradiente del acento,
+ * borde de luz y una flotación lenta. En lite queda quieta y sin sombra de color.
+ */
+@Composable
+private fun PageBadge(icon: ImageVector?, accent: Color, liteMode: Boolean) {
+    val float = if (liteMode) {
+        null
+    } else {
+        rememberInfiniteTransition(label = "pageBadge").animateFloat(
+            initialValue = 0f,
+            targetValue = 1f,
+            animationSpec = infiniteRepeatable(
+                animation = tween(durationMillis = 5_400, easing = FastOutSlowInEasing),
+                repeatMode = RepeatMode.Reverse,
+            ),
+            label = "pageBadgeFloat",
+        )
+    }
+
+    Box(
+        modifier = Modifier
+            .size(112.dp)
+            .graphicsLayer {
+                val t = float?.value ?: 0.5f
+                translationY = -(t - 0.5f) * 10.dp.toPx()
+                rotationZ = (t - 0.5f) * 3f
+            }
+            .shadow(
+                elevation = 18.dp,
+                shape = RoundedCornerShape(42.dp),
+                ambientColor = accent.copy(alpha = 0.5f),
+                spotColor = accent.copy(alpha = 0.7f),
+            )
+            .clip(RoundedCornerShape(42.dp))
+            .background(
+                Brush.linearGradient(
+                    listOf(
+                        accent.copy(alpha = 0.26f),
+                        accent.copy(alpha = 0.08f),
+                    ),
+                ),
+            )
+            .border(
+                width = 1.dp,
+                brush = Brush.linearGradient(
+                    listOf(
+                        accent.copy(alpha = 0.55f),
+                        Color.Transparent,
+                        accent.copy(alpha = 0.22f),
+                    ),
+                ),
+                shape = RoundedCornerShape(42.dp),
+            ),
+        contentAlignment = Alignment.Center,
+    ) {
+        Box(
+            Modifier
+                .size(70.dp)
+                .clip(CircleShape)
+                .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.72f)),
+        )
+        icon?.let {
+            Icon(
+                imageVector = it,
+                contentDescription = null,
+                modifier = Modifier.size(52.dp),
+                tint = accent,
             )
         }
     }
@@ -397,37 +537,74 @@ private fun WordmarkRow(accent: Color, liteMode: Boolean) {
 
 @Composable
 private fun WordmarkContent(accent: Color, drift: State<Float>?) {
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = Modifier.graphicsLayer {
-            val t = drift?.value ?: 0f
-            translationY = -t * 6.dp.toPx()
-            scaleX = 0.99f + 0.02f * t
-            scaleY = 0.99f + 0.02f * t
-        },
-    ) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Text(
             text = stringResource(R.string.app_name),
             style = MaterialTheme.typography.displayLarge,
             color = accent,
+            modifier = Modifier.graphicsLayer {
+                val t = drift?.value ?: 0f
+                translationY = -t * 4.dp.toPx()
+                val scale = 0.995f + 0.012f * t
+                scaleX = scale
+                scaleY = scale
+            },
         )
-        Spacer(Modifier.height(22.dp))
+        Spacer(Modifier.height(24.dp))
         val colors = logoColors()
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             colors.forEachIndexed { index, color ->
-                Box(
-                    Modifier
+                LogoCard(
+                    color = color,
+                    modifier = Modifier
                         .size(width = 64.dp, height = 96.dp)
                         .graphicsLayer {
                             val t = drift?.value ?: 0f
-                            rotationZ = -8f + index * 8f + (index - 1) * 3f * t
-                        }
-                        .clip(RoundedCornerShape(22.dp))
-                        .background(color),
+                            // Cada tarjeta flota con su propio desfase para que
+                            // el grupo no se mueva como un bloque rígido.
+                            val bob = sin((t * Math.PI + index * 0.9f).toFloat())
+                            rotationZ = -8f + index * 8f + bob * 2.4f
+                            translationY = bob * 5.dp.toPx()
+                            val scale = 1f + bob * 0.015f
+                            scaleX = scale
+                            scaleY = scale
+                        },
                 )
             }
         }
     }
+}
+
+/**
+ * Tarjeta del logo: gradiente suave de su propio color, filo de luz y una
+ * sombra teñida. La usan la portada y el remate para que el cierre se sienta
+ * como la misma marca.
+ */
+@Composable
+private fun LogoCard(color: Color, modifier: Modifier = Modifier) {
+    Box(
+        modifier
+            .shadow(
+                elevation = 14.dp,
+                shape = RoundedCornerShape(22.dp),
+                ambientColor = color.copy(alpha = 0.45f),
+                spotColor = color.copy(alpha = 0.6f),
+            )
+            .clip(RoundedCornerShape(22.dp))
+            .background(
+                Brush.verticalGradient(
+                    listOf(
+                        lerp(color, Color.White, 0.22f),
+                        lerp(color, Color.Black, 0.05f),
+                    ),
+                ),
+            )
+            .border(
+                width = 1.dp,
+                color = Color.White.copy(alpha = 0.24f),
+                shape = RoundedCornerShape(22.dp),
+            ),
+    )
 }
 
 /**
@@ -440,8 +617,8 @@ private fun FinishStage(accent: Color) {
     val progress by animateFloatAsState(
         targetValue = if (started) 1f else 0f,
         animationSpec = spring(
-            dampingRatio = 0.68f,
-            stiffness = 190f,
+            dampingRatio = 0.7f,
+            stiffness = 170f,
         ),
         label = "finishStage",
     )
@@ -449,35 +626,50 @@ private fun FinishStage(accent: Color) {
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background.copy(alpha = 0.75f)),
+            .background(MaterialTheme.colorScheme.background.copy(alpha = 0.82f)),
         contentAlignment = Alignment.Center,
     ) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            modifier = Modifier.graphicsLayer {
-                alpha = progress
-                val scale = 0.86f + 0.14f * progress
-                scaleX = scale
-                scaleY = scale
-            },
-        ) {
+        // Halo del acento: se abre detrás de la marca y da paso a la app.
+        Box(
+            Modifier
+                .size(300.dp)
+                .graphicsLayer {
+                    alpha = progress * 0.9f
+                    val scale = 0.55f + 0.65f * progress
+                    scaleX = scale
+                    scaleY = scale
+                }
+                .background(
+                    Brush.radialGradient(
+                        listOf(accent.copy(alpha = 0.3f), Color.Transparent),
+                    ),
+                ),
+        )
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Text(
                 text = stringResource(R.string.app_name),
                 style = MaterialTheme.typography.displayLarge,
                 color = accent,
+                modifier = Modifier.graphicsLayer {
+                    alpha = progress
+                    translationY = (1f - progress) * 10.dp.toPx()
+                },
             )
             Spacer(Modifier.height(26.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 logoColors().forEachIndexed { index, color ->
-                    Box(
-                        Modifier
+                    LogoCard(
+                        color = color,
+                        modifier = Modifier
                             .size(width = 64.dp, height = 96.dp)
                             .graphicsLayer {
-                                rotationZ = (index - 1) * 10f * progress
-                                translationY = (1f - progress) * 14.dp.toPx()
-                            }
-                            .clip(RoundedCornerShape(22.dp))
-                            .background(color),
+                                alpha = progress
+                                rotationZ = (index - 1) * 12f * progress
+                                translationY = (1f - progress) * (14 + index * 8).dp.toPx()
+                                val scale = 0.82f + 0.18f * progress
+                                scaleX = scale
+                                scaleY = scale
+                            },
                     )
                 }
             }
@@ -564,6 +756,18 @@ private fun BackdropShapes(
     breathe: State<Float>?,
 ) {
     Box(Modifier.fillMaxSize()) {
+        // Velo del acento de la página: el fondo cambia de temperatura al
+        // deslizar, sin competir con el texto.
+        Box(
+            Modifier
+                .fillMaxSize()
+                .background(
+                    Brush.radialGradient(
+                        listOf(accent.copy(alpha = 0.12f), Color.Transparent),
+                    ),
+                ),
+        )
+
         // Cookie grande arriba a la derecha.
         Box(
             Modifier
@@ -619,3 +823,10 @@ private fun BackdropShapes(
         )
     }
 }
+
+/**
+ * Progreso de una etapa concreta dentro de una animación global, en 0..1.
+ * Permite escalonar varias capas con un solo valor.
+ */
+private fun stage(value: Float, start: Float, end: Float): Float =
+    ((value - start) / (end - start)).coerceIn(0f, 1f)
