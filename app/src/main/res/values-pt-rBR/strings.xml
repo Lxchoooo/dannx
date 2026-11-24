@@ -6,15 +6,13 @@
 
     <string name="onboarding_skip">Pular</string>
     <string name="onboarding_next">Próximo</string>
-    <string name="onboarding_start">Começar</string>
-    <string name="onboarding_kicker_explore">Explorar</string>
-    <string name="onboarding_kicker_apply">Aplicar</string>
-    <string name="onboarding_title_1">Sua tela não precisa ser a padrão.</string>
-    <string name="onboarding_message_1">Papéis de parede escolhidos a dedo, sem anúncios e sem enrolação. Abra, escolha, pronto.</string>
-    <string name="onboarding_title_2">Menos busca. Mais descoberta.</string>
-    <string name="onboarding_message_2">Categorias e etiquetas que levam direto ao papel de parede que combina com você.</string>
-    <string name="onboarding_title_3">Defina e deixe aparecer.</string>
-    <string name="onboarding_message_3">Tela inicial, tela de bloqueio ou as duas. Baixe na qualidade original e salve o que gostar.</string>
+    <string name="onboarding_start">Entrar</string>
+    <string name="onboarding_title_1">Você não procurava um papel.</string>
+    <string name="onboarding_message_1">Procurava outro jeito de olhar.</string>
+    <string name="onboarding_title_2">Tem papéis que se reconhecem.</string>
+    <string name="onboarding_message_2">Não precisa procurar: eles aparecem.</string>
+    <string name="onboarding_title_3">E já é a sua tela.</string>
+    <string name="onboarding_message_3">Sem cerimônia.</string>
 
     <string name="apply_sheet_title">Aplicar como</string>
     <string name="apply_system">Tela inicial</string>

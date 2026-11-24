@@ -94,19 +94,16 @@ fun OnboardingScreen(liteMode: Boolean, onFinish: () -> Unit) {
             OnboardingPage(
                 title = R.string.onboarding_title_1,
                 message = R.string.onboarding_message_1,
-                kicker = null,
                 icon = null,
             ),
             OnboardingPage(
                 title = R.string.onboarding_title_2,
                 message = R.string.onboarding_message_2,
-                kicker = R.string.onboarding_kicker_explore,
                 icon = Icons.Rounded.AutoAwesome,
             ),
             OnboardingPage(
                 title = R.string.onboarding_title_3,
                 message = R.string.onboarding_message_3,
-                kicker = R.string.onboarding_kicker_apply,
                 icon = Icons.Rounded.Wallpaper,
             ),
         )
@@ -283,7 +280,6 @@ fun OnboardingScreen(liteMode: Boolean, onFinish: () -> Unit) {
 private data class OnboardingPage(
     @StringRes val title: Int,
     @StringRes val message: Int,
-    @StringRes val kicker: Int?,
     val icon: ImageVector?,
 )
 
@@ -341,14 +337,6 @@ private fun PageContent(
                     }
                 }
                 Spacer(Modifier.height(22.dp))
-                page.kicker?.let {
-                    Text(
-                        text = stringResource(it),
-                        style = MaterialTheme.typography.labelLarge,
-                        color = accent,
-                    )
-                    Spacer(Modifier.height(12.dp))
-                }
             }
 
             Text(

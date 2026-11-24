@@ -6,15 +6,13 @@
 
     <string name="onboarding_skip">Skip</string>
     <string name="onboarding_next">Next</string>
-    <string name="onboarding_start">Start</string>
-    <string name="onboarding_kicker_explore">Explore</string>
-    <string name="onboarding_kicker_apply">Apply</string>
-    <string name="onboarding_title_1">Your screen shouldn\'t look stock.</string>
-    <string name="onboarding_message_1">Hand-picked wallpapers, no ads, no filler. Open, pick, done.</string>
-    <string name="onboarding_title_2">Less searching. More finding.</string>
-    <string name="onboarding_message_2">Categories and tags that take you straight to the wallpaper that fits you.</string>
-    <string name="onboarding_title_3">Set it and let it show.</string>
-    <string name="onboarding_message_3">Home, lock screen, or both. Download in original quality and save what you like.</string>
+    <string name="onboarding_start">Step in</string>
+    <string name="onboarding_title_1">Not another wallpaper.</string>
+    <string name="onboarding_message_1">A different way to see.</string>
+    <string name="onboarding_title_2">Some images find you first.</string>
+    <string name="onboarding_message_2">You don\'t look for them; they show up.</string>
+    <string name="onboarding_title_3">And then it\'s your screen.</string>
+    <string name="onboarding_message_3">No ceremony, no fuss.</string>
 
     <string name="apply_sheet_title">Apply as</string>
     <string name="apply_system">Home screen</string>

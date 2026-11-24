@@ -6,15 +6,13 @@
 
     <string name="onboarding_skip">Passer</string>
     <string name="onboarding_next">Suivant</string>
-    <string name="onboarding_start">Commencer</string>
-    <string name="onboarding_kicker_explore">Explorer</string>
-    <string name="onboarding_kicker_apply">Appliquer</string>
-    <string name="onboarding_title_1">Votre écran n\'a pas besoin de ressembler à l\'original.</string>
-    <string name="onboarding_message_1">Des fonds d\'écran choisis un par un, sans pubs ni remplissage. Ouvrez, choisissez, terminé.</string>
-    <string name="onboarding_title_2">Cherchez moins. Trouvez plus.</string>
-    <string name="onboarding_message_2">Des catégories et des étiquettes qui vous mènent directement au fond d\'écran qui vous va.</string>
-    <string name="onboarding_title_3">Réglez-le et laissez-le s\'afficher.</string>
-    <string name="onboarding_message_3">Écran d\'accueil, écran de verrouillage ou les deux. Téléchargez en qualité d\'origine et gardez ce que vous aimez.</string>
+    <string name="onboarding_start">Entrer</string>
+    <string name="onboarding_title_1">Pas juste un fond d\'écran.</string>
+    <string name="onboarding_message_1">Une autre façon de regarder.</string>
+    <string name="onboarding_title_2">Certains fonds se reconnaissent.</string>
+    <string name="onboarding_message_2">Pas besoin de les chercher : ils arrivent.</string>
+    <string name="onboarding_title_3">Et c\'est déjà votre écran.</string>
+    <string name="onboarding_message_3">Sans cérémonie.</string>
 
     <string name="apply_sheet_title">Appliquer comme</string>
     <string name="apply_system">Écran d\'accueil</string>
