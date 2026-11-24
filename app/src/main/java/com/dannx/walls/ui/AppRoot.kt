@@ -51,6 +51,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -79,10 +80,12 @@ import com.dannx.walls.MainViewModel
 import com.dannx.walls.MessageAction
 import com.dannx.walls.R
 import com.dannx.walls.UiState
+import com.dannx.walls.data.Wallpaper
 import com.dannx.walls.ui.components.DebugFpsOverlay
 import com.dannx.walls.ui.components.DockItem
 import com.dannx.walls.ui.components.ErrorState
 import com.dannx.walls.ui.components.FloatingDock
+import com.dannx.walls.ui.components.LocalLastAccent
 import com.dannx.walls.ui.components.LocalSharedTransitionScope
 import com.dannx.walls.ui.components.ProvideSharedVisibilityScope
 import com.dannx.walls.ui.editor.WallpaperEditorScreen
@@ -262,7 +265,14 @@ private fun MainApp(
     ) { innerPadding ->
         Box(Modifier.fillMaxSize().padding(innerPadding)) {
             SharedTransitionLayout(Modifier.fillMaxSize()) {
-                CompositionLocalProvider(LocalSharedTransitionScope provides this) {
+                // El último acento extraído vive acá, por encima del NavHost:
+                // así, al pasar de un fondo a otro, la pantalla nueva arranca
+                // desde el color anterior y lo transforma en el suyo.
+                val lastAccent = remember { mutableStateOf<Color?>(null) }
+                CompositionLocalProvider(
+                    LocalSharedTransitionScope provides this,
+                    LocalLastAccent provides lastAccent,
+                ) {
                     NavHost(
                         navController = navController,
                         startDestination = startDestination,
@@ -311,7 +321,17 @@ private fun MainApp(
                                 isDetailRoute(targetRoute)
                             when {
                                 reduceMotion -> fadeOut(tween(MotionDuration.Fast))
-                                randomDetail || detailToDetail -> fadeOut(tween(300))
+                                // Al pasar de un fondo a otro el anterior se
+                                // aleja mientras el nuevo se asienta, para que
+                                // la foto se transforme y no se funda en seco.
+                                detailToDetail -> {
+                                    fadeOut(tween(300)) +
+                                        scaleOut(
+                                            animationSpec = tween(300, easing = EmphasizedEasing),
+                                            targetScale = 1.04f,
+                                        )
+                                }
+                                randomDetail -> fadeOut(tween(300))
                                 isDetailRoute(targetRoute) -> fadeOut(tween(180))
                                 isSecondaryRoute(targetRoute) -> {
                                     fadeOut(tween(180)) +
@@ -719,8 +739,19 @@ private fun MainApp(
                             LaunchedEffect(id) {
                                 viewModel.loadWallpaperDetail(id)
                             }
-                            val detail = state.detailWallpaper
+                            val resolved = state.detailWallpaper
                                 ?.takeIf { state.detailWallpaperId == id }
+                            // La pantalla que sale conserva su foto mientras la
+                            // nueva resuelve: si no, la anterior se reemplaza por
+                            // el indicador de carga a mitad de la transición y el
+                            // cambio de fondo se corta en seco.
+                            var latched by remember(id) {
+                                mutableStateOf<LoadState.Content<Wallpaper>?>(null)
+                            }
+                            LaunchedEffect(resolved) {
+                                if (resolved is LoadState.Content) latched = resolved
+                            }
+                            val detail = resolved ?: latched
                             when (detail) {
                                 is LoadState.Content -> {
                                     val wallpaper = detail.data

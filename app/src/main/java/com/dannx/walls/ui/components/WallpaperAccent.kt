@@ -2,12 +2,15 @@ package com.dannx.walls.ui.components
 
 import android.content.Context
 import android.graphics.Bitmap
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.graphics.drawable.toBitmapOrNull
@@ -16,26 +19,53 @@ import coil.imageLoader
 import coil.request.ImageRequest
 import coil.request.SuccessResult
 import com.dannx.walls.ui.theme.LocalLiteMode
+import com.dannx.walls.ui.theme.LocalReduceMotion
+import com.dannx.walls.ui.theme.Motion
+import com.dannx.walls.ui.theme.MotionDuration
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlin.math.max
 
 /**
+ * Último acento resuelto, compartido por encima del NavHost. Vive en un scope
+ * exterior para que, al pasar de un fondo a otro, la pantalla nueva arranque
+ * desde el color anterior y lo transforme en el suyo en vez de volver al color
+ * del tema: eso es lo que hace que el color se funda con la foto.
+ */
+val LocalLastAccent = staticCompositionLocalOf<MutableState<Color?>> { mutableStateOf(null) }
+
+/**
  * Saca un color representativo de la pared para teñir detalles de la pantalla.
- * Se calcula una sola vez por imagen y arranca con el color de la app.
+ * Se calcula una sola vez por imagen y el resultado se anima, así el botón, el
+ * favorito y el degradado cambian de color junto con el fondo y no de golpe.
  */
 @Composable
 fun rememberWallpaperAccent(url: String, fallback: Color): Color {
     val context = LocalContext.current
     val lite = LocalLiteMode.current
-    var accent by remember(url) { mutableStateOf(fallback) }
+    val reduceMotion = LocalReduceMotion.current
+    val lastAccent = LocalLastAccent.current
+    var accent by remember(url) {
+        mutableStateOf(if (lite) fallback else (lastAccent.value ?: fallback))
+    }
     LaunchedEffect(url, lite) {
         // En lite no se decodifica la imagen solo para sacar un color: es
         // trabajo y memoria que en gama baja pesa más que el detalle visual.
-        if (lite) return@LaunchedEffect
-        accent = extractAccent(context, url) ?: fallback
+        if (lite) {
+            accent = fallback
+            return@LaunchedEffect
+        }
+        // Si la foto no se puede analizar se conserva el color anterior: el
+        // acento nunca debe caer al del tema en medio de un cambio.
+        val extracted = extractAccent(context, url) ?: accent
+        accent = extracted
+        lastAccent.value = extracted
     }
-    return accent
+    return animateColorAsState(
+        targetValue = accent,
+        animationSpec = Motion.fade(reduceMotion, MotionDuration.Slow),
+        label = "wallpaperAccent",
+    ).value
 }
 
 private suspend fun extractAccent(context: Context, url: String): Color? {
