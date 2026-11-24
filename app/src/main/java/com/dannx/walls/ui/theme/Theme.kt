@@ -55,7 +55,6 @@ fun DannXTheme(
     content: @Composable () -> Unit,
 ) {
     val context = LocalContext.current
-    val seed = rememberSeedColor(colorSeed, darkTheme)
     // Con el color del sistema y el estilo por defecto no hace falta volver a
     // generar nada: Android ya calculó el esquema que el usuario espera.
     val useSystemScheme = dynamicColor &&
@@ -64,6 +63,9 @@ fun DannXTheme(
         contrastLevel == ColorContrast.STANDARD &&
         !amoled &&
         Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
+    // Leer el color del fondo de pantalla es una llamada al sistema: solo se
+    // hace cuando de verdad se usa como semilla.
+    val seed = if (useSystemScheme) DefaultSeed else rememberSeedColor(colorSeed, darkTheme)
     val target = remember(
         dynamicColor,
         darkTheme,

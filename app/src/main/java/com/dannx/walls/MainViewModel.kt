@@ -49,6 +49,7 @@ import com.dannx.walls.data.WallpaperCollection
 import com.dannx.walls.data.WallpaperColor
 import com.dannx.walls.data.WallpaperColorResolver
 import com.dannx.walls.data.WallpaperFilter
+import com.dannx.walls.data.WallpaperPage
 import com.dannx.walls.data.WallpapersRepository
 import com.dannx.walls.data.WallsApi
 import com.dannx.walls.data.allTags
@@ -109,7 +110,8 @@ class MainViewModel(
     private var filterJob: Job? = null
     private var colorJob: Job? = null
     /** null = se intentó y no se pudo resolver; evita reintentos infinitos. */
-    private val colorCache = colorCacheStore.read().toMutableMap()
+    private val colorCache = LinkedHashMap<String, WallpaperColor?>()
+    private var colorCacheLoaded = false
     private var lastFeedRefreshAt: Long? = null
     /**
      * Filas del servidor ya consumidas por el feed actual. Se reinicia con cada
@@ -166,35 +168,66 @@ class MainViewModel(
 
     init {
         restoreSession()
-        if (isOnline()) {
-            refresh()
-        } else {
-            viewModelScope.launch { loadFromCache() }
+        viewModelScope.launch {
+            // El archivo de colores puede tener cientos de entradas y no debe
+            // retrasar el primer frame; se lee en segundo plano.
+            val stored = withContext(Dispatchers.IO) { colorCacheStore.read() }
+            colorCache.putAll(stored)
+            colorCacheLoaded = true
+            if (_state.value.color != null) classifyPendingColors()
+        }
+        viewModelScope.launch {
+            // Lo guardado se pinta primero y la red llega después: en un
+            // arranque normal no hay esqueleto de por medio.
+            val hydrated = try {
+                loadFromCache()
+            } catch (error: CancellationException) {
+                throw error
+            } catch (_: Exception) {
+                false
+            }
             loadDailyWallpaper()
+            if (isOnline()) {
+                loadFeed(reloadMeta = true, preserveFeed = true, silent = hydrated)
+            }
         }
     }
 
     /**
-     * Muestra lo guardado en disco cuando no hay red. Sin sesión nunca se
-     * muestran colecciones privadas cacheadas.
+     * Pinta lo guardado en disco. Sin red es lo único que se muestra; con red
+     * sirve de contenido provisional mientras llega la primera página. Sin
+     * sesión nunca se muestran colecciones privadas cacheadas.
+     *
+     * @return true si había algo guardado para mostrar.
      */
-    private suspend fun loadFromCache() {
+    private suspend fun loadFromCache(): Boolean {
+        val online = isOnline()
         val hasSession = _state.value.session != null
         val cachedWallpapers = cache.readWallpapers()
         val cachedCollections = mergedWithLocal(cache.readCollections())
             .filter { it.isLocal || hasSession || it.isPublic }
-        _state.update {
-            it.copy(
-                feed = if (cachedWallpapers.isEmpty()) {
-                    LoadState.Error(
+        if (online && cachedWallpapers.isEmpty() && cachedCollections.isEmpty()) {
+            return false
+        }
+        var hydrated = false
+        _state.update { state ->
+            // La red pudo responder antes que el disco: no se pisa contenido.
+            if (state.wallpapers.isNotEmpty() || state.collectionItems.isNotEmpty()) {
+                return@update state
+            }
+            hydrated = cachedWallpapers.isNotEmpty()
+            state.copy(
+                feed = when {
+                    cachedWallpapers.isNotEmpty() -> LoadState.Content(cachedWallpapers)
+                    online -> state.feed
+                    else -> LoadState.Error(
                         message = strings.get(R.string.error_offline),
                         kind = ErrorKind.OFFLINE,
                     )
-                } else {
-                    LoadState.Content(cachedWallpapers)
                 },
                 collections = when {
                     cachedCollections.isNotEmpty() -> LoadState.Content(cachedCollections)
+                    online -> state.collections
                     // Sin nada guardado no mostramos una pantalla vacía: el
                     // primer uso sin internet ofrece reintentar.
                     api.isConfigured -> LoadState.Error(
@@ -205,14 +238,20 @@ class MainViewModel(
                 },
                 wallpapers = cachedWallpapers,
                 collectionItems = cachedCollections,
-                tagCatalog = collectTagValues(cachedWallpapers),
-                offline = true,
+                tagCatalog = if (cachedWallpapers.isEmpty()) {
+                    state.tagCatalog
+                } else {
+                    collectTagValues(cachedWallpapers)
+                },
+                offline = !online,
+                refreshing = false,
                 loadingMore = false,
                 hasMore = false,
                 loadMoreError = null,
             )
         }
-        if (_state.value.color != null) classifyPendingColors()
+        if (hydrated && _state.value.color != null) classifyPendingColors()
+        return hydrated
     }
 
     /** Une las colecciones guardadas en el teléfono con las del servidor. */
@@ -234,7 +273,19 @@ class MainViewModel(
     }
 
     /**
-     * Recarga el feed y las colecciones. Si ya hay una recarga en curso, la
+     * Resultado de una carga completa: la página pedida y la metadata que la
+     * acompaña. Los campos de metadata son null cuando no se pidieron.
+     */
+    private data class FeedLoad(
+        val page: WallpaperPage,
+        val collections: List<WallpaperCollection>? = null,
+        val categories: List<WallpaperCategory>? = null,
+        val tagCategories: List<TagCategory>? = null,
+        val appSettings: AppSettings? = null,
+    )
+
+    /**
+     * Relee el feed y las colecciones. Si ya hay una recarga en curso, la
      * cancela para no apilar estados ni requests.
      */
     fun refresh() {
@@ -290,40 +341,46 @@ class MainViewModel(
                 }
             }
             try {
-                val page = api.loadWallpapersPage(filter)
+                // La página y la metadata viajan en paralelo: el contenido no
+                // espera colecciones, categorías, reglas de etiquetas ni
+                // ajustes. Antes eran cuatro viajes en serie después de la
+                // primera página.
+                val loaded = coroutineScope {
+                    val page = async { api.loadWallpapersPage(filter) }
+                    val collections = if (reloadMeta) async { loadCollectionsOrKeep() } else null
+                    val categories = if (reloadMeta) {
+                        async { loadCategoriesOrEmpty(_state.value.categories) }
+                    } else {
+                        null
+                    }
+                    val tagRules = if (reloadMeta) {
+                        async { loadTagCategoriesOrEmpty(_state.value.tagCategories) }
+                    } else {
+                        null
+                    }
+                    val settings = if (reloadMeta) {
+                        async { loadAppSettingsOrFallback(_state.value.appSettings) }
+                    } else {
+                        null
+                    }
+                    FeedLoad(
+                        page = page.await(),
+                        collections = collections?.await(),
+                        categories = categories?.await(),
+                        tagCategories = tagRules?.await(),
+                        appSettings = settings?.await(),
+                    )
+                }
                 val current = _state.value
                 val trashedIds = current.trashWallpapers.map { it.id }.toSet()
-                val fresh = page.items.filterNot { it.isDeleted || it.id in trashedIds }
-                val remoteCollections = if (reloadMeta) {
-                    try {
-                        api.loadCollections()
-                    } catch (error: CancellationException) {
-                        throw error
-                    } catch (error: DannXError.SessionExpired) {
-                        throw error
-                    } catch (error: Exception) {
-                        _state.update { state -> state.copy(message = error.userMessage()) }
-                        _state.value.collectionItems
-                    }
-                } else {
-                    current.collectionItems
-                }
-                val collections = mergedWithLocal(remoteCollections)
-                val categories = if (reloadMeta) {
-                    loadCategoriesOrEmpty(current.categories)
-                } else {
-                    current.categories
-                }
-                val tagCategoryRules = if (reloadMeta) {
-                    loadTagCategoriesOrEmpty(current.tagCategories)
-                } else {
-                    current.tagCategories
-                }
-                val appSettings = if (reloadMeta) {
-                    loadAppSettingsOrFallback(current.appSettings)
-                } else {
-                    current.appSettings
-                }
+                val fresh = loaded.page.items
+                    .filterNot { it.isDeleted || it.id in trashedIds }
+                val collections = mergedWithLocal(
+                    loaded.collections ?: current.collectionItems,
+                )
+                val categories = loaded.categories ?: current.categories
+                val tagCategoryRules = loaded.tagCategories ?: current.tagCategories
+                val appSettings = loaded.appSettings ?: current.appSettings
                 val items = if (preserveFeed) {
                     mergedFirstPage(fresh, current.wallpapers)
                 } else {
@@ -343,9 +400,9 @@ class MainViewModel(
                 val hasMore = if (preserveFeed && current.wallpapers.size > fresh.size) {
                     current.hasMore
                 } else {
-                    page.hasMore
+                    loaded.page.hasMore
                 }
-                feedOffset = page.nextOffset
+                feedOffset = loaded.page.nextOffset
                 _state.update {
                     it.copy(
                         feed = if (items.isEmpty()) LoadState.Empty else LoadState.Content(items),
@@ -1148,12 +1205,17 @@ class MainViewModel(
 
     private fun classifyPendingColors() {
         val resolver = colorResolver ?: return
+        // Mientras se lee la caché de disco no se resuelve nada: al terminar
+        // se vuelve a intentar si el filtro por color sigue activo.
+        if (!colorCacheLoaded) return
         if (colorJob?.isActive == true) return
         val pending = _state.value.wallpapers.filter { it.id !in colorCache }
         if (pending.isEmpty()) return
         colorJob = viewModelScope.launch {
             _state.update { it.copy(classifyingColors = true) }
             try {
+                var pendingUpdate = false
+                var sinceUpdate = 0
                 pending.chunked(COLOR_BATCH_SIZE).forEach { chunk ->
                     val resolved = coroutineScope {
                         chunk.map { wallpaper ->
@@ -1178,9 +1240,22 @@ class MainViewModel(
                         if (color != null) changed = true
                     }
                     if (changed) {
+                        pendingUpdate = true
+                        sinceUpdate += chunk.size
+                    }
+                    // Publicar cada pocos lotes: actualizar la grilla cada
+                    // cuatro fondos la recomponía varias veces sin necesidad.
+                    if (pendingUpdate && sinceUpdate >= COLOR_UI_BATCH) {
                         _state.update {
                             it.copy(wallpaperColors = resolvedColors())
                         }
+                        pendingUpdate = false
+                        sinceUpdate = 0
+                    }
+                }
+                if (pendingUpdate) {
+                    _state.update {
+                        it.copy(wallpaperColors = resolvedColors())
                     }
                 }
             } finally {
@@ -3463,6 +3538,24 @@ class MainViewModel(
         }
     }
 
+    /**
+     * Colecciones para una recarga completa. Un fallo distinto de sesión
+     * vencida deja el mensaje visible y conserva lo que ya estaba en pantalla.
+     */
+    private suspend fun loadCollectionsOrKeep(): List<WallpaperCollection> {
+        val fallback = _state.value.collectionItems
+        return try {
+            api.loadCollections()
+        } catch (error: CancellationException) {
+            throw error
+        } catch (error: DannXError.SessionExpired) {
+            throw error
+        } catch (error: Exception) {
+            _state.update { state -> state.copy(message = error.userMessage()) }
+            fallback
+        }
+    }
+
     private suspend fun loadCollectionsOrEmpty(
         fallback: List<WallpaperCollection>,
     ): List<WallpaperCollection> =
@@ -3639,6 +3732,8 @@ class MainViewModel(
         private const val SEARCH_DEBOUNCE_MS = 300L
         private const val REFRESH_WINDOW_MS = 5 * 60 * 1000L
         private const val COLOR_BATCH_SIZE = 4
+        /** Colores resueltos antes de tocar el estado de la pantalla. */
+        private const val COLOR_UI_BATCH = 16
         /** Fondos que muestra la fila de similares en el Detalle. */
         private const val RELATED_LIMIT = 5
 
