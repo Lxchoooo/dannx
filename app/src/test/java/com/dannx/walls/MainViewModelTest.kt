@@ -34,8 +34,8 @@ class MainViewModelTest {
     private lateinit var actions: FakeActions
     private val strings = StringResolver { id, _ ->
         when (id) {
-            R.string.error_offline -> "Sin conexión. Revisá tu internet y probá de nuevo."
-            R.string.msg_name_reserved -> "Ese nombre está reservado. Elegí otro."
+            R.string.error_offline -> "Sin conexión. Revisa tu internet y prueba de nuevo."
+            R.string.msg_name_reserved -> "Ese nombre está reservado. Elige otro."
             R.string.msg_wallpaper_updated -> "Fondo actualizado."
             R.string.msg_wallpapers_updated -> "Fondos actualizados."
             R.string.msg_category_delete_blocked ->
