@@ -75,6 +75,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -87,6 +88,8 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
@@ -281,6 +284,11 @@ fun HomeScreen(
     // Se recrea cuando cambia la cantidad de destacados para que el carrusel
     // siempre conozca el total actual.
     val carouselState = key(featured.size) { rememberCarouselState { featured.size } }
+    // Centro y ancho del carrusel. Cada página mide contra esto qué tan lejos
+    // está mientras se desliza: `CarouselState` no expone su desplazamiento
+    // fraccional, así que se mide por posición real en pantalla.
+    var carouselCenterX by remember { mutableFloatStateOf(Float.NaN) }
+    var carouselWidth by remember { mutableFloatStateOf(0f) }
     val windowWidth = LocalWindowSizeClass.current.widthSizeClass
     val columns = when (windowWidth) {
         WindowWidthSizeClass.Compact -> 2
@@ -703,26 +711,43 @@ fun HomeScreen(
                             preferredItemWidth = heroHeight * 0.72f,
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .height(heroHeight),
+                                .height(heroHeight)
+                                .onGloballyPositioned { coords ->
+                                    val origin = coords.positionInRoot()
+                                    carouselCenterX =
+                                        origin.x + coords.size.width / 2f
+                                    carouselWidth = coords.size.width.toFloat()
+                                },
                             itemSpacing = 12.dp,
                             minSmallItemWidth = 42.dp,
                             maxSmallItemWidth = 84.dp,
                         ) { page ->
                             val wallpaper = featured[page]
-                            // Qué tan lejos está esta página del centro: es lo
-                            // que mueve la foto de la tarjeta detrás de su
-                            // contenido mientras se desliza el carrusel.
-                            val pageOffset =
-                                (carouselState.currentPage - page) +
-                                    carouselState.currentPageOffsetFraction
+                            // Qué tan lejos está esta página del centro: 0 en
+                            // reposo y ±1 al borde del carrusel. Es lo que
+                            // mueve la foto de la tarjeta detrás de su
+                            // contenido mientras se desliza.
+                            val pageCenterX = key(page) {
+                                remember { mutableFloatStateOf(Float.NaN) }
+                            }
                             FeaturedCard(
                                 wallpaper = wallpaper,
                                 isFavorite = wallpaper.id in favorites,
                                 onClick = { onOpenWallpaper(wallpaper) },
                                 onToggleFavorite = { onToggleFavorite(wallpaper.id) },
-                                pageOffset = pageOffset,
+                                pageOffset = heroPageOffset(
+                                    pageCenterX = pageCenterX.value,
+                                    carouselCenterX = carouselCenterX,
+                                    carouselWidth = carouselWidth,
+                                ),
                                 heroHeight = heroHeight,
-                                modifier = Modifier.fillMaxSize(),
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .onGloballyPositioned { coords ->
+                                        val origin = coords.positionInRoot()
+                                        pageCenterX.value =
+                                            origin.x + coords.size.width / 2f
+                                    },
                             )
                         }
                     }
@@ -1004,4 +1029,21 @@ fun HomeTagFilterRow(
             }
         }
     }
+}
+
+/**
+ * Qué tan lejos está una página del centro del carrusel: 0 en reposo y ±1 al
+ * llegar al borde. Todavía sin medir devuelve 0, así la foto arranca quieta en
+ * vez de saltar al primer frame.
+ */
+private fun heroPageOffset(
+    pageCenterX: Float,
+    carouselCenterX: Float,
+    carouselWidth: Float,
+): Float {
+    if (carouselWidth <= 0f || pageCenterX.isNaN() || carouselCenterX.isNaN()) {
+        return 0f
+    }
+    return ((pageCenterX - carouselCenterX) / (carouselWidth / 2f))
+        .coerceIn(-1f, 1f)
 }
