@@ -62,6 +62,7 @@ class MainViewModelTest {
         isOnline = { online },
         strings = strings,
         now = now,
+        ioDispatcher = dispatcher,
     )
 
     @Before
@@ -465,6 +466,7 @@ class MainViewModelTest {
             api = repository,
             cache = cache,
             actions = actions,
+            ioDispatcher = dispatcher,
         )
 
         model.setQuery("noche")
@@ -849,6 +851,7 @@ class MainViewModelTest {
             cache = cache,
             appCache = appCache,
             actions = actions,
+            ioDispatcher = dispatcher,
         )
 
         model.refreshCacheSize()

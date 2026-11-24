@@ -66,6 +66,7 @@ import java.time.LocalDate
 import java.util.Locale
 import java.util.UUID
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.NonCancellable
@@ -101,6 +102,8 @@ class MainViewModel(
     private val now: () -> Long = System::currentTimeMillis,
     private val colorResolver: WallpaperColorResolver? = null,
     private val colorCacheStore: ColorCacheStore = NoColorCacheStore,
+    /** Pruebas lo reemplazan por su scheduler; en la app es el IO real. */
+    private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
 ) : ViewModel() {
     private var actionJob: Job? = null
     private var actionToken = 0
@@ -171,7 +174,7 @@ class MainViewModel(
         viewModelScope.launch {
             // El archivo de colores puede tener cientos de entradas y no debe
             // retrasar el primer frame; se lee en segundo plano.
-            val stored = withContext(Dispatchers.IO) { colorCacheStore.read() }
+            val stored = withContext(ioDispatcher) { colorCacheStore.read() }
             colorCache.putAll(stored)
             colorCacheLoaded = true
             if (_state.value.color != null) classifyPendingColors()
@@ -1260,7 +1263,7 @@ class MainViewModel(
                 }
             } finally {
                 val snapshot = colorCache.toMap()
-                withContext(NonCancellable + Dispatchers.IO) {
+                withContext(NonCancellable + ioDispatcher) {
                     runCatching { colorCacheStore.write(snapshot) }
                 }
                 _state.update { it.copy(classifyingColors = false) }
