@@ -179,6 +179,7 @@
     <!-- Settings -->
     <string name="settings_title">Settings</string>
     <string name="settings_appearance">Appearance</string>
+    <string name="settings_behavior">Behavior</string>
     <string name="settings_theme">Theme</string>
     <string name="settings_theme_hint">Choose how the app looks.</string>
     <string name="settings_language">Language</string>

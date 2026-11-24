@@ -33,6 +33,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.KeyboardArrowRight
+import androidx.compose.material.icons.rounded.Palette
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -114,26 +115,12 @@ fun ColorSettingsCard(
     // un preset elegido: así se puede volver a él viendo lo que se recupera.
     val wallpaperSeed = rememberSeedColor(WALLPAPER_COLOR_SEED, darkTheme)
     var showStyles by rememberSaveable { mutableStateOf(false) }
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = MaterialTheme.shapes.extraLarge,
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
-        ),
-        border = BorderStroke(
-            1.dp,
-            MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f),
-        ),
-    ) {
+    SettingsCard {
         Column(Modifier.padding(16.dp)) {
-            Text(
-                stringResource(R.string.settings_color),
-                style = MaterialTheme.typography.titleMediumEmphasized,
-            )
-            Text(
-                stringResource(R.string.settings_color_hint),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            SettingsCardHeader(
+                icon = Icons.Rounded.Palette,
+                title = stringResource(R.string.settings_color),
+                hint = stringResource(R.string.settings_color_hint),
             )
             Spacer(Modifier.height(14.dp))
             LazyRow(

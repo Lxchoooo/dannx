@@ -5,11 +5,9 @@ import android.content.Intent
 import android.os.Build
 import android.provider.Settings
 import androidx.annotation.RequiresApi
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -20,13 +18,18 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
+import androidx.compose.material.icons.rounded.CleaningServices
+import androidx.compose.material.icons.rounded.Info
+import androidx.compose.material.icons.rounded.Language
+import androidx.compose.material.icons.rounded.LightMode
 import androidx.compose.material.icons.rounded.OpenInNew
+import androidx.compose.material.icons.rounded.Speed
+import androidx.compose.material.icons.rounded.Tune
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
@@ -59,6 +62,10 @@ import com.dannx.walls.data.ColorContrast
 import com.dannx.walls.data.ColorPaletteStyle
 import com.dannx.walls.data.ThemeMode
 import com.dannx.walls.ui.components.ColorSettingsCard
+import com.dannx.walls.ui.components.SettingsCard
+import com.dannx.walls.ui.components.SettingsCardHeader
+import com.dannx.walls.ui.components.SettingsIcon
+import com.dannx.walls.ui.components.StaggeredAppear
 import com.dannx.walls.ui.components.UpdateDialog
 import com.dannx.walls.ui.update.UpdateState
 import com.dannx.walls.ui.update.UpdateViewModel
@@ -67,7 +74,7 @@ import com.dannx.walls.util.formatFileSize
 import com.dannx.walls.util.openUrl
 
 /**
- * Ajustes de la app: apariencia, caché y datos generales.
+ * Ajustes de la app: apariencia, comportamiento, caché y datos generales.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -129,15 +136,14 @@ fun SettingsScreen(
             ),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            item { SectionTitle(stringResource(R.string.settings_appearance)) }
-            item {
+            staggeredItem(0) { SectionTitle(stringResource(R.string.settings_appearance)) }
+            staggeredItem(1) {
                 SettingsCard {
                     Column(Modifier.padding(16.dp)) {
-                        Text(stringResource(R.string.settings_theme), style = MaterialTheme.typography.titleMediumEmphasized)
-                        Text(
-                            stringResource(R.string.settings_theme_hint),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        SettingsCardHeader(
+                            icon = Icons.Rounded.LightMode,
+                            title = stringResource(R.string.settings_theme),
+                            hint = stringResource(R.string.settings_theme_hint),
                         )
                         Spacer(Modifier.height(12.dp))
                         SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
@@ -157,12 +163,14 @@ fun SettingsScreen(
                 }
             }
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                item {
+                staggeredItem(2) {
                     SettingsCard {
                         Row(
                             modifier = Modifier.padding(16.dp),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
+                            SettingsIcon(Icons.Rounded.Language)
+                            Spacer(Modifier.width(12.dp))
                             Column(Modifier.weight(1f)) {
                                 Text(
                                     stringResource(R.string.settings_language),
@@ -182,7 +190,7 @@ fun SettingsScreen(
                     }
                 }
             }
-            item {
+            staggeredItem(3) {
                 ColorSettingsCard(
                     colorSeed = state.colorSeed,
                     paletteStyle = state.paletteStyle,
@@ -195,7 +203,8 @@ fun SettingsScreen(
                     onAmoledChange = onAmoledChange,
                 )
             }
-            item {
+            staggeredItem(4) { SectionTitle(stringResource(R.string.settings_behavior)) }
+            staggeredItem(5) {
                 SettingsCard {
                     Row(
                         modifier = Modifier
@@ -208,6 +217,8 @@ fun SettingsScreen(
                             .padding(16.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
+                        SettingsIcon(Icons.Rounded.Speed)
+                        Spacer(Modifier.width(12.dp))
                         Column(Modifier.weight(1f)) {
                             Text(stringResource(R.string.settings_lite), style = MaterialTheme.typography.titleMediumEmphasized)
                             Text(
@@ -225,7 +236,7 @@ fun SettingsScreen(
                 }
             }
 
-            item {
+            staggeredItem(6) {
                 SettingsCard {
                     Row(
                         modifier = Modifier
@@ -238,6 +249,8 @@ fun SettingsScreen(
                             .padding(16.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
+                        SettingsIcon(Icons.Rounded.Tune)
+                        Spacer(Modifier.width(12.dp))
                         Column(Modifier.weight(1f)) {
                             Text(
                                 stringResource(R.string.settings_open_editor),
@@ -258,13 +271,15 @@ fun SettingsScreen(
                 }
             }
 
-            item { SectionTitle(stringResource(R.string.settings_storage)) }
-            item {
+            staggeredItem(7) { SectionTitle(stringResource(R.string.settings_storage)) }
+            staggeredItem(8) {
                 SettingsCard {
                     Row(
                         modifier = Modifier.padding(16.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
+                        SettingsIcon(Icons.Rounded.CleaningServices)
+                        Spacer(Modifier.width(12.dp))
                         Column(Modifier.weight(1f)) {
                             Text(stringResource(R.string.settings_cache), style = MaterialTheme.typography.titleMediumEmphasized)
                             Text(
@@ -289,15 +304,14 @@ fun SettingsScreen(
                 }
             }
 
-            item { SectionTitle(stringResource(R.string.settings_credits)) }
-            item {
+            staggeredItem(9) { SectionTitle(stringResource(R.string.settings_credits)) }
+            staggeredItem(10) {
                 SettingsCard {
                     Column(Modifier.padding(16.dp)) {
-                        Text(stringResource(R.string.app_name), style = MaterialTheme.typography.titleMediumEmphasized)
-                        Text(
-                            stringResource(R.string.settings_version, BuildConfig.VERSION_NAME),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        SettingsCardHeader(
+                            icon = Icons.Rounded.Info,
+                            title = stringResource(R.string.app_name),
+                            hint = stringResource(R.string.settings_version, BuildConfig.VERSION_NAME),
                         )
                         Spacer(Modifier.height(10.dp))
                         Text(
@@ -347,8 +361,8 @@ fun SettingsScreen(
                 }
             }
 
-            item { SectionTitle(stringResource(R.string.settings_advanced)) }
-            item {
+            staggeredItem(11) { SectionTitle(stringResource(R.string.settings_advanced)) }
+            staggeredItem(12) {
                 SettingsCard {
                     Column(Modifier.padding(horizontal = 8.dp, vertical = 8.dp)) {
                         TextButton(onClick = onResetAppearance) {
@@ -394,21 +408,16 @@ private fun SectionTitle(text: String) {
     )
 }
 
-/** Tarjeta de Ajustes con el contorno fino que comparten las del resto de la app. */
-@Composable
-private fun SettingsCard(content: @Composable ColumnScope.() -> Unit) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = MaterialTheme.shapes.extraLarge,
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
-        ),
-        border = BorderStroke(
-            1.dp,
-            MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f),
-        ),
-        content = content,
-    )
+/**
+ * Ítem de Ajustes que entra con la misma aparición escalonada de las grillas:
+ * los primeros se acomodan apenas se abre la pantalla y el resto aparece
+ * directo. El índice es el de la lista, así que conviene renumerarlo al
+ * reordenar los ítems.
+ */
+private fun LazyListScope.staggeredItem(index: Int, content: @Composable () -> Unit) {
+    item {
+        StaggeredAppear(index = index) { content() }
+    }
 }
 
 @RequiresApi(Build.VERSION_CODES.TIRAMISU)
