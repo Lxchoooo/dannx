@@ -32,6 +32,9 @@ class BaselineProfileGenerator {
     ) {
         pressHome()
         startActivityAndWait()
+        // Si es la primera instalación, salir de la bienvenida para que el
+        // perfil cubra el feed y no solo las tres pantallas iniciales.
+        skipOnboardingIfNeeded()
         device.waitForIdle()
         scrollFeed()
     }

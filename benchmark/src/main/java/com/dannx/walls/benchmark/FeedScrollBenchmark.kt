@@ -29,6 +29,8 @@ class FeedScrollBenchmark {
         setupBlock = { pressHome() },
     ) {
         startActivityAndWait()
+        // En una instalación nueva el feed queda detrás de la bienvenida.
+        skipOnboardingIfNeeded()
         device.waitForIdle()
         scrollFeed()
     }
