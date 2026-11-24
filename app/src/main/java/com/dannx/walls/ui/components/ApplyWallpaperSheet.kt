@@ -13,6 +13,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Lock
 import androidx.compose.material.icons.rounded.Smartphone
 import androidx.compose.material.icons.rounded.Wallpaper
+import androidx.compose.material3.BottomSheetDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -34,38 +35,46 @@ fun ApplyWallpaperSheet(
     onDismiss: () -> Unit,
     onPick: (WallpaperTarget) -> Unit,
 ) {
-    ModalBottomSheet(onDismissRequest = onDismiss) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 20.dp)
-                .padding(bottom = 28.dp),
+    BackdropGlass {
+        ModalBottomSheet(
+            onDismissRequest = onDismiss,
+            containerColor = BottomSheetDefaults.ContainerColor.copy(
+                alpha = GlassSheetAlpha,
+            ),
+            contentColor = MaterialTheme.colorScheme.onSurface,
         ) {
-            Text(
-                text = stringResource(R.string.apply_sheet_title),
-                style = MaterialTheme.typography.headlineMediumEmphasized,
-            )
-            Spacer(Modifier.height(12.dp))
-            ApplyOption(
-                icon = Icons.Rounded.Smartphone,
-                title = stringResource(R.string.apply_system),
-                hint = stringResource(R.string.apply_system_hint),
-                onClick = { onPick(WallpaperTarget.SYSTEM) },
-            )
-            Spacer(Modifier.height(8.dp))
-            ApplyOption(
-                icon = Icons.Rounded.Lock,
-                title = stringResource(R.string.apply_lock),
-                hint = stringResource(R.string.apply_lock_hint),
-                onClick = { onPick(WallpaperTarget.LOCK) },
-            )
-            Spacer(Modifier.height(8.dp))
-            ApplyOption(
-                icon = Icons.Rounded.Wallpaper,
-                title = stringResource(R.string.apply_both),
-                hint = stringResource(R.string.apply_both_hint),
-                onClick = { onPick(WallpaperTarget.BOTH) },
-            )
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp)
+                    .padding(bottom = 28.dp),
+            ) {
+                Text(
+                    text = stringResource(R.string.apply_sheet_title),
+                    style = MaterialTheme.typography.headlineMediumEmphasized,
+                )
+                Spacer(Modifier.height(12.dp))
+                ApplyOption(
+                    icon = Icons.Rounded.Smartphone,
+                    title = stringResource(R.string.apply_system),
+                    hint = stringResource(R.string.apply_system_hint),
+                    onClick = { onPick(WallpaperTarget.SYSTEM) },
+                )
+                Spacer(Modifier.height(8.dp))
+                ApplyOption(
+                    icon = Icons.Rounded.Lock,
+                    title = stringResource(R.string.apply_lock),
+                    hint = stringResource(R.string.apply_lock_hint),
+                    onClick = { onPick(WallpaperTarget.LOCK) },
+                )
+                Spacer(Modifier.height(8.dp))
+                ApplyOption(
+                    icon = Icons.Rounded.Wallpaper,
+                    title = stringResource(R.string.apply_both),
+                    hint = stringResource(R.string.apply_both_hint),
+                    onClick = { onPick(WallpaperTarget.BOTH) },
+                )
+            }
         }
     }
 }

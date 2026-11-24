@@ -119,6 +119,7 @@ import com.dannx.walls.data.WallpaperCategory
 import com.dannx.walls.data.WallpaperCollection
 import com.dannx.walls.data.allTags
 import com.dannx.walls.data.parseTags
+import com.dannx.walls.ui.components.BackdropGlass
 
 @Composable
 internal fun BulkCategoryDialog(
@@ -826,25 +827,27 @@ internal fun TagEditDialog(
                             contentDescription = null,
                         )
                     }
-                    DropdownMenu(
-                        expanded = categoryMenu,
-                        onDismissRequest = { categoryMenu = false },
-                    ) {
-                        DropdownMenuItem(
-                            text = { Text(stringResource(R.string.studio_tag_category_none)) },
-                            onClick = {
-                                categoryId = null
-                                categoryMenu = false
-                            },
-                        )
-                        categories.forEach { category ->
+                    BackdropGlass(enabled = categoryMenu) {
+                        DropdownMenu(
+                            expanded = categoryMenu,
+                            onDismissRequest = { categoryMenu = false },
+                        ) {
                             DropdownMenuItem(
-                                text = { Text(category.name) },
+                                text = { Text(stringResource(R.string.studio_tag_category_none)) },
                                 onClick = {
-                                    categoryId = category.id
+                                    categoryId = null
                                     categoryMenu = false
                                 },
                             )
+                            categories.forEach { category ->
+                                DropdownMenuItem(
+                                    text = { Text(category.name) },
+                                    onClick = {
+                                        categoryId = category.id
+                                        categoryMenu = false
+                                    },
+                                )
+                            }
                         }
                     }
                 }

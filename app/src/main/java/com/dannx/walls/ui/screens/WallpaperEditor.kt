@@ -32,6 +32,7 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.BottomSheetDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -81,6 +82,8 @@ import com.dannx.walls.data.allTags
 import com.dannx.walls.data.parseTags
 import com.dannx.walls.data.primaryTag
 import com.dannx.walls.kind
+import com.dannx.walls.ui.components.BackdropGlass
+import com.dannx.walls.ui.components.GlassSheetAlpha
 import com.dannx.walls.ui.components.StatefulImage
 import com.dannx.walls.ui.components.wallpaperThumbRequest
 import com.dannx.walls.ui.theme.LocalLiteMode
@@ -282,160 +285,166 @@ internal fun WallpaperEditorSheet(
         },
     )
 
-    ModalBottomSheet(
-        onDismissRequest = { closeOrAsk() },
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 20.dp)
-                .verticalScroll(rememberScrollState()),
+    BackdropGlass {
+        ModalBottomSheet(
+            onDismissRequest = { closeOrAsk() },
+            containerColor = BottomSheetDefaults.ContainerColor.copy(
+                alpha = GlassSheetAlpha,
+            ),
+            contentColor = MaterialTheme.colorScheme.onSurface,
         ) {
-            EditorThumb(wallpaper)
-            Text(
-                text = stringResource(R.string.studio_edit_wallpaper),
-                style = MaterialTheme.typography.titleLarge,
-                modifier = Modifier.padding(top = 14.dp),
-            )
-            Spacer(Modifier.height(12.dp))
-            OutlinedTextField(
-                value = title,
-                onValueChange = {
-                    title = it.take(TITLE_MAX_LENGTH)
-                    errorText = null
-                },
-                label = { Text(stringResource(R.string.field_title)) },
-                supportingText = {
-                    Text(stringResource(R.string.studio_title_counter, title.length))
-                },
-                singleLine = true,
-                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
-                keyboardActions = saveOnDone,
-                enabled = !saving,
-                modifier = Modifier.fillMaxWidth(),
-            )
-            Spacer(Modifier.height(10.dp))
-            OutlinedTextField(
-                value = author,
-                onValueChange = {
-                    author = it.take(AUTHOR_MAX_LENGTH)
-                    errorText = null
-                },
-                label = { Text(stringResource(R.string.field_author)) },
-                singleLine = true,
-                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
-                keyboardActions = saveOnDone,
-                enabled = !saving,
-                modifier = Modifier.fillMaxWidth(),
-            )
-            Spacer(Modifier.height(10.dp))
-            CategorySelector(
-                categories = categories,
-                value = categoryName,
-                enabled = !saving,
-                onPick = { name, id ->
-                    categoryName = name
-                    categoryId = id
-                    errorText = null
-                },
-                onDone = {
-                    focus.clearFocus()
-                    runSave()
-                },
-            )
-            Spacer(Modifier.height(12.dp))
-            EditorTagChips(
-                tags = tags,
-                enabled = !saving,
-                onChange = { next ->
-                    tags = next
-                    errorText = null
-                    if (categoryId == wallpaper.categoryId) {
-                        categoryFromRules(next)?.let { suggested ->
-                            categoryName = suggested.name
-                            categoryId = suggested.id
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp)
+                    .verticalScroll(rememberScrollState()),
+            ) {
+                EditorThumb(wallpaper)
+                Text(
+                    text = stringResource(R.string.studio_edit_wallpaper),
+                    style = MaterialTheme.typography.titleLarge,
+                    modifier = Modifier.padding(top = 14.dp),
+                )
+                Spacer(Modifier.height(12.dp))
+                OutlinedTextField(
+                    value = title,
+                    onValueChange = {
+                        title = it.take(TITLE_MAX_LENGTH)
+                        errorText = null
+                    },
+                    label = { Text(stringResource(R.string.field_title)) },
+                    supportingText = {
+                        Text(stringResource(R.string.studio_title_counter, title.length))
+                    },
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                    keyboardActions = saveOnDone,
+                    enabled = !saving,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                Spacer(Modifier.height(10.dp))
+                OutlinedTextField(
+                    value = author,
+                    onValueChange = {
+                        author = it.take(AUTHOR_MAX_LENGTH)
+                        errorText = null
+                    },
+                    label = { Text(stringResource(R.string.field_author)) },
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                    keyboardActions = saveOnDone,
+                    enabled = !saving,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                Spacer(Modifier.height(10.dp))
+                CategorySelector(
+                    categories = categories,
+                    value = categoryName,
+                    enabled = !saving,
+                    onPick = { name, id ->
+                        categoryName = name
+                        categoryId = id
+                        errorText = null
+                    },
+                    onDone = {
+                        focus.clearFocus()
+                        runSave()
+                    },
+                )
+                Spacer(Modifier.height(12.dp))
+                EditorTagChips(
+                    tags = tags,
+                    enabled = !saving,
+                    onChange = { next ->
+                        tags = next
+                        errorText = null
+                        if (categoryId == wallpaper.categoryId) {
+                            categoryFromRules(next)?.let { suggested ->
+                                categoryName = suggested.name
+                                categoryId = suggested.id
+                            }
                         }
+                    },
+                )
+                Spacer(Modifier.height(8.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = stringResource(R.string.studio_featured),
+                        style = MaterialTheme.typography.bodyLarge,
+                        modifier = Modifier.weight(1f),
+                    )
+                    Switch(
+                        checked = featured,
+                        onCheckedChange = {
+                            featured = it
+                            errorText = null
+                        },
+                        enabled = !saving,
+                    )
+                }
+                errorText?.let { message ->
+                    Spacer(Modifier.height(10.dp))
+                    Text(
+                        text = message,
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                    TextButton(
+                        onClick = { runSave() },
+                        enabled = !saving,
+                    ) {
+                        Text(stringResource(R.string.action_retry))
+                    }
+                }
+                if (saving) {
+                    Spacer(Modifier.height(8.dp))
+                    LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+                }
+                Spacer(Modifier.height(12.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End),
+                ) {
+                    TextButton(
+                        onClick = { closeOrAsk() },
+                        enabled = !saving,
+                    ) {
+                        Text(stringResource(R.string.action_cancel))
+                    }
+                    Button(
+                        onClick = { runSave() },
+                        enabled = dirty && !saving,
+                    ) {
+                        Text(stringResource(R.string.action_save))
+                    }
+                }
+                Spacer(Modifier.height(20.dp))
+            }
+        }
+
+        if (askDiscard) {
+            AlertDialog(
+                onDismissRequest = { askDiscard = false },
+                properties = DialogProperties(dismissOnClickOutside = false),
+                title = { Text(stringResource(R.string.editor_discard_title)) },
+                text = { Text(stringResource(R.string.editor_discard_body)) },
+                confirmButton = {
+                    TextButton(
+                        onClick = {
+                            askDiscard = false
+                            onDismiss()
+                        },
+                    ) {
+                        Text(stringResource(R.string.editor_discard_confirm))
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { askDiscard = false }) {
+                        Text(stringResource(R.string.action_cancel))
                     }
                 },
             )
-            Spacer(Modifier.height(8.dp))
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    text = stringResource(R.string.studio_featured),
-                    style = MaterialTheme.typography.bodyLarge,
-                    modifier = Modifier.weight(1f),
-                )
-                Switch(
-                    checked = featured,
-                    onCheckedChange = {
-                        featured = it
-                        errorText = null
-                    },
-                    enabled = !saving,
-                )
-            }
-            errorText?.let { message ->
-                Spacer(Modifier.height(10.dp))
-                Text(
-                    text = message,
-                    color = MaterialTheme.colorScheme.error,
-                    style = MaterialTheme.typography.bodyMedium,
-                )
-                TextButton(
-                    onClick = { runSave() },
-                    enabled = !saving,
-                ) {
-                    Text(stringResource(R.string.action_retry))
-                }
-            }
-            if (saving) {
-                Spacer(Modifier.height(8.dp))
-                LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
-            }
-            Spacer(Modifier.height(12.dp))
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End),
-            ) {
-                TextButton(
-                    onClick = { closeOrAsk() },
-                    enabled = !saving,
-                ) {
-                    Text(stringResource(R.string.action_cancel))
-                }
-                Button(
-                    onClick = { runSave() },
-                    enabled = dirty && !saving,
-                ) {
-                    Text(stringResource(R.string.action_save))
-                }
-            }
-            Spacer(Modifier.height(20.dp))
         }
-    }
-
-    if (askDiscard) {
-        AlertDialog(
-            onDismissRequest = { askDiscard = false },
-            properties = DialogProperties(dismissOnClickOutside = false),
-            title = { Text(stringResource(R.string.editor_discard_title)) },
-            text = { Text(stringResource(R.string.editor_discard_body)) },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        askDiscard = false
-                        onDismiss()
-                    },
-                ) {
-                    Text(stringResource(R.string.editor_discard_confirm))
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { askDiscard = false }) {
-                    Text(stringResource(R.string.action_cancel))
-                }
-            },
-        )
     }
 }
 
@@ -501,20 +510,22 @@ private fun CategorySelector(
         },
         modifier = Modifier.fillMaxWidth(),
     )
-    DropdownMenu(
-        expanded = expanded && categories.isNotEmpty(),
-        onDismissRequest = { expanded = false },
-    ) {
-        categories.forEach { category ->
-            DropdownMenuItem(
-                text = {
-                    Text(category.name, maxLines = 2, overflow = TextOverflow.Ellipsis)
-                },
-                onClick = {
-                    expanded = false
-                    onPick(category.name, category.id)
-                },
-            )
+    BackdropGlass(enabled = expanded && categories.isNotEmpty()) {
+        DropdownMenu(
+            expanded = expanded && categories.isNotEmpty(),
+            onDismissRequest = { expanded = false },
+        ) {
+            categories.forEach { category ->
+                DropdownMenuItem(
+                    text = {
+                        Text(category.name, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                    },
+                    onClick = {
+                        expanded = false
+                        onPick(category.name, category.id)
+                    },
+                )
+            }
         }
     }
 }

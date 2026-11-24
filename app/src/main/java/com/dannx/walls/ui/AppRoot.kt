@@ -81,13 +81,16 @@ import com.dannx.walls.MessageAction
 import com.dannx.walls.R
 import com.dannx.walls.UiState
 import com.dannx.walls.data.Wallpaper
+import com.dannx.walls.ui.components.BackdropGlassState
 import com.dannx.walls.ui.components.DebugFpsOverlay
 import com.dannx.walls.ui.components.DockItem
 import com.dannx.walls.ui.components.ErrorState
 import com.dannx.walls.ui.components.FloatingDock
+import com.dannx.walls.ui.components.LocalBackdropGlass
 import com.dannx.walls.ui.components.LocalLastAccent
 import com.dannx.walls.ui.components.LocalSharedTransitionScope
 import com.dannx.walls.ui.components.ProvideSharedVisibilityScope
+import com.dannx.walls.ui.components.backdropGlass
 import com.dannx.walls.ui.editor.WallpaperEditorScreen
 import com.dannx.walls.ui.screens.AboutScreen
 import com.dannx.walls.ui.screens.CollectionDetailScreen
@@ -190,6 +193,9 @@ private fun MainApp(
     val showBar = currentRoute in topTabRoutes
     val startDestination = if (startTab in topTabs.map { it.route }) startTab else "home"
     val reduceMotion = LocalReduceMotion.current
+    // Vidrio: el fondo se difumina detrás de las hojas y los menús que se
+    // abran por encima. Vive acá para que lo alcance todo el NavHost.
+    val backdropGlass = remember { BackdropGlassState() }
     // Última pestaña visitada: da dirección al contenido de la siguiente. Se
     // actualiza después de componer para no pisar la entrada en curso.
     var previousTabRoute by remember { mutableStateOf(currentRoute) }
@@ -263,7 +269,16 @@ private fun MainApp(
             )
         },
     ) { innerPadding ->
-        Box(Modifier.fillMaxSize().padding(innerPadding)) {
+        Box(
+            Modifier
+                .fillMaxSize()
+                .padding(innerPadding)
+                .backdropGlass(
+                    state = backdropGlass,
+                    enabled = !state.liteMode,
+                    reduceMotion = reduceMotion,
+                ),
+        ) {
             SharedTransitionLayout(Modifier.fillMaxSize()) {
                 // El último acento extraído vive acá, por encima del NavHost:
                 // así, al pasar de un fondo a otro, la pantalla nueva arranca
@@ -272,6 +287,7 @@ private fun MainApp(
                 CompositionLocalProvider(
                     LocalSharedTransitionScope provides this,
                     LocalLastAccent provides lastAccent,
+                    LocalBackdropGlass provides backdropGlass,
                 ) {
                     NavHost(
                         navController = navController,

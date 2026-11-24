@@ -34,6 +34,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.KeyboardArrowRight
 import androidx.compose.material.icons.rounded.Palette
+import androidx.compose.material3.BottomSheetDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -355,36 +356,44 @@ private fun ColorStyleSheet(
     onSelect: (ColorPaletteStyle) -> Unit,
     onDismiss: () -> Unit,
 ) {
-    ModalBottomSheet(onDismissRequest = onDismiss) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 20.dp)
-                .padding(bottom = 28.dp)
-                .verticalScroll(rememberScrollState()),
+    BackdropGlass {
+        ModalBottomSheet(
+            onDismissRequest = onDismiss,
+            containerColor = BottomSheetDefaults.ContainerColor.copy(
+                alpha = GlassSheetAlpha,
+            ),
+            contentColor = MaterialTheme.colorScheme.onSurface,
         ) {
-            Text(
-                text = stringResource(R.string.settings_color_style),
-                style = MaterialTheme.typography.headlineSmall,
-            )
-            Text(
-                text = stringResource(R.string.settings_color_style_hint),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            Spacer(Modifier.height(16.dp))
-            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                ColorPaletteStyle.entries.forEach { style ->
-                    StyleCard(
-                        style = style,
-                        seed = seed,
-                        darkTheme = darkTheme,
-                        selected = selected == style,
-                        onClick = {
-                            onSelect(style)
-                            onDismiss()
-                        },
-                    )
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp)
+                    .padding(bottom = 28.dp)
+                    .verticalScroll(rememberScrollState()),
+            ) {
+                Text(
+                    text = stringResource(R.string.settings_color_style),
+                    style = MaterialTheme.typography.headlineSmall,
+                )
+                Text(
+                    text = stringResource(R.string.settings_color_style_hint),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Spacer(Modifier.height(16.dp))
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    ColorPaletteStyle.entries.forEach { style ->
+                        StyleCard(
+                            style = style,
+                            seed = seed,
+                            darkTheme = darkTheme,
+                            selected = selected == style,
+                            onClick = {
+                                onSelect(style)
+                                onDismiss()
+                            },
+                        )
+                    }
                 }
             }
         }
