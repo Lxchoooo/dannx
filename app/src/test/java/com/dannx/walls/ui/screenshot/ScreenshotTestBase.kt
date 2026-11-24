@@ -48,4 +48,36 @@ abstract class ScreenshotTestBase {
         }
         composeRule.onRoot().captureRoboImage("$name.png")
     }
+
+    /**
+     * Igual que [capture], pero con el reloj bajo control para las pantallas
+     * cuyos ítems aparecen escalonados: sin esto se los capturaría invisibles.
+     *
+     * Se pausa antes de componer, se da el primer frame (el que arranca la
+     * animación), se pasa el reloj y recién entonces se espera a que termine
+     * el dibujo. Con el reloj corriendo solo, el stagger se resolvería en una
+     * ráfaga y no habría forma de saber en qué punto se capturó.
+     */
+    protected fun captureSettled(
+        name: String,
+        darkTheme: Boolean,
+        settleMillis: Long = 1_500L,
+        content: @Composable () -> Unit,
+    ) {
+        composeRule.mainClock.autoAdvance = false
+        composeRule.setContent {
+            DannXTheme(darkTheme = darkTheme, dynamicColor = false) {
+                Surface(
+                    modifier = Modifier,
+                    color = MaterialTheme.colorScheme.background,
+                ) {
+                    content()
+                }
+            }
+        }
+        composeRule.mainClock.advanceTimeByFrame()
+        composeRule.mainClock.advanceTimeBy(settleMillis)
+        composeRule.waitForIdle()
+        composeRule.onRoot().captureRoboImage("$name.png")
+    }
 }
