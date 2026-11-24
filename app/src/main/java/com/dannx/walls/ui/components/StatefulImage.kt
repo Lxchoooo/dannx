@@ -1,5 +1,6 @@
 package com.dannx.walls.ui.components
 
+import androidx.compose.foundation.Image as FoundationImage
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -7,8 +8,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Image
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
-import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
@@ -18,7 +19,8 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import coil.compose.SubcomposeAsyncImage
+import coil.compose.AsyncImagePainter
+import coil.compose.rememberAsyncImagePainter
 import coil.request.ImageRequest
 import com.dannx.walls.R
 import com.dannx.walls.ui.theme.LocalLiteMode
@@ -27,6 +29,11 @@ import com.dannx.walls.ui.theme.LocalLiteMode
  * Imagen remota con estados explícitos: un indicador pequeño mientras carga y
  * un ícono marcado si la imagen falló, para no dejar un rectángulo vacío a
  * adivinar.
+ *
+ * Se usa `Image` con un painter en vez de `SubcomposeAsyncImage`: la versión
+ * con subcomposición crea una composición aparte por cada tarjeta, y en una
+ * grilla eso se paga al scrollear. Los estados se dibujan encima, con el mismo
+ * aspecto de antes.
  */
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
@@ -48,18 +55,23 @@ fun StatefulImage(
                 .build()
         }
     }
-    SubcomposeAsyncImage(
-        model = request,
-        contentDescription = contentDescription,
-        contentScale = contentScale,
-        modifier = modifier,
-        loading = {
-            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+    val painter = rememberAsyncImagePainter(model = request)
+    Box(modifier = modifier) {
+        FoundationImage(
+            painter = painter,
+            contentDescription = contentDescription,
+            contentScale = contentScale,
+            modifier = Modifier.fillMaxSize(),
+        )
+        when (painter.state) {
+            is AsyncImagePainter.State.Loading -> Box(
+                Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center,
+            ) {
                 LoadingIndicator(Modifier.size(25.dp))
             }
-        },
-        error = {
-            Box(
+
+            is AsyncImagePainter.State.Error -> Box(
                 Modifier
                     .fillMaxSize()
                     .background(MaterialTheme.colorScheme.surfaceVariant),
@@ -67,10 +79,14 @@ fun StatefulImage(
             ) {
                 Icon(
                     imageVector = Icons.Rounded.Image,
-                    contentDescription = stringResource(R.string.image_load_error_description),
+                    contentDescription = stringResource(
+                        R.string.image_load_error_description,
+                    ),
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
-        },
-    )
+
+            else -> Unit
+        }
+    }
 }

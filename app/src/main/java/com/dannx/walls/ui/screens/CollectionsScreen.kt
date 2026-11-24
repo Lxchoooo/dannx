@@ -158,7 +158,11 @@ fun CollectionsScreen(
         }
 
         if (state.collectionItems.isNotEmpty()) {
-            items(items = state.collectionItems, key = { it.id }) { collection ->
+            items(
+                items = state.collectionItems,
+                key = { it.id },
+                contentType = { "collection" },
+            ) { collection ->
                 Box(modifier = animateItemMotion()) {
                     CollectionCard(
                         state = state,

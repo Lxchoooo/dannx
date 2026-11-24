@@ -1469,7 +1469,11 @@ private fun PublishPanel(
                             shape = CircleShape,
                         )
                     }
-                    items(myCollections, key = { it.id }) { collection ->
+                    items(
+                        items = myCollections,
+                        key = { it.id },
+                        contentType = { "collection" },
+                    ) { collection ->
                         FilterChip(
                             selected = selectedCollectionId == collection.id,
                             onClick = { selectedCollectionId = collection.id },
@@ -1926,7 +1930,11 @@ private fun LazyListScope.wallsPanel(
             }
         }
     } else {
-        items(items = walls, key = { it.id }) { wallpaper ->
+        items(
+            items = walls,
+            key = { it.id },
+            contentType = { "wall" },
+        ) { wallpaper ->
             StudioWallpaperRow(
                 wallpaper = wallpaper,
                 modifier = animateItemMotion(),
@@ -2002,7 +2010,11 @@ private fun LazyListScope.trashPanel(
         return
     }
 
-    items(items = trash, key = { "trash-${it.id}" }) { wallpaper ->
+    items(
+        items = trash,
+        key = { "trash-${it.id}" },
+        contentType = { "trash" },
+    ) { wallpaper ->
         Card(
             modifier = animateItemMotion()
                 .fillMaxWidth()

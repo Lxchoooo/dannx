@@ -138,6 +138,12 @@ import kotlinx.coroutines.withTimeoutOrNull
 /** Tiempo que hay que mantener presionado el título para la puerta secreta. */
 private const val SECRET_HOLD_MS = 3_000L
 
+/**
+ * Miniaturas que se piden por adelantado. Ocho alcanzan para la segunda fila
+ * sin competir de lleno con las que ya están en pantalla.
+ */
+private const val PRECACHE_COUNT = 8
+
 @OptIn(ExperimentalMaterial3ExpressiveApi::class, ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
@@ -179,6 +185,11 @@ fun HomeScreen(
         state.filtered
     }
     val availableTags = remember(state.tagCatalog, state.wallpapers) { state.availableTags }
+    // Las sugerencias recorren títulos y autores: se calculan una vez por
+    // consulta y no en cada composición del campo de búsqueda.
+    val searchSuggestions = remember(state.query, state.wallpapers, availableTags) {
+        state.searchSuggestions
+    }
     val context = LocalContext.current
     val liteMode = LocalLiteMode.current
     val reduceMotion = LocalReduceMotion.current
@@ -202,8 +213,9 @@ fun HomeScreen(
         }
         wasRefreshing = state.refreshing
     }
-    // Balanceo suave del dado de "Sorpréndeme". Con reducir movimiento quieto.
-    val surpriseWiggle = if (reduceMotion) {
+    // Balanceo suave del dado de "Sorpréndeme". Con reducir movimiento o en
+    // Lite no se anima: así no se piden frames todo el tiempo en la portada.
+    val surpriseWiggle = if (reduceMotion || liteMode) {
         0f
     } else {
         val transition = rememberInfiniteTransition(label = "surprise")
@@ -230,7 +242,7 @@ fun HomeScreen(
             return@LaunchedEffect
         }
         delay(300)
-        state.wallpapers.take(12).forEach { wallpaper ->
+        state.wallpapers.take(PRECACHE_COUNT).forEach { wallpaper ->
             context.imageLoader.enqueue(
                 wallpaperThumbRequest(context, wallpaper),
             )
@@ -508,7 +520,7 @@ fun HomeScreen(
                     if (
                         searchFocused &&
                         state.query.isNotBlank() &&
-                        state.searchSuggestions.isNotEmpty()
+                        searchSuggestions.isNotEmpty()
                     ) {
                         Spacer(Modifier.height(8.dp))
                         Text(
@@ -521,7 +533,7 @@ fun HomeScreen(
                             contentPadding = PaddingValues(end = 20.dp),
                             horizontalArrangement = Arrangement.spacedBy(8.dp),
                         ) {
-                            items(state.searchSuggestions, key = { "suggestion-$it" }) { suggestion ->
+                            items(searchSuggestions, key = { "suggestion-$it" }) { suggestion ->
                                 AssistChip(
                                     onClick = {
                                         onQueryChange(suggestion)

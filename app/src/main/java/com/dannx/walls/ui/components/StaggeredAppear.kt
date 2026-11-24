@@ -1,6 +1,7 @@
 package com.dannx.walls.ui.components
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.slideInVertically
@@ -20,6 +21,9 @@ import com.dannx.walls.ui.theme.StandardEasing
 import kotlinx.coroutines.delay
 import kotlin.math.min
 
+/** Cantidad de tarjetas que entran con animación; el resto aparece directo. */
+private const val StaggerItemLimit = 12
+
 /**
  * Aparición escalonada para las tarjetas de una lista: entran con fade y una
  * subida corta, con un retraso por índice que nunca pasa de 300 ms.
@@ -36,10 +40,13 @@ fun StaggeredAppear(
     content: @Composable () -> Unit,
 ) {
     val reduceMotion = LocalReduceMotion.current
+    // Solo la primera pantalla de tarjetas entra escalonada. Animar también las
+    // que aparecen al scrollear corta el desplazamiento y no aporta nada.
+    val animated = index < StaggerItemLimit
     var visible by rememberSaveable(resetKey) { mutableStateOf(false) }
 
     LaunchedEffect(resetKey) {
-        if (!reduceMotion) {
+        if (!reduceMotion && animated) {
             delay(min(index * StaggerStepMillis, StaggerMaxMillis))
         }
         visible = true
@@ -48,10 +55,10 @@ fun StaggeredAppear(
     AnimatedVisibility(
         visible = visible,
         modifier = modifier,
-        enter = if (reduceMotion) {
-            fadeIn(animationSpec = tween(MotionDuration.Fast))
-        } else {
-            fadeIn(animationSpec = tween(MotionDuration.Medium, easing = StandardEasing)) +
+        enter = when {
+            !animated -> EnterTransition.None
+            reduceMotion -> fadeIn(animationSpec = tween(MotionDuration.Fast))
+            else -> fadeIn(animationSpec = tween(MotionDuration.Medium, easing = StandardEasing)) +
                 slideInVertically(
                     animationSpec = tween(
                         durationMillis = MotionDuration.Slow,
