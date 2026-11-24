@@ -59,7 +59,6 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.text.font.FontWeight
 import com.dannx.walls.ui.theme.LocalReduceMotion
 import com.dannx.walls.ui.theme.Motion
 import com.dannx.walls.R
@@ -350,9 +349,8 @@ private fun Badge(icon: androidx.compose.ui.graphics.vector.ImageVector?, label:
             }
             Text(
                 text = label,
-                style = MaterialTheme.typography.labelMedium,
+                style = MaterialTheme.typography.labelMediumEmphasized,
                 color = Color.White,
-                fontWeight = FontWeight.Bold,
             )
         }
     }

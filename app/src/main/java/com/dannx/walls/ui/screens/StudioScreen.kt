@@ -2385,7 +2385,7 @@ private fun TagPreviewChips(tags: List<String>) {
                 Text(
                     text = "#$tag",
                     style = MaterialTheme.typography.labelLarge,
-                    fontWeight = if (primary) FontWeight.SemiBold else null,
+                    fontWeight = if (primary) FontWeight.Bold else null,
                     modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
                 )
             }

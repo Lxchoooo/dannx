@@ -11,7 +11,9 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.LocalTonalElevationEnabled
+import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialExpressiveTheme
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MotionScheme
 import androidx.compose.material3.Shapes
 import androidx.compose.material3.dynamicDarkColorScheme
@@ -116,8 +118,17 @@ fun DannXTheme(
             motionScheme = if (reduceMotion) MotionScheme.standard() else MotionScheme.expressive(),
             typography = DannXTypography,
             shapes = DannXShapes,
-            content = content,
-        )
+        ) {
+            // El texto sin estilo hereda el default de material3, que no trae
+            // familia: se dibujaba con la fuente del sistema en vez de con
+            // Google Sans Flex. Con este valor por defecto toda la app escribe
+            // con la misma tipografía aunque un Text no pida estilo.
+            CompositionLocalProvider(
+                LocalTextStyle provides MaterialTheme.typography.bodyMedium,
+            ) {
+                content()
+            }
+        }
     }
 }
 

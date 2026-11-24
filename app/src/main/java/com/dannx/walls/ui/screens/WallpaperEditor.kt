@@ -697,7 +697,7 @@ private fun EditorTagChip(
             Text(
                 text = "#$tag",
                 style = MaterialTheme.typography.labelLarge,
-                fontWeight = if (primary) FontWeight.SemiBold else null,
+                fontWeight = if (primary) FontWeight.Bold else null,
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.padding(start = 8.dp),

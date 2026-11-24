@@ -258,9 +258,8 @@ fun WallpaperCard(
         ) {
             Text(
                 text = wallpaper.category.uppercase(Locale.ROOT),
-                style = MaterialTheme.typography.labelSmall,
+                style = MaterialTheme.typography.labelSmallEmphasized,
                 color = Color.White.copy(alpha = 0.78f),
-                fontWeight = FontWeight.Bold,
             )
             Text(
                 text = title,
@@ -426,9 +425,8 @@ fun FeaturedCard(
         ) {
             Text(
                 text = wallpaper.category.uppercase(Locale.ROOT),
-                style = MaterialTheme.typography.labelMedium,
+                style = MaterialTheme.typography.labelMediumEmphasized,
                 color = Color.White.copy(alpha = 0.8f),
-                fontWeight = FontWeight.Bold,
             )
             Spacer(Modifier.height(4.dp))
             Text(

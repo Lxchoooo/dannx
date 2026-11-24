@@ -1281,7 +1281,7 @@ private fun LockScreenPreview(
                         style = MaterialTheme.typography.displayLarge.copy(
                             fontSize = 76.sp,
                             lineHeight = 78.sp,
-                            fontWeight = FontWeight.Light,
+                            fontWeight = FontWeight.Normal,
                             letterSpacing = (-2).sp,
                             shadow = clockShadow,
                         ),
@@ -1293,7 +1293,7 @@ private fun LockScreenPreview(
                             text = suffix,
                             style = MaterialTheme.typography.titleMedium,
                             color = Color.White.copy(alpha = 0.9f),
-                            fontWeight = FontWeight.SemiBold,
+                            fontWeight = FontWeight.Bold,
                             modifier = Modifier.padding(start = 6.dp, bottom = 12.dp),
                         )
                     }
