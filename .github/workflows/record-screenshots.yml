@@ -28,8 +28,41 @@ jobs:
 
       - uses: gradle/actions/setup-gradle@8da46b539cd8fe6ab27ca75128919a18d757604c # v6
 
-      # Robolectric baja su android-all del proxy de Maven en la primera
-      # corrida; no hace falta emulador.
+      # Robolectric baja al arrancar un android-all de 151 MB desde Maven
+      # Central, y en Actions esa descarga falla de forma intermitente. Si el
+      # jar ya está en el repositorio local de Maven, Robolectric lo usa sin
+      # tocar la red (MavenArtifactFetcher sale antes de descargar), así que lo
+      # dejamos sembrado a mano. Coordenadas según @Config(sdk = [34]) y
+      # Robolectric 4.17: al subir cualquiera de los dos hay que actualizarlas.
+      - name: Prefetch Robolectric android-all
+        run: |
+          base="org/robolectric/android-all-instrumented/14-robolectric-10818077-i7"
+          jar="android-all-instrumented-14-robolectric-10818077-i7.jar"
+          dir="$HOME/.m2/repository/$base"
+          mkdir -p "$dir"
+          cd "$dir"
+          if [ -s "$jar" ]; then
+            echo "android-all ya estaba en el repositorio local"
+            exit 0
+          fi
+          for repo in https://repo1.maven.org/maven2 https://repo.maven.apache.org/maven2; do
+            if curl -fL --retry 5 --retry-delay 5 --retry-all-errors \
+                 --connect-timeout 30 -o "$jar.part" "$repo/$base/$jar"; then
+              expected="$(curl -fsSL --retry 3 "$repo/$base/$jar.sha512" | tr -d '[:space:]')"
+              actual="$(sha512sum "$jar.part" | cut -d' ' -f1)"
+              if [ -n "$expected" ] && [ "$expected" = "$actual" ]; then
+                mv "$jar.part" "$jar"
+                echo "android-all descargado y verificado"
+                exit 0
+              fi
+              echo "Checksum distinto en $repo, se prueba el siguiente espejo"
+            fi
+            rm -f "$jar.part"
+          done
+          echo "::error::No se pudo descargar android-all-instrumented"
+          exit 1
+
+      # Sin emulador: los tests de captura corren sobre Robolectric.
       - name: Record golden images
         run: ./gradlew :app:recordRoborazziDebug -Pscreenshots
 
