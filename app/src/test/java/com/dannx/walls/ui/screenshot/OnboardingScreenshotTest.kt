@@ -34,6 +34,20 @@ class OnboardingScreenshotEs : ScreenshotTestBase() {
             OnboardingScreen(liteMode = true, onFinish = {})
         }
     }
+
+    @Test
+    fun `onboarding second page in Spanish`() {
+        capture("onboarding_es_page2", darkTheme = false) {
+            OnboardingScreen(liteMode = true, onFinish = {}, initialPage = 1)
+        }
+    }
+
+    @Test
+    fun `onboarding third page in Spanish`() {
+        capture("onboarding_es_page3", darkTheme = false) {
+            OnboardingScreen(liteMode = true, onFinish = {}, initialPage = 2)
+        }
+    }
 }
 
 @Config(sdk = [34], qualifiers = "pt-rBR-w411dp-h891dp-420dpi")

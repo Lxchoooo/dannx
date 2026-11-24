@@ -93,7 +93,11 @@ import kotlin.math.sin
  * aplicarlos. Sale una sola vez la primera vez que se abre la app.
  */
 @Composable
-fun OnboardingScreen(liteMode: Boolean, onFinish: () -> Unit) {
+fun OnboardingScreen(
+    liteMode: Boolean,
+    onFinish: () -> Unit,
+    initialPage: Int = 0,
+) {
     // Lite o animaciones del sistema desactivadas: misma entrada tranquila.
     val motionOff = liteMode || LocalReduceMotion.current
     val pages = remember {
@@ -115,7 +119,10 @@ fun OnboardingScreen(liteMode: Boolean, onFinish: () -> Unit) {
             ),
         )
     }
-    val pagerState = rememberPagerState(pageCount = { pages.size })
+    val pagerState = rememberPagerState(
+        initialPage = initialPage.coerceIn(pages.indices),
+        pageCount = { pages.size },
+    )
     val scope = rememberCoroutineScope()
     var finishing by remember { mutableStateOf(false) }
 
