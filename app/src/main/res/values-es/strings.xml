@@ -21,6 +21,9 @@
     <string name="apply_lock_hint">Al desbloquear el teléfono</string>
     <string name="apply_both">Ambas pantallas</string>
     <string name="apply_both_hint">Inicio y bloqueo</string>
+    <string name="apply_live_section">Con movimiento</string>
+    <string name="apply_live">Fondo animado</string>
+    <string name="apply_live_hint">Inicio y bloqueo, con movimiento suave</string>
     <string name="apply_in_progress">Aplicando el fondo…</string>
     <string name="apply_button_loading">Aplicando…</string>
     <string name="apply_button_done">Aplicado</string>
@@ -512,6 +515,9 @@
     <string name="editor_error_memory">No hay memoria suficiente. Cierra otras apps y prueba de nuevo.</string>
     <string name="editor_error_open">No se pudo abrir la imagen. Revisa tu conexión y prueba de nuevo.</string>
     <string name="editor_error_apply">No se pudo aplicar el fondo. Prueba de nuevo.</string>
+    <string name="editor_error_live">No se pudo abrir el selector de fondos animados.</string>
+    <string name="live_wallpaper_label">DannX</string>
+    <string name="live_wallpaper_description">Tu fondo, con un movimiento apenas perceptible.</string>
     <string name="filter_original">Original</string>
     <string name="filter_warm">Cálido</string>
     <string name="filter_cool">Frío</string>
@@ -570,6 +576,7 @@
     <string name="msg_applied_system">Listo, cambiaste el fondo de la pantalla de inicio.</string>
     <string name="msg_applied_lock">Listo, cambiaste el fondo de la pantalla de bloqueo.</string>
     <string name="msg_applied_both">Listo, cambiaste los fondos de inicio y de bloqueo.</string>
+    <string name="msg_applied_live">Listo, tu fondo animado quedó puesto.</string>
     <string name="msg_share_failed">No se pudo preparar la imagen para compartir.</string>
     <string name="msg_settings_reset">Ajustes restablecidos.</string>
     <string name="msg_cache_cleared">Caché borrada.</string>

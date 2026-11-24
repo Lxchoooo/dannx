@@ -3362,6 +3362,17 @@ class MainViewModel(
         }
     }
 
+    /** El editor dejó activo el fondo animado del sistema. */
+    fun onLiveWallpaperApplied() {
+        _state.update {
+            it.copy(
+                message = strings.get(R.string.msg_applied_live),
+                messageAction = null,
+                applyTick = it.applyTick + 1,
+            )
+        }
+    }
+
     private fun appliedMessage(target: WallpaperTarget): String = when (target) {
         WallpaperTarget.SYSTEM -> strings.get(R.string.msg_applied_system)
         WallpaperTarget.LOCK -> strings.get(R.string.msg_applied_lock)

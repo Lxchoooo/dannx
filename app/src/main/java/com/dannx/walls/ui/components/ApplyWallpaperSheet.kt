@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Animation
 import androidx.compose.material.icons.rounded.Lock
 import androidx.compose.material.icons.rounded.Smartphone
 import androidx.compose.material.icons.rounded.Wallpaper
@@ -34,6 +35,7 @@ import com.dannx.walls.util.WallpaperTarget
 fun ApplyWallpaperSheet(
     onDismiss: () -> Unit,
     onPick: (WallpaperTarget) -> Unit,
+    onPickLive: (() -> Unit)? = null,
 ) {
     BackdropGlass {
         ModalBottomSheet(
@@ -74,6 +76,21 @@ fun ApplyWallpaperSheet(
                     hint = stringResource(R.string.apply_both_hint),
                     onClick = { onPick(WallpaperTarget.BOTH) },
                 )
+                if (onPickLive != null) {
+                    Spacer(Modifier.height(20.dp))
+                    Text(
+                        text = stringResource(R.string.apply_live_section),
+                        style = MaterialTheme.typography.titleSmallEmphasized,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    ApplyOption(
+                        icon = Icons.Rounded.Animation,
+                        title = stringResource(R.string.apply_live),
+                        hint = stringResource(R.string.apply_live_hint),
+                        onClick = onPickLive,
+                    )
+                }
             }
         }
     }

@@ -21,6 +21,9 @@
     <string name="apply_lock_hint">Quand vous déverrouillez le téléphone</string>
     <string name="apply_both">Les deux écrans</string>
     <string name="apply_both_hint">Accueil et verrouillage</string>
+    <string name="apply_live_section">Avec du mouvement</string>
+    <string name="apply_live">Fond animé</string>
+    <string name="apply_live_hint">Accueil et verrouillage, avec un léger glissement</string>
     <string name="apply_in_progress">Application du fond d\'écran…</string>
     <string name="apply_button_loading">Application…</string>
     <string name="apply_button_done">Appliqué</string>
@@ -512,6 +515,9 @@
     <string name="editor_error_memory">Mémoire insuffisante. Fermez d\'autres applications et réessayez.</string>
     <string name="editor_error_open">Impossible d\'ouvrir l\'image. Vérifiez votre connexion et réessayez.</string>
     <string name="editor_error_apply">Impossible d\'appliquer le fond d\'écran. Réessayez.</string>
+    <string name="editor_error_live">Impossible d\'ouvrir le sélecteur de fonds animés.</string>
+    <string name="live_wallpaper_label">DannX</string>
+    <string name="live_wallpaper_description">Votre fond, avec un mouvement à peine perceptible.</string>
     <string name="filter_original">Original</string>
     <string name="filter_warm">Chaud</string>
     <string name="filter_cool">Froid</string>
@@ -570,6 +576,7 @@
     <string name="msg_applied_system">Terminé, votre fond d\'écran d\'accueil a changé.</string>
     <string name="msg_applied_lock">Terminé, vous avez changé le fond d\'écran de l\'écran de verrouillage.</string>
     <string name="msg_applied_both">Terminé, vous avez changé les fonds d\'écran des écrans d\'accueil et de verrouillage.</string>
+    <string name="msg_applied_live">C\'est fait, votre fond animé est en place.</string>
     <string name="msg_share_failed">Impossible de préparer l\'image pour le partage.</string>
     <string name="msg_settings_reset">Paramètres réinitialisés.</string>
     <string name="msg_cache_cleared">Cache vidé.</string>

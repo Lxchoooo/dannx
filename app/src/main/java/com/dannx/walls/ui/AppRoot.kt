@@ -881,6 +881,10 @@ private fun MainApp(
                                         viewModel.onWallpaperApplied(target)
                                         navController.popBackStack()
                                     },
+                                    onAppliedLive = {
+                                        viewModel.onLiveWallpaperApplied()
+                                        navController.popBackStack()
+                                    },
                                 )
                             }
 

@@ -4,6 +4,8 @@ import android.app.Application
 import android.graphics.Bitmap
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.LocalActivity
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
@@ -116,6 +118,7 @@ import com.dannx.walls.ui.theme.Motion
 import com.dannx.walls.ui.theme.MotionDuration
 import com.dannx.walls.util.WallpaperTarget
 import com.dannx.walls.util.wallpaperTargetSize
+import com.dannx.walls.wallpaper.LiveWallpaperStore
 import kotlin.math.roundToInt
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withTimeoutOrNull
@@ -147,6 +150,7 @@ fun WallpaperEditorScreen(
     wallpaper: Wallpaper,
     onBack: () -> Unit,
     onApplied: (WallpaperTarget) -> Unit,
+    onAppliedLive: () -> Unit,
 ) {
     val context = LocalContext.current
     val application = context.applicationContext as Application
@@ -181,6 +185,22 @@ fun WallpaperEditorScreen(
 
     LaunchedEffect(state.appliedTarget) {
         state.appliedTarget?.let(onApplied)
+    }
+
+    val liveStore = remember(context) { LiveWallpaperStore(context) }
+    val liveLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult(),
+    ) {
+        if (liveStore.isActive()) onAppliedLive()
+    }
+
+    // El selector del sistema no devuelve un resultado confiable: al volver se
+    // pregunta qué fondo animado quedó puesto.
+    LaunchedEffect(state.liveReady) {
+        if (!state.liveReady) return@LaunchedEffect
+        editorViewModel.consumeLiveReady()
+        val opened = runCatching { liveLauncher.launch(liveStore.chooserIntent()) }.isSuccess
+        if (!opened) editorViewModel.reportLiveChooserError()
     }
 
     Box(
@@ -243,6 +263,10 @@ fun WallpaperEditorScreen(
             onPick = { target ->
                 showTargetSheet = false
                 editorViewModel.apply(target)
+            },
+            onPickLive = {
+                showTargetSheet = false
+                editorViewModel.applyLive()
             },
         )
     }

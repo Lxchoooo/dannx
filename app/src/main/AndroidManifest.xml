@@ -53,6 +53,19 @@
             </intent-filter>
         </activity>
 
+        <service
+            android:name=".wallpaper.DannXWallpaperService"
+            android:exported="true"
+            android:label="@string/live_wallpaper_label"
+            android:permission="android.permission.BIND_WALLPAPER">
+            <intent-filter>
+                <action android:name="android.service.wallpaper.WallpaperService" />
+            </intent-filter>
+            <meta-data
+                android:name="android.service.wallpaper"
+                android:resource="@xml/live_wallpaper" />
+        </service>
+
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.fileprovider"

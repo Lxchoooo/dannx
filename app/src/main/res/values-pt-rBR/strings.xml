@@ -21,6 +21,9 @@
     <string name="apply_lock_hint">Ao desbloquear o celular</string>
     <string name="apply_both">As duas telas</string>
     <string name="apply_both_hint">Inicial e de bloqueio</string>
+    <string name="apply_live_section">Com movimento</string>
+    <string name="apply_live">Papel animado</string>
+    <string name="apply_live_hint">Inicial e de bloqueio, com um leve deslize</string>
     <string name="apply_in_progress">Aplicando o papel de parede…</string>
     <string name="apply_button_loading">Aplicando…</string>
     <string name="apply_button_done">Aplicado</string>
@@ -512,6 +515,9 @@
     <string name="editor_error_memory">Memória insuficiente. Feche outros apps e tente de novo.</string>
     <string name="editor_error_open">Não foi possível abrir a imagem. Verifique sua conexão e tente de novo.</string>
     <string name="editor_error_apply">Não foi possível aplicar o papel de parede. Tente de novo.</string>
+    <string name="editor_error_live">Não foi possível abrir o seletor de papéis animados.</string>
+    <string name="live_wallpaper_label">DannX</string>
+    <string name="live_wallpaper_description">Seu papel de parede, com um movimento quase imperceptível.</string>
     <string name="filter_original">Original</string>
     <string name="filter_warm">Quente</string>
     <string name="filter_cool">Frio</string>
@@ -570,6 +576,7 @@
     <string name="msg_applied_system">Pronto, o papel de parede da tela inicial mudou.</string>
     <string name="msg_applied_lock">Pronto, você mudou o papel de parede da tela de bloqueio.</string>
     <string name="msg_applied_both">Pronto, você mudou os papéis de parede das telas inicial e de bloqueio.</string>
+    <string name="msg_applied_live">Pronto, seu papel animado está ativo.</string>
     <string name="msg_share_failed">Não foi possível preparar a imagem para compartilhar.</string>
     <string name="msg_settings_reset">Configurações redefinidas.</string>
     <string name="msg_cache_cleared">Cache limpo.</string>

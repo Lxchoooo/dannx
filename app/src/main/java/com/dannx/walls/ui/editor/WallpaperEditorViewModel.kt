@@ -12,6 +12,7 @@ import com.dannx.walls.data.Wallpaper
 import com.dannx.walls.util.WallpaperFiles
 import com.dannx.walls.util.WallpaperTarget
 import com.dannx.walls.util.wallpaperTargetSize
+import com.dannx.walls.wallpaper.LiveWallpaperStore
 import java.io.File
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
@@ -40,6 +41,7 @@ internal data class EditorUiState(
     val applyProgress: Int = 0,
     val applyError: String? = null,
     val appliedTarget: WallpaperTarget? = null,
+    val liveReady: Boolean = false,
 )
 
 /**
@@ -251,6 +253,37 @@ internal class WallpaperEditorViewModel(
     }
 
     fun apply(target: WallpaperTarget) {
+        launchApply { rendered ->
+            val applied = files.applyEditedWallpaper(rendered, target)
+            _state.update { it.copy(appliedTarget = applied) }
+        }
+    }
+
+    /**
+     * Deja la foto lista para [com.dannx.walls.wallpaper.DannXWallpaperService].
+     * El selector del sistema se abre desde la pantalla, que es la única que
+     * puede lanzar una actividad y comprobar después qué fondo quedó puesto.
+     */
+    fun applyLive() {
+        launchApply { rendered ->
+            withContext(Dispatchers.IO) {
+                LiveWallpaperStore(appContext).save(rendered)
+            }
+            _state.update { it.copy(liveReady = true) }
+        }
+    }
+
+    fun consumeLiveReady() {
+        _state.update { it.copy(liveReady = false) }
+    }
+
+    fun reportLiveChooserError() {
+        _state.update {
+            it.copy(applyError = appContext.getString(R.string.editor_error_live))
+        }
+    }
+
+    private fun launchApply(finish: suspend (Bitmap) -> Unit) {
         if (applyJob?.isActive == true) return
         val current = _state.value
         if (current.preview == null || current.loading) return
@@ -261,6 +294,7 @@ internal class WallpaperEditorViewModel(
                     applying = true,
                     applyProgress = 0,
                     applyError = null,
+                    liveReady = false,
                 )
             }
             var finalBitmap: Bitmap? = null
@@ -279,14 +313,13 @@ internal class WallpaperEditorViewModel(
                 }
                 finalBitmap = rendered
                 _state.update { it.copy(applyProgress = 96) }
-                val applied = files.applyEditedWallpaper(rendered, target)
+                finish(rendered)
                 rendered.recycle()
                 finalBitmap = null
                 _state.update {
                     it.copy(
                         applying = false,
                         applyProgress = 100,
-                        appliedTarget = applied,
                     )
                 }
             } catch (error: CancellationException) {
@@ -318,7 +351,7 @@ internal class WallpaperEditorViewModel(
     fun cancelApply() {
         applyJob?.cancel()
         applyJob = null
-        _state.update { it.copy(applying = false, applyProgress = 0) }
+        _state.update { it.copy(applying = false, applyProgress = 0, liveReady = false) }
     }
 
     private suspend fun ensureSourceFile(): File {
