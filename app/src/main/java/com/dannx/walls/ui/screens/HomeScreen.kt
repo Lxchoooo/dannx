@@ -709,11 +709,18 @@ fun HomeScreen(
                             maxSmallItemWidth = 84.dp,
                         ) { page ->
                             val wallpaper = featured[page]
+                            // Qué tan lejos está esta página del centro: es lo
+                            // que mueve la foto de la tarjeta detrás de su
+                            // contenido mientras se desliza el carrusel.
+                            val pageOffset =
+                                (carouselState.currentPage - page) +
+                                    carouselState.currentPageOffsetFraction
                             FeaturedCard(
                                 wallpaper = wallpaper,
                                 isFavorite = wallpaper.id in favorites,
                                 onClick = { onOpenWallpaper(wallpaper) },
                                 onToggleFavorite = { onToggleFavorite(wallpaper.id) },
+                                pageOffset = pageOffset,
                                 heroHeight = heroHeight,
                                 modifier = Modifier.fillMaxSize(),
                             )

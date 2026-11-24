@@ -302,12 +302,24 @@ fun WallpaperCard(
     }
 }
 
+/** Holgura de la foto del hero para que su desplazamiento no descubra el fondo. */
+private const val HeroParallaxScale = 1.18f
+
+/** Desplazamiento máximo de la foto del hero al cambiar de página. */
+private val HeroParallaxShift = 20.dp
+
 @Composable
 fun FeaturedCard(
     wallpaper: Wallpaper,
     isFavorite: Boolean,
     onClick: () -> Unit,
     onToggleFavorite: () -> Unit,
+    /**
+     * Qué tan lejos está esta página del centro del carrusel: 0 cuando está
+     * quieta y ±1 al cambiar de página. Es lo que mueve la foto detrás de las
+     * capas superpuestas.
+     */
+    pageOffset: Float = 0f,
     modifier: Modifier = Modifier,
     heroHeight: Dp = HeroHeight,
 ) {
@@ -346,7 +358,26 @@ fun FeaturedCard(
                 onClick()
             },
     ) {
-        WallpaperImage(wallpaper, isHero = true, heroHeight = heroHeight)
+        // Parallax: la foto se retrasa respecto al desplazamiento del
+        // carrusel y queda detrás de las capas superpuestas, así la tarjeta
+        // se siente con profundidad en vez de plana. La holgura de escala es
+        // la que evita que el desplazamiento descubra el fondo. Con
+        // "reducir movimiento" la foto se queda quieta.
+        Box(
+            Modifier
+                .fillMaxSize()
+                .graphicsLayer {
+                    translationX = if (reduceMotion) {
+                        0f
+                    } else {
+                        -pageOffset * HeroParallaxShift.toPx()
+                    }
+                    scaleX = HeroParallaxScale
+                    scaleY = HeroParallaxScale
+                },
+        ) {
+            WallpaperImage(wallpaper, isHero = true, heroHeight = heroHeight)
+        }
         val scrim = remember {
             Brush.verticalGradient(
                 colors = listOf(
