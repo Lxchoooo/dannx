@@ -75,8 +75,8 @@ fun UpdateDialog(
                 modifier = Modifier
                     .fillMaxWidth()
                     .heightIn(max = 380.dp)
-                    .verticalScroll(rememberScrollState())
-                    .animateContentSize(animationSpec = Motion.spatial(reduceMotion)),
+                    .animateContentSize(animationSpec = Motion.spatial(reduceMotion))
+                    .verticalScroll(rememberScrollState()),
             ) {
                 when (state) {
                     UpdateState.Idle, UpdateState.Checking -> {

@@ -54,8 +54,8 @@ fun ApplyWallpaperSheet(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .verticalScroll(rememberScrollState())
                     .animateContentSize(animationSpec = Motion.spatial(reduceMotion))
+                    .verticalScroll(rememberScrollState())
                     .padding(horizontal = 20.dp)
                     .padding(bottom = 28.dp),
             ) {
