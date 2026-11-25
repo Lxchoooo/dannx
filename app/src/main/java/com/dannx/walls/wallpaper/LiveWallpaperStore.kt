@@ -41,7 +41,7 @@ internal class LiveWallpaperStore(private val context: Context) {
         } finally {
             temp.delete()
         }
-        prefs().edit { putLong(KEY_VERSION, System.currentTimeMillis()) }
+        prefs(context).edit { putLong(KEY_VERSION, System.currentTimeMillis()) }
     }
 
     /** Si el fondo animado que está puesto es el nuestro. */
