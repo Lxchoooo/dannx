@@ -45,9 +45,13 @@ jobs:
             echo "android-all ya estaba en el repositorio local"
             exit 0
           fi
+          # Un espejo que se queda a media transferencia no puede colgar el job
+          # entero: `timeout` corta el intento y se pasa al siguiente espejo.
+          # El límite de velocidad corta antes un enlace que dejó de avanzar.
           for repo in https://repo1.maven.org/maven2 https://repo.maven.apache.org/maven2; do
-            if curl -fL --retry 5 --retry-delay 5 --retry-all-errors \
-                 --connect-timeout 30 -o "$jar.part" "$repo/$base/$jar"; then
+            if timeout 240 curl -fL --retry 3 --retry-delay 5 --retry-all-errors \
+                 --connect-timeout 30 --speed-limit 10240 --speed-time 30 \
+                 -o "$jar.part" "$repo/$base/$jar"; then
               expected="$(curl -fsSL --retry 3 "$repo/$base/$jar.sha512" | tr -d '[:space:]')"
               actual="$(sha512sum "$jar.part" | cut -d' ' -f1)"
               if [ -n "$expected" ] && [ "$expected" = "$actual" ]; then
