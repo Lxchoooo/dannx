@@ -43,8 +43,10 @@ jobs:
 
       - uses: gradle/actions/setup-gradle@8da46b539cd8fe6ab27ca75128919a18d757604c # v6
 
-      - name: Lint and unit tests
-        run: ./gradlew lintDebug testDebugUnitTest
+      # Los instrumentados solo corren en tags o a mano: sin este paso, un
+      # cambio de firma podía romperlos y el push no se enteraba.
+      - name: Lint, unit tests and instrumented test APK
+        run: ./gradlew lintDebug testDebugUnitTest assembleDebugAndroidTest
 
       # Los reportes solo se conservan cuando algo falla: en verde no hacen
       # falta y ensucian la lista de artefactos.
