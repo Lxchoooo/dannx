@@ -45,22 +45,21 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.dannx.walls.R
 import com.dannx.walls.ui.theme.EmphasizedEasing
-import com.dannx.walls.ui.theme.LocalLiteMode
 import com.dannx.walls.ui.theme.LocalReduceMotion
 import com.dannx.walls.ui.theme.MotionDuration
 
 /**
  * Marcador de carga liviano: bloques que simulan la grilla y una banda de luz
- * que los recorre. Cuando hay modo lite queda estático, sin animación, para no
- * gastar CPU en equipos lentos.
+ * que los recorre. Con modo lite o "reducir movimiento" queda estático, sin
+ * animación, para no gastar CPU en equipos lentos.
  */
 @Composable
 fun FeedSkeleton(modifier: Modifier = Modifier) {
-    val lite = LocalLiteMode.current
+    val reduceMotion = LocalReduceMotion.current
     val base = MaterialTheme.colorScheme.surfaceVariant
     // Se entrega como función para leer el estado recién en la fase de dibujo:
     // así el esqueleto no se recompone en cada frame.
-    val sweep: (() -> Float)? = if (lite) {
+    val sweep: (() -> Float)? = if (reduceMotion) {
         null
     } else {
         val transition = rememberInfiniteTransition(label = "feedSkeleton")
