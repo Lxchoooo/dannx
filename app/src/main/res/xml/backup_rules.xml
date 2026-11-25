@@ -1,5 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Solo se excluye la sesión: las colecciones locales sí se respaldan. -->
+<!-- Solo se excluye la sesión y la foto del fondo animado: las colecciones
+     locales sí se respaldan. La foto se puede volver a generar y pesa de más. -->
 <full-backup-content>
     <exclude domain="sharedpref" path="dannx_session.xml" />
+    <exclude domain="file" path="live/" />
 </full-backup-content>

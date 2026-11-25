@@ -6,6 +6,7 @@ import com.dannx.walls.data.AppSettings
 import com.dannx.walls.data.CategoryFeatured
 import com.dannx.walls.data.ColorContrast
 import com.dannx.walls.data.ColorPaletteStyle
+import com.dannx.walls.data.LiveMotion
 import com.dannx.walls.data.TagCategory
 import com.dannx.walls.data.ThemeMode
 import com.dannx.walls.data.Wallpaper
@@ -156,6 +157,7 @@ data class UiState(
     val selectedUploadUri: String? = null,
     val themeMode: ThemeMode = ThemeMode.SYSTEM,
     val liteMode: Boolean = false,
+    val liveMotion: LiveMotion = LiveMotion.NORMAL,
     val openEditorOnApply: Boolean = true,
     /** Semilla del color; vacío = color del fondo de pantalla. */
     val colorSeed: String = "",

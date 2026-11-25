@@ -2,7 +2,10 @@ package com.dannx.walls
 
 import androidx.lifecycle.SavedStateHandle
 import com.dannx.walls.data.AdminSession
+import com.dannx.walls.data.AppearanceStore
 import com.dannx.walls.data.DannXError
+import com.dannx.walls.data.InMemoryAppearanceStore
+import com.dannx.walls.data.LiveMotion
 import com.dannx.walls.data.Wallpaper
 import com.dannx.walls.data.WallpaperCategory
 import com.dannx.walls.data.WallpaperCollection
@@ -53,6 +56,7 @@ class MainViewModelTest {
     private fun viewModel(
         online: Boolean = true,
         now: () -> Long = System::currentTimeMillis,
+        appearance: AppearanceStore = InMemoryAppearanceStore(),
     ): MainViewModel = MainViewModel(
         savedState = SavedStateHandle(),
         prefs = store,
@@ -60,6 +64,7 @@ class MainViewModelTest {
         cache = cache,
         actions = actions,
         isOnline = { online },
+        appearance = appearance,
         strings = strings,
         now = now,
         ioDispatcher = dispatcher,
@@ -90,6 +95,18 @@ class MainViewModelTest {
         val state = model.state.value
         assertTrue(state.feed is LoadState.Content)
         assertEquals(1, state.wallpapers.size)
+    }
+
+    @Test
+    fun `la intensidad del fondo animado se guarda y llega al estado`() = runTest(dispatcher) {
+        val appearance = InMemoryAppearanceStore()
+        val model = viewModel(appearance = appearance)
+
+        assertEquals(LiveMotion.NORMAL, model.state.value.liveMotion)
+
+        model.setLiveMotion(LiveMotion.SUBTLE)
+        assertEquals(LiveMotion.SUBTLE, model.state.value.liveMotion)
+        assertEquals(LiveMotion.SUBTLE, appearance.liveMotion())
     }
 
     @Test

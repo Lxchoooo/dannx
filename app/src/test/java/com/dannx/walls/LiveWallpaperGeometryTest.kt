@@ -1,5 +1,6 @@
 package com.dannx.walls
 
+import com.dannx.walls.data.LiveMotion
 import com.dannx.walls.wallpaper.LiveWallpaperGeometry
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -88,5 +89,48 @@ class LiveWallpaperGeometryTest {
     fun `un tamano invalido no produce escala`() {
         assertEquals(0f, LiveWallpaperGeometry.coverScale(0, 2400, 1080f, 2400f), delta)
         assertEquals(0f, LiveWallpaperGeometry.coverScale(1080, 2400, 0f, 2400f), delta)
+    }
+
+    @Test
+    fun `cada intensidad pesa lo suyo`() {
+        assertEquals(1f, LiveWallpaperGeometry.weight(LiveMotion.NORMAL), delta)
+        assertEquals(0f, LiveWallpaperGeometry.weight(LiveMotion.STILL), delta)
+        assertTrue(
+            LiveWallpaperGeometry.weight(LiveMotion.SUBTLE) <
+                LiveWallpaperGeometry.weight(LiveMotion.NORMAL),
+        )
+        assertTrue(LiveWallpaperGeometry.weight(LiveMotion.SUBTLE) > 0f)
+    }
+
+    @Test
+    fun `quieto deja la foto centrada`() {
+        assertEquals(
+            0f,
+            LiveWallpaperGeometry.shift(
+                1080f,
+                1f,
+                LiveWallpaperGeometry.ForegroundShift,
+                LiveMotion.STILL,
+            ),
+            delta,
+        )
+    }
+
+    @Test
+    fun `suave recorre menos que normal`() {
+        val subtle = LiveWallpaperGeometry.shift(
+            1080f,
+            1f,
+            LiveWallpaperGeometry.ForegroundShift,
+            LiveMotion.SUBTLE,
+        )
+        val normal = LiveWallpaperGeometry.shift(
+            1080f,
+            1f,
+            LiveWallpaperGeometry.ForegroundShift,
+            LiveMotion.NORMAL,
+        )
+        assertTrue(subtle > 0f)
+        assertTrue(subtle < normal)
     }
 }

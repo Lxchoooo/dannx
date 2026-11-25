@@ -22,6 +22,7 @@ import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
+import androidx.compose.material.icons.rounded.Animation
 import androidx.compose.material.icons.rounded.CleaningServices
 import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.Language
@@ -60,6 +61,7 @@ import com.dannx.walls.R
 import com.dannx.walls.UiState
 import com.dannx.walls.data.ColorContrast
 import com.dannx.walls.data.ColorPaletteStyle
+import com.dannx.walls.data.LiveMotion
 import com.dannx.walls.data.ThemeMode
 import com.dannx.walls.ui.components.ColorSettingsCard
 import com.dannx.walls.ui.components.SettingsCard
@@ -84,6 +86,7 @@ fun SettingsScreen(
     onBack: () -> Unit,
     onThemeModeChange: (ThemeMode) -> Unit,
     onLiteModeChange: (Boolean) -> Unit,
+    onLiveMotionChange: (LiveMotion) -> Unit,
     onOpenEditorOnApplyChange: (Boolean) -> Unit,
     onColorSeedChange: (String) -> Unit,
     onPaletteStyleChange: (ColorPaletteStyle) -> Unit,
@@ -238,6 +241,50 @@ fun SettingsScreen(
 
             staggeredItem(6) {
                 SettingsCard {
+                    Column(Modifier.padding(16.dp)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            SettingsIcon(Icons.Rounded.Animation)
+                            Spacer(Modifier.width(12.dp))
+                            Column(Modifier.weight(1f)) {
+                                Text(
+                                    stringResource(R.string.settings_live_motion),
+                                    style = MaterialTheme.typography.titleMediumEmphasized,
+                                )
+                                Text(
+                                    stringResource(R.string.settings_live_motion_hint),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                        }
+                        Spacer(Modifier.height(12.dp))
+                        SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
+                            LiveMotion.entries.forEachIndexed { index, motion ->
+                                SegmentedButton(
+                                    selected = state.liveMotion == motion,
+                                    onClick = { onLiveMotionChange(motion) },
+                                    shape = SegmentedButtonDefaults.itemShape(
+                                        index = index,
+                                        count = LiveMotion.entries.size,
+                                    ),
+                                    label = { Text(stringResource(motion.labelRes())) },
+                                )
+                            }
+                        }
+                        if (state.liteMode) {
+                            Spacer(Modifier.height(8.dp))
+                            Text(
+                                stringResource(R.string.settings_live_motion_lite),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                    }
+                }
+            }
+
+            staggeredItem(7) {
+                SettingsCard {
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -271,8 +318,8 @@ fun SettingsScreen(
                 }
             }
 
-            staggeredItem(7) { SectionTitle(stringResource(R.string.settings_storage)) }
-            staggeredItem(8) {
+            staggeredItem(8) { SectionTitle(stringResource(R.string.settings_storage)) }
+            staggeredItem(9) {
                 SettingsCard {
                     Row(
                         modifier = Modifier.padding(16.dp),
@@ -304,8 +351,8 @@ fun SettingsScreen(
                 }
             }
 
-            staggeredItem(9) { SectionTitle(stringResource(R.string.settings_credits)) }
-            staggeredItem(10) {
+            staggeredItem(10) { SectionTitle(stringResource(R.string.settings_credits)) }
+            staggeredItem(11) {
                 SettingsCard {
                     Column(Modifier.padding(16.dp)) {
                         SettingsCardHeader(
@@ -361,8 +408,8 @@ fun SettingsScreen(
                 }
             }
 
-            staggeredItem(11) { SectionTitle(stringResource(R.string.settings_advanced)) }
-            staggeredItem(12) {
+            staggeredItem(12) { SectionTitle(stringResource(R.string.settings_advanced)) }
+            staggeredItem(13) {
                 SettingsCard {
                     Column(Modifier.padding(horizontal = 8.dp, vertical = 8.dp)) {
                         TextButton(onClick = onResetAppearance) {
@@ -436,4 +483,10 @@ private fun ThemeMode.labelRes(): Int = when (this) {
     ThemeMode.SYSTEM -> R.string.theme_system
     ThemeMode.LIGHT -> R.string.theme_light
     ThemeMode.DARK -> R.string.theme_dark
+}
+
+private fun LiveMotion.labelRes(): Int = when (this) {
+    LiveMotion.SUBTLE -> R.string.live_motion_subtle
+    LiveMotion.NORMAL -> R.string.live_motion_normal
+    LiveMotion.STILL -> R.string.live_motion_still
 }

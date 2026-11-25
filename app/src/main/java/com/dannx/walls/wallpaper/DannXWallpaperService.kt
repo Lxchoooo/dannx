@@ -1,18 +1,22 @@
 package com.dannx.walls.wallpaper
 
 import android.animation.ValueAnimator
+import android.content.Context
 import android.content.SharedPreferences
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Canvas
 import android.graphics.Color
+import android.graphics.LinearGradient
 import android.graphics.Paint
 import android.graphics.RectF
+import android.graphics.Shader
 import android.os.Handler
 import android.os.Looper
 import android.service.wallpaper.WallpaperService
 import android.view.SurfaceHolder
 import com.dannx.walls.data.AppearancePrefs
+import com.dannx.walls.data.LiveMotion
 import com.dannx.walls.ui.editor.EditorBlur
 import java.io.File
 import java.util.concurrent.ExecutorService
@@ -37,8 +41,11 @@ class DannXWallpaperService : WallpaperService() {
             Thread(runnable, "dannx-wallpaper").apply { isDaemon = true }
         }
         private val paint = Paint(Paint.FILTER_BITMAP_FLAG or Paint.DITHER_FLAG)
+        private val fallbackPaint = Paint()
         private val backdropDst = RectF()
         private val foregroundDst = RectF()
+        private var fallbackWidth = 0
+        private var fallbackHeight = 0
 
         private var layers: Layers? = null
         private var loadToken = 0
@@ -48,17 +55,38 @@ class DannXWallpaperService : WallpaperService() {
         private var height = 0
         private var xOffset = 0.5f
         private var moves = true
+        private var motion: LiveMotion = LiveMotion.NORMAL
 
         private val prefsListener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
             if (key == LiveWallpaperStore.KEY_VERSION) reload()
         }
 
+        /**
+         * La intensidad y el modo lite se aplican en caliente: alcanza con
+         * volver a dibujar, no hace falta recargar la foto.
+         */
+        private val appearanceListener =
+            SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
+                when (key) {
+                    AppearancePrefs.KEY_LIVE_MOTION -> {
+                        refreshMotion()
+                        drawFrame()
+                    }
+                    AppearancePrefs.KEY_LITE -> {
+                        moves = motionAllowed()
+                        drawFrame()
+                    }
+                }
+            }
+
         override fun onCreate(surfaceHolder: SurfaceHolder) {
             super.onCreate(surfaceHolder)
             setOffsetNotificationsEnabled(true)
             moves = motionAllowed()
+            refreshMotion()
             LiveWallpaperStore.prefs(applicationContext)
                 .registerOnSharedPreferenceChangeListener(prefsListener)
+            appearancePrefs().registerOnSharedPreferenceChangeListener(appearanceListener)
             reload()
         }
 
@@ -67,6 +95,7 @@ class DannXWallpaperService : WallpaperService() {
             runCatching {
                 LiveWallpaperStore.prefs(applicationContext)
                     .unregisterOnSharedPreferenceChangeListener(prefsListener)
+                appearancePrefs().unregisterOnSharedPreferenceChangeListener(appearanceListener)
             }
             worker.shutdownNow()
             recycleLayers()
@@ -77,8 +106,19 @@ class DannXWallpaperService : WallpaperService() {
             this.visible = visible
             if (visible) {
                 moves = motionAllowed()
+                refreshMotion()
                 drawFrame()
             }
+        }
+
+        private fun appearancePrefs(): SharedPreferences =
+            applicationContext.getSharedPreferences(
+                AppearancePrefs.PREFS_NAME,
+                Context.MODE_PRIVATE,
+            )
+
+        private fun refreshMotion() {
+            motion = AppearancePrefs(applicationContext).liveMotion()
         }
 
         /** Lite o animaciones del sistema apagadas: la foto queda quieta. */
@@ -131,7 +171,8 @@ class DannXWallpaperService : WallpaperService() {
                 yPixelOffset,
             )
             this.xOffset = xOffset
-            drawFrame()
+            // Quieto no necesita repintar por cada desplazamiento del launcher.
+            if (moves && motion != LiveMotion.STILL) drawFrame()
         }
 
         /** Relee la foto guardada y arma las dos capas fuera del hilo principal. */
@@ -226,9 +267,12 @@ class DannXWallpaperService : WallpaperService() {
         private fun draw(canvas: Canvas) {
             val surfaceWidth = width.toFloat()
             val surfaceHeight = height.toFloat()
-            canvas.drawColor(BackdropColor)
 
-            val current = layers ?: return
+            val current = layers
+            if (current == null) {
+                drawFallback(canvas, surfaceWidth, surfaceHeight)
+                return
+            }
             val foreground = current.foreground
             val scale = LiveWallpaperGeometry.coverScale(
                 sourceWidth = foreground.width,
@@ -239,11 +283,13 @@ class DannXWallpaperService : WallpaperService() {
             if (scale <= 0f) return
             val foregroundWidth = foreground.width * scale
             val foregroundHeight = foreground.height * scale
-            val shift = if (moves) {
-                LiveWallpaperGeometry.shift(surfaceWidth, xOffset, LiveWallpaperGeometry.ForegroundShift)
-            } else {
-                0f
-            }
+            val activeMotion = if (moves) motion else LiveMotion.STILL
+            val shift = LiveWallpaperGeometry.shift(
+                surfaceWidth,
+                xOffset,
+                LiveWallpaperGeometry.ForegroundShift,
+                activeMotion,
+            )
             val centerX = surfaceWidth / 2f + shift
             foregroundDst.set(
                 centerX - foregroundWidth / 2f,
@@ -262,15 +308,12 @@ class DannXWallpaperService : WallpaperService() {
             if (backdropScale > 0f) {
                 val backdropWidth = backdrop.width * backdropScale
                 val backdropHeight = backdrop.height * backdropScale
-                val backdropShift = if (moves) {
-                    LiveWallpaperGeometry.shift(
-                        surfaceWidth,
-                        xOffset,
-                        LiveWallpaperGeometry.BackgroundShift,
-                    )
-                } else {
-                    0f
-                }
+                val backdropShift = LiveWallpaperGeometry.shift(
+                    surfaceWidth,
+                    xOffset,
+                    LiveWallpaperGeometry.BackgroundShift,
+                    activeMotion,
+                )
                 val backdropCenterX = surfaceWidth / 2f + backdropShift
                 backdropDst.set(
                     backdropCenterX - backdropWidth / 2f,
@@ -281,6 +324,31 @@ class DannXWallpaperService : WallpaperService() {
                 canvas.drawBitmap(backdrop, null, backdropDst, paint)
             }
             canvas.drawBitmap(foreground, null, foregroundDst, paint)
+        }
+
+        /**
+         * Sin foto no se dibuja negro plano: un degradado oscuro neutro evita
+         * que la pantalla parezca rota. El shader se rehace solo al cambiar el
+         * tamaño, nunca en cada frame.
+         */
+        private fun drawFallback(canvas: Canvas, surfaceWidth: Float, surfaceHeight: Float) {
+            if (fallbackPaint.shader == null ||
+                fallbackWidth != width ||
+                fallbackHeight != height
+            ) {
+                fallbackWidth = width
+                fallbackHeight = height
+                fallbackPaint.shader = LinearGradient(
+                    0f,
+                    0f,
+                    0f,
+                    surfaceHeight,
+                    FallbackTop,
+                    FallbackBottom,
+                    Shader.TileMode.CLAMP,
+                )
+            }
+            canvas.drawRect(0f, 0f, surfaceWidth, surfaceHeight, fallbackPaint)
         }
 
         private fun recycleLayers() {
@@ -302,6 +370,7 @@ class DannXWallpaperService : WallpaperService() {
     private companion object {
         /** La copia de fondo se calcula enana: el desenfoque oculta el detalle. */
         const val BackdropDivisor = 8
-        val BackdropColor: Int = Color.rgb(10, 10, 12)
+        val FallbackTop: Int = Color.rgb(30, 32, 38)
+        val FallbackBottom: Int = Color.rgb(8, 8, 10)
     }
 }

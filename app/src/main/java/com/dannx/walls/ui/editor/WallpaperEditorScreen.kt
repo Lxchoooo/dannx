@@ -142,8 +142,9 @@ private enum class EditorPreviewMode {
 private const val ControlsHideDelayMillis = 3_000L
 
 /**
- * Editor de una imagen fija. No usa parallax ni APIs de Android 12: el
- * desenfoque se hace sobre una copia reducida y el color con ColorMatrix.
+ * Editor de una imagen fija. El desenfoque se hace sobre una copia reducida y
+ * el color con ColorMatrix. El parallax del launcher no se simula acá: eso lo
+ * hace el fondo animado del sistema (`DannXWallpaperService`).
  */
 @Composable
 fun WallpaperEditorScreen(

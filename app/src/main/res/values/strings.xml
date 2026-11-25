@@ -22,7 +22,7 @@
     <string name="apply_both">Both screens</string>
     <string name="apply_both_hint">Home and lock</string>
     <string name="apply_live_section">With motion</string>
-    <string name="apply_live">Animated background</string>
+    <string name="apply_live">Animated wallpaper</string>
     <string name="apply_live_hint">Home and lock, with a gentle drift</string>
     <string name="apply_in_progress">Applying the wallpaper…</string>
     <string name="apply_button_loading">Applying…</string>
@@ -192,6 +192,12 @@
     <string name="theme_dark">Dark</string>
     <string name="settings_lite">Lite mode</string>
     <string name="settings_lite_hint">Fewer animations to save battery.</string>
+    <string name="settings_live_motion">Animated wallpaper motion</string>
+    <string name="settings_live_motion_hint">How much it drifts as you swipe between screens.</string>
+    <string name="settings_live_motion_lite">Lite mode keeps it still.</string>
+    <string name="live_motion_subtle">Subtle</string>
+    <string name="live_motion_normal">Normal</string>
+    <string name="live_motion_still">Still</string>
     <string name="settings_open_editor">Open editor when applying</string>
     <string name="settings_open_editor_hint">Adjust the crop and colors before setting the wallpaper.</string>
     <string name="settings_color">Color</string>
@@ -515,8 +521,8 @@
     <string name="editor_error_memory">Not enough memory. Close other apps and try again.</string>
     <string name="editor_error_open">Couldn\'t open the image. Check your connection and try again.</string>
     <string name="editor_error_apply">Couldn\'t apply the wallpaper. Try again.</string>
-    <string name="editor_error_live">Couldn\'t open the animated background picker.</string>
-    <string name="live_wallpaper_label">DannX</string>
+    <string name="editor_error_live">Couldn\'t open the animated wallpaper picker.</string>
+    <string name="live_wallpaper_label">DannX · Animated wallpaper</string>
     <string name="live_wallpaper_description">Your wallpaper, with a barely-there drift.</string>
     <string name="filter_original">Original</string>
     <string name="filter_warm">Warm</string>
@@ -576,7 +582,7 @@
     <string name="msg_applied_system">Done, your home screen wallpaper changed.</string>
     <string name="msg_applied_lock">Done, you changed the lock screen wallpaper.</string>
     <string name="msg_applied_both">Done, you changed the home and lock screen wallpapers.</string>
-    <string name="msg_applied_live">Done, your animated background is on.</string>
+    <string name="msg_applied_live">Done, your animated wallpaper is on.</string>
     <string name="msg_share_failed">Couldn\'t prepare the image to share.</string>
     <string name="msg_settings_reset">Settings reset.</string>
     <string name="msg_cache_cleared">Cache cleared.</string>

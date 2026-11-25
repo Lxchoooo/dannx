@@ -33,6 +33,7 @@ import com.dannx.walls.data.EmptyAppCache
 import com.dannx.walls.data.FeedCache
 import com.dannx.walls.data.FeedCacheStore
 import com.dannx.walls.data.InMemoryAppearanceStore
+import com.dannx.walls.data.LiveMotion
 import com.dannx.walls.data.LOCAL_COLLECTION_OWNER
 import com.dannx.walls.data.LOCAL_COLLECTION_PREFIX
 import com.dannx.walls.data.LocalStore
@@ -147,6 +148,7 @@ class MainViewModel(
             selectedUploadUri = savedState.get<String>(KEY_UPLOAD_URI),
             themeMode = appearance.themeMode(),
             liteMode = appearance.liteMode(),
+            liveMotion = appearance.liveMotion(),
             openEditorOnApply = appearance.openEditorOnApply(),
             colorSeed = appearance.colorSeed(),
             paletteStyle = appearance.paletteStyle(),
@@ -3479,6 +3481,9 @@ class MainViewModel(
 
     /** Activa o desactiva las animaciones más pesadas. */
     fun setLiteMode(enabled: Boolean) = appearanceController.setLiteMode(enabled)
+
+    /** Cuánto se mueve el fondo animado al cambiar de pantalla. */
+    fun setLiveMotion(motion: LiveMotion) = appearanceController.setLiveMotion(motion)
 
     /** Define si el botón Aplicar abre primero el editor de fondos. */
     fun setOpenEditorOnApply(enabled: Boolean) =

@@ -6,6 +6,9 @@ import androidx.core.content.edit
 /** Forma de elegir entre tema claro y oscuro. */
 enum class ThemeMode { SYSTEM, LIGHT, DARK }
 
+/** Cuánto se mueve el fondo animado al deslizar entre pantallas. */
+enum class LiveMotion { SUBTLE, NORMAL, STILL }
+
 /**
  * Preferencias visuales de la app. Se guardan aparte del resto para que los
  * ajustes no dependan de la sesión ni del feed.
@@ -13,6 +16,7 @@ enum class ThemeMode { SYSTEM, LIGHT, DARK }
 interface AppearanceStore {
     fun themeMode(): ThemeMode
     fun liteMode(): Boolean
+    fun liveMotion(): LiveMotion
     fun openEditorOnApply(): Boolean
     fun colorSeed(): String
     fun paletteStyle(): ColorPaletteStyle
@@ -20,6 +24,7 @@ interface AppearanceStore {
     fun amoled(): Boolean
     fun saveThemeMode(mode: ThemeMode)
     fun saveLiteMode(enabled: Boolean)
+    fun saveLiveMotion(motion: LiveMotion)
     fun saveOpenEditorOnApply(enabled: Boolean)
     fun saveColorSeed(seed: String)
     fun savePaletteStyle(style: ColorPaletteStyle)
@@ -31,7 +36,7 @@ interface AppearanceStore {
 /** Guarda las preferencias en el teléfono. */
 class AppearancePrefs(context: Context) : AppearanceStore {
     private val prefs =
-        context.getSharedPreferences("dannx_appearance", Context.MODE_PRIVATE)
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
 
     override fun themeMode(): ThemeMode = runCatching {
         ThemeMode.valueOf(
@@ -40,6 +45,12 @@ class AppearancePrefs(context: Context) : AppearanceStore {
     }.getOrDefault(ThemeMode.SYSTEM)
 
     override fun liteMode(): Boolean = prefs.getBoolean(KEY_LITE, false)
+
+    override fun liveMotion(): LiveMotion = runCatching {
+        LiveMotion.valueOf(
+            prefs.getString(KEY_LIVE_MOTION, null) ?: LiveMotion.NORMAL.name,
+        )
+    }.getOrDefault(LiveMotion.NORMAL)
 
     override fun openEditorOnApply(): Boolean = prefs.getBoolean(KEY_OPEN_EDITOR, true)
 
@@ -59,6 +70,10 @@ class AppearancePrefs(context: Context) : AppearanceStore {
 
     override fun saveLiteMode(enabled: Boolean) {
         prefs.edit { putBoolean(KEY_LITE, enabled) }
+    }
+
+    override fun saveLiveMotion(motion: LiveMotion) {
+        prefs.edit { putString(KEY_LIVE_MOTION, motion.name) }
     }
 
     override fun saveOpenEditorOnApply(enabled: Boolean) {
@@ -85,14 +100,18 @@ class AppearancePrefs(context: Context) : AppearanceStore {
         prefs.edit { clear() }
     }
 
-    private companion object {
-        const val KEY_THEME = "theme_mode"
+    companion object {
+        /** El servicio del fondo animado lee estas mismas preferencias. */
+        const val PREFS_NAME = "dannx_appearance"
+        const val KEY_LIVE_MOTION = "live_motion"
         const val KEY_LITE = "lite_mode"
-        const val KEY_OPEN_EDITOR = "open_editor_on_apply"
-        const val KEY_COLOR_SEED = "color_seed"
-        const val KEY_PALETTE_STYLE = "palette_style"
-        const val KEY_CONTRAST = "contrast_level"
-        const val KEY_AMOLED = "amoled"
+
+        private const val KEY_THEME = "theme_mode"
+        private const val KEY_OPEN_EDITOR = "open_editor_on_apply"
+        private const val KEY_COLOR_SEED = "color_seed"
+        private const val KEY_PALETTE_STYLE = "palette_style"
+        private const val KEY_CONTRAST = "contrast_level"
+        private const val KEY_AMOLED = "amoled"
     }
 }
 
@@ -105,10 +124,13 @@ class InMemoryAppearanceStore(
     private var style: ColorPaletteStyle = ColorPaletteStyle.TONAL_SPOT,
     private var contrast: ColorContrast = ColorContrast.STANDARD,
     private var pureBlack: Boolean = false,
+    private var motion: LiveMotion = LiveMotion.NORMAL,
 ) : AppearanceStore {
     override fun themeMode(): ThemeMode = theme
 
     override fun liteMode(): Boolean = lite
+
+    override fun liveMotion(): LiveMotion = motion
 
     override fun openEditorOnApply(): Boolean = openEditor
 
@@ -126,6 +148,10 @@ class InMemoryAppearanceStore(
 
     override fun saveLiteMode(enabled: Boolean) {
         lite = enabled
+    }
+
+    override fun saveLiveMotion(motion: LiveMotion) {
+        this.motion = motion
     }
 
     override fun saveOpenEditorOnApply(enabled: Boolean) {
@@ -156,5 +182,6 @@ class InMemoryAppearanceStore(
         style = ColorPaletteStyle.TONAL_SPOT
         contrast = ColorContrast.STANDARD
         pureBlack = false
+        motion = LiveMotion.NORMAL
     }
 }

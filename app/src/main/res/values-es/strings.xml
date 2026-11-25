@@ -192,6 +192,12 @@
     <string name="theme_dark">Oscuro</string>
     <string name="settings_lite">Modo lite</string>
     <string name="settings_lite_hint">Menos animaciones para consumir menos batería.</string>
+    <string name="settings_live_motion">Movimiento del fondo animado</string>
+    <string name="settings_live_motion_hint">Cuánto acompaña el fondo al deslizar entre pantallas.</string>
+    <string name="settings_live_motion_lite">El modo lite lo deja quieto.</string>
+    <string name="live_motion_subtle">Suave</string>
+    <string name="live_motion_normal">Normal</string>
+    <string name="live_motion_still">Quieto</string>
     <string name="settings_open_editor">Abrir editor al aplicar</string>
     <string name="settings_open_editor_hint">Ajusta el encuadre y los colores antes de poner el fondo.</string>
     <string name="settings_color">Color</string>
@@ -516,7 +522,7 @@
     <string name="editor_error_open">No se pudo abrir la imagen. Revisa tu conexión y prueba de nuevo.</string>
     <string name="editor_error_apply">No se pudo aplicar el fondo. Prueba de nuevo.</string>
     <string name="editor_error_live">No se pudo abrir el selector de fondos animados.</string>
-    <string name="live_wallpaper_label">DannX</string>
+    <string name="live_wallpaper_label">DannX · Fondo animado</string>
     <string name="live_wallpaper_description">Tu fondo, con un movimiento apenas perceptible.</string>
     <string name="filter_original">Original</string>
     <string name="filter_warm">Cálido</string>
@@ -576,7 +582,7 @@
     <string name="msg_applied_system">Listo, cambiaste el fondo de la pantalla de inicio.</string>
     <string name="msg_applied_lock">Listo, cambiaste el fondo de la pantalla de bloqueo.</string>
     <string name="msg_applied_both">Listo, cambiaste los fondos de inicio y de bloqueo.</string>
-    <string name="msg_applied_live">Listo, tu fondo animado quedó puesto.</string>
+    <string name="msg_applied_live">Listo, tu fondo animado ya está activo.</string>
     <string name="msg_share_failed">No se pudo preparar la imagen para compartir.</string>
     <string name="msg_settings_reset">Ajustes restablecidos.</string>
     <string name="msg_cache_cleared">Caché borrada.</string>

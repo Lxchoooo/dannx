@@ -22,7 +22,7 @@
     <string name="apply_both">As duas telas</string>
     <string name="apply_both_hint">Inicial e de bloqueio</string>
     <string name="apply_live_section">Com movimento</string>
-    <string name="apply_live">Papel animado</string>
+    <string name="apply_live">Papel de parede animado</string>
     <string name="apply_live_hint">Inicial e de bloqueio, com um leve deslize</string>
     <string name="apply_in_progress">Aplicando o papel de parede…</string>
     <string name="apply_button_loading">Aplicando…</string>
@@ -192,6 +192,12 @@
     <string name="theme_dark">Escuro</string>
     <string name="settings_lite">Modo leve</string>
     <string name="settings_lite_hint">Menos animações para economizar bateria.</string>
+    <string name="settings_live_motion">Movimento do papel de parede animado</string>
+    <string name="settings_live_motion_hint">Quanto ele acompanha ao deslizar entre as telas.</string>
+    <string name="settings_live_motion_lite">O modo leve o deixa parado.</string>
+    <string name="live_motion_subtle">Sutil</string>
+    <string name="live_motion_normal">Normal</string>
+    <string name="live_motion_still">Parado</string>
     <string name="settings_open_editor">Abrir o editor ao aplicar</string>
     <string name="settings_open_editor_hint">Ajuste o recorte e as cores antes de definir o papel de parede.</string>
     <string name="settings_color">Cor</string>
@@ -515,8 +521,8 @@
     <string name="editor_error_memory">Memória insuficiente. Feche outros apps e tente de novo.</string>
     <string name="editor_error_open">Não foi possível abrir a imagem. Verifique sua conexão e tente de novo.</string>
     <string name="editor_error_apply">Não foi possível aplicar o papel de parede. Tente de novo.</string>
-    <string name="editor_error_live">Não foi possível abrir o seletor de papéis animados.</string>
-    <string name="live_wallpaper_label">DannX</string>
+    <string name="editor_error_live">Não foi possível abrir o seletor de papéis de parede animados.</string>
+    <string name="live_wallpaper_label">DannX · Papel de parede animado</string>
     <string name="live_wallpaper_description">Seu papel de parede, com um movimento quase imperceptível.</string>
     <string name="filter_original">Original</string>
     <string name="filter_warm">Quente</string>
@@ -576,7 +582,7 @@
     <string name="msg_applied_system">Pronto, o papel de parede da tela inicial mudou.</string>
     <string name="msg_applied_lock">Pronto, você mudou o papel de parede da tela de bloqueio.</string>
     <string name="msg_applied_both">Pronto, você mudou os papéis de parede das telas inicial e de bloqueio.</string>
-    <string name="msg_applied_live">Pronto, seu papel animado está ativo.</string>
+    <string name="msg_applied_live">Pronto, seu papel de parede animado está ativo.</string>
     <string name="msg_share_failed">Não foi possível preparar a imagem para compartilhar.</string>
     <string name="msg_settings_reset">Configurações redefinidas.</string>
     <string name="msg_cache_cleared">Cache limpo.</string>

@@ -1,5 +1,6 @@
 package com.dannx.walls.wallpaper
 
+import com.dannx.walls.data.LiveMotion
 import kotlin.math.max
 
 /**
@@ -20,13 +21,28 @@ object LiveWallpaperGeometry {
     /** Margen extra de la copia de fondo para que tape los costados descubiertos. */
     const val BackgroundSlack = 0.10f
 
+    /**
+     * Peso del recorrido según la intensidad elegida. "Quieto" da cero, así el
+     * servicio no necesita un caso aparte al cambiar la preferencia.
+     */
+    fun weight(motion: LiveMotion): Float = when (motion) {
+        LiveMotion.SUBTLE -> 0.55f
+        LiveMotion.NORMAL -> 1f
+        LiveMotion.STILL -> 0f
+    }
+
     /** Lleva el `xOffset` del launcher a -1 (izquierda) … 1 (derecha). */
     fun normalizedOffset(xOffset: Float): Float =
         ((xOffset - 0.5f) * 2f).coerceIn(-1f, 1f)
 
     /** Desplazamiento en píxeles para una capa con la fracción indicada. */
-    fun shift(surfaceWidth: Float, xOffset: Float, fraction: Float): Float =
-        normalizedOffset(xOffset) * max(surfaceWidth, 0f) * fraction
+    fun shift(
+        surfaceWidth: Float,
+        xOffset: Float,
+        fraction: Float,
+        motion: LiveMotion = LiveMotion.NORMAL,
+    ): Float =
+        normalizedOffset(xOffset) * max(surfaceWidth, 0f) * fraction * weight(motion)
 
     /** Escala que hace entrar la foto completa cubriendo el destino. */
     fun coverScale(

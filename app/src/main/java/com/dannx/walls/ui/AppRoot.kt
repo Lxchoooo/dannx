@@ -635,6 +635,7 @@ private fun MainApp(
                             onBack = { navController.popBackStack() },
                             onThemeModeChange = viewModel::setThemeMode,
                             onLiteModeChange = viewModel::setLiteMode,
+                            onLiveMotionChange = viewModel::setLiveMotion,
                             onOpenEditorOnApplyChange = viewModel::setOpenEditorOnApply,
                             onColorSeedChange = viewModel::setColorSeed,
                             onPaletteStyleChange = viewModel::setPaletteStyle,

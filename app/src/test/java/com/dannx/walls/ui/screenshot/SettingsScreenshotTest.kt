@@ -42,6 +42,7 @@ private fun settingsFixture(context: Context): @Composable () -> Unit {
             onBack = {},
             onThemeModeChange = {},
             onLiteModeChange = {},
+            onLiveMotionChange = {},
             onOpenEditorOnApplyChange = {},
             onColorSeedChange = {},
             onPaletteStyleChange = {},

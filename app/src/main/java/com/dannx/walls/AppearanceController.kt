@@ -10,6 +10,7 @@ import com.dannx.walls.data.LocalStore
 import com.dannx.walls.data.AppearanceStore
 import com.dannx.walls.data.ColorContrast
 import com.dannx.walls.data.ColorPaletteStyle
+import com.dannx.walls.data.LiveMotion
 import com.dannx.walls.data.ThemeMode
 import com.dannx.walls.data.WALLPAPER_COLOR_SEED
 import com.dannx.walls.R
@@ -41,6 +42,12 @@ class AppearanceController(
     fun setLiteMode(enabled: Boolean) {
         appearance.saveLiteMode(enabled)
         state.update { it.copy(liteMode = enabled) }
+    }
+
+    /** Cuánto se mueve el fondo animado al deslizar entre pantallas. */
+    fun setLiveMotion(motion: LiveMotion) {
+        appearance.saveLiveMotion(motion)
+        state.update { it.copy(liveMotion = motion) }
     }
 
     /** Define si el botón Aplicar abre primero el editor de fondos. */
@@ -80,6 +87,7 @@ class AppearanceController(
             it.copy(
                 themeMode = ThemeMode.SYSTEM,
                 liteMode = false,
+                liveMotion = LiveMotion.NORMAL,
                 openEditorOnApply = true,
                 colorSeed = WALLPAPER_COLOR_SEED,
                 paletteStyle = ColorPaletteStyle.TONAL_SPOT,
