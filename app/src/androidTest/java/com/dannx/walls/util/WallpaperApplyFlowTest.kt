@@ -4,6 +4,7 @@ import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
+import android.graphics.Rect
 import android.util.Log
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
@@ -21,7 +22,7 @@ import org.junit.runner.RunWith
 
 /**
  * Flujo crítico de aplicar un fondo: descarga real por HTTP local, recorte al
- * tamaño de pantalla y destino. El sistema de fondos se reemplaza con un
+ * tamaño con margen lateral y destino. El sistema de fondos se reemplaza con un
  * [WallpaperApplier] de prueba: el emulador no cambia su fondo y no hace falta
  * ningún permiso extra.
  */
@@ -48,8 +49,10 @@ class WallpaperApplyFlowTest {
             assertEquals(WallpaperTarget.SYSTEM, applier.target)
 
             val expected = wallpaperTargetSize(context)
-            assertEquals(expected.x, applier.width)
-            assertEquals(expected.y, applier.height)
+            val layout = staticWallpaperLayout(expected.x, expected.y)
+            assertEquals(layout.width, applier.width)
+            assertEquals(layout.height, applier.height)
+            assertEquals(layout.cropHint(), applier.cropHint)
             assertTrue("La imagen aplicada quedó vacía", applier.alpha != 0)
         } finally {
             server.stop()
@@ -69,12 +72,18 @@ class WallpaperApplyFlowTest {
         var width = 0
         var height = 0
         var alpha = 0
+        var cropHint: Rect? = null
 
-        override fun apply(bitmap: Bitmap, target: WallpaperTarget): WallpaperTarget {
+        override fun apply(
+            bitmap: Bitmap,
+            target: WallpaperTarget,
+            cropHint: Rect?,
+        ): WallpaperTarget {
             this.target = target
             width = bitmap.width
             height = bitmap.height
             alpha = bitmap.getPixel(bitmap.width / 2, bitmap.height / 2) ushr 24
+            this.cropHint = cropHint
             return target
         }
     }

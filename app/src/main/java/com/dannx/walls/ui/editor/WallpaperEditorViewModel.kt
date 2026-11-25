@@ -9,8 +9,10 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.dannx.walls.R
 import com.dannx.walls.data.Wallpaper
+import com.dannx.walls.util.StaticWallpaperLayout
 import com.dannx.walls.util.WallpaperFiles
 import com.dannx.walls.util.WallpaperTarget
+import com.dannx.walls.util.staticWallpaperLayout
 import com.dannx.walls.util.wallpaperTargetSize
 import com.dannx.walls.wallpaper.LiveWallpaperStore
 import java.io.File
@@ -253,8 +255,8 @@ internal class WallpaperEditorViewModel(
     }
 
     fun apply(target: WallpaperTarget) {
-        launchApply { rendered ->
-            val applied = files.applyEditedWallpaper(rendered, target)
+        launchApply(live = false) { rendered, layout ->
+            val applied = files.applyEditedWallpaper(rendered, target, layout?.cropHint())
             _state.update { it.copy(appliedTarget = applied) }
         }
     }
@@ -265,7 +267,7 @@ internal class WallpaperEditorViewModel(
      * puede lanzar una actividad y comprobar después qué fondo quedó puesto.
      */
     fun applyLive() {
-        launchApply { rendered ->
+        launchApply(live = true) { rendered, _ ->
             withContext(Dispatchers.IO) {
                 LiveWallpaperStore(appContext).save(rendered)
             }
@@ -283,7 +285,10 @@ internal class WallpaperEditorViewModel(
         }
     }
 
-    private fun launchApply(finish: suspend (Bitmap) -> Unit) {
+    private fun launchApply(
+        live: Boolean,
+        finish: suspend (Bitmap, StaticWallpaperLayout?) -> Unit,
+    ) {
         if (applyJob?.isActive == true) return
         val current = _state.value
         if (current.preview == null || current.loading) return
@@ -300,12 +305,15 @@ internal class WallpaperEditorViewModel(
             var finalBitmap: Bitmap? = null
             try {
                 val file = sourceFile ?: ensureSourceFile()
-                val size = wallpaperTargetSize(appContext)
+                val screen = wallpaperTargetSize(appContext)
+                // El fondo estático se guarda con margen lateral; el animado
+                // ya se mueve solo y se queda con el tamaño justo de pantalla.
+                val layout = if (live) null else staticWallpaperLayout(screen.x, screen.y)
                 val rendered = withContext(Dispatchers.Default) {
                     EditorImage.renderFinal(
                         file = file,
-                        targetWidth = size.x,
-                        targetHeight = size.y,
+                        targetWidth = layout?.width ?: screen.x,
+                        targetHeight = layout?.height ?: screen.y,
                         settings = settings,
                     ) { progress ->
                         _state.update { it.copy(applyProgress = progress) }
@@ -313,7 +321,7 @@ internal class WallpaperEditorViewModel(
                 }
                 finalBitmap = rendered
                 _state.update { it.copy(applyProgress = 96) }
-                finish(rendered)
+                finish(rendered, layout)
                 rendered.recycle()
                 finalBitmap = null
                 _state.update {

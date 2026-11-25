@@ -2,6 +2,7 @@ package com.dannx.walls
 
 import com.dannx.walls.data.LiveMotion
 import com.dannx.walls.wallpaper.LiveWallpaperGeometry
+import kotlin.math.abs
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -36,13 +37,15 @@ class LiveWallpaperGeometryTest {
 
     @Test
     fun `la foto nitida recorre el ancho acordado`() {
+        // En la primera página el fondo muestra su lado izquierdo y la capa se
+        // corre a la derecha; en la última, al revés.
         assertEquals(
-            -1080f * LiveWallpaperGeometry.ForegroundShift,
+            1080f * LiveWallpaperGeometry.ForegroundShift,
             LiveWallpaperGeometry.shift(1080f, 0f, LiveWallpaperGeometry.ForegroundShift),
             delta,
         )
         assertEquals(
-            1080f * LiveWallpaperGeometry.ForegroundShift,
+            -1080f * LiveWallpaperGeometry.ForegroundShift,
             LiveWallpaperGeometry.shift(1080f, 1f, LiveWallpaperGeometry.ForegroundShift),
             delta,
         )
@@ -54,8 +57,8 @@ class LiveWallpaperGeometryTest {
             LiveWallpaperGeometry.shift(1080f, 1f, LiveWallpaperGeometry.ForegroundShift)
         val backdrop =
             LiveWallpaperGeometry.shift(1080f, 1f, LiveWallpaperGeometry.BackgroundShift)
-        assertTrue(backdrop > 0f)
-        assertTrue(backdrop < foreground)
+        assertTrue(backdrop < 0f)
+        assertTrue(abs(backdrop) < abs(foreground))
     }
 
     @Test
@@ -118,17 +121,21 @@ class LiveWallpaperGeometryTest {
 
     @Test
     fun `suave recorre menos que normal`() {
-        val subtle = LiveWallpaperGeometry.shift(
-            1080f,
-            1f,
-            LiveWallpaperGeometry.ForegroundShift,
-            LiveMotion.SUBTLE,
+        val subtle = abs(
+            LiveWallpaperGeometry.shift(
+                1080f,
+                1f,
+                LiveWallpaperGeometry.ForegroundShift,
+                LiveMotion.SUBTLE,
+            ),
         )
-        val normal = LiveWallpaperGeometry.shift(
-            1080f,
-            1f,
-            LiveWallpaperGeometry.ForegroundShift,
-            LiveMotion.NORMAL,
+        val normal = abs(
+            LiveWallpaperGeometry.shift(
+                1080f,
+                1f,
+                LiveWallpaperGeometry.ForegroundShift,
+                LiveMotion.NORMAL,
+            ),
         )
         assertTrue(subtle > 0f)
         assertTrue(subtle < normal)

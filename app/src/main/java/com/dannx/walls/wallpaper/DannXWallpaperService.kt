@@ -14,6 +14,7 @@ import android.graphics.Shader
 import android.os.Handler
 import android.os.Looper
 import android.service.wallpaper.WallpaperService
+import android.view.Choreographer
 import android.view.SurfaceHolder
 import com.dannx.walls.data.AppearancePrefs
 import com.dannx.walls.data.LiveMotion
@@ -21,7 +22,10 @@ import com.dannx.walls.ui.editor.EditorBlur
 import java.io.File
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
+import kotlin.math.abs
+import kotlin.math.exp
 import kotlin.math.max
+import kotlin.math.roundToInt
 
 /**
  * Fondo animado de DannX: la foto nítida se corre sobre una copia
@@ -42,8 +46,7 @@ class DannXWallpaperService : WallpaperService() {
         }
         private val paint = Paint(Paint.FILTER_BITMAP_FLAG or Paint.DITHER_FLAG)
         private val fallbackPaint = Paint()
-        private val backdropDst = RectF()
-        private val foregroundDst = RectF()
+        private val layerDst = RectF()
         private var fallbackWidth = 0
         private var fallbackHeight = 0
 
@@ -56,6 +59,51 @@ class DannXWallpaperService : WallpaperService() {
         private var xOffset = 0.5f
         private var moves = true
         private var motion: LiveMotion = LiveMotion.NORMAL
+        private var displayOffset = 0.5f
+        private var frameScheduled = false
+        private var lastFrameNanos = 0L
+
+        /**
+         * El launcher puede mandar muchos offsets por segundo. Se guarda el
+         * último y se dibuja una sola vez por frame, acercando la posición
+         * dibujada a la real. Eso suaviza los launchers que informan saltos y
+         * evita encolar dibujos que después se ven como tirones.
+         */
+        private val frameCallback = Choreographer.FrameCallback { frameTimeNanos ->
+            frameScheduled = false
+            if (!visible || destroyed) return@FrameCallback
+            if (!moves || motion == LiveMotion.STILL) {
+                displayOffset = xOffset
+                drawFrame()
+                return@FrameCallback
+            }
+            val diff = xOffset - displayOffset
+            if (abs(diff) <= OffsetEpsilon) {
+                displayOffset = xOffset
+                lastFrameNanos = 0L
+                drawFrame()
+                return@FrameCallback
+            }
+            val elapsed = if (lastFrameNanos == 0L) {
+                NominalFrameMillis
+            } else {
+                ((frameTimeNanos - lastFrameNanos) / 1_000_000.0).coerceIn(1.0, 64.0)
+            }
+            lastFrameNanos = frameTimeNanos
+            val alpha = (1.0 - exp(-elapsed / SmoothingTauMillis))
+                .toFloat()
+                .coerceIn(0.05f, 1f)
+            displayOffset += diff * alpha
+            drawFrame()
+            scheduleMotion()
+        }
+
+        private fun scheduleMotion() {
+            if (!visible || destroyed || frameScheduled) return
+            if (!moves || motion == LiveMotion.STILL) return
+            frameScheduled = true
+            Choreographer.getInstance().postFrameCallback(frameCallback)
+        }
 
         private val prefsListener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
             if (key == LiveWallpaperStore.KEY_VERSION) reload()
@@ -107,6 +155,9 @@ class DannXWallpaperService : WallpaperService() {
             if (visible) {
                 moves = motionAllowed()
                 refreshMotion()
+                // Al volver no se anima desde una posición vieja: se entra
+                // directo a la que dejó el launcher.
+                displayOffset = xOffset
                 drawFrame()
             }
         }
@@ -171,8 +222,8 @@ class DannXWallpaperService : WallpaperService() {
                 yPixelOffset,
             )
             this.xOffset = xOffset
-            // Quieto no necesita repintar por cada desplazamiento del launcher.
-            if (moves && motion != LiveMotion.STILL) drawFrame()
+            // Quieto o lite no cambian el frame: no hay que repintar.
+            scheduleMotion()
         }
 
         /** Relee la foto guardada y arma las dos capas fuera del hilo principal. */
@@ -202,13 +253,50 @@ class DannXWallpaperService : WallpaperService() {
         }
 
         private fun buildLayers(file: File, targetWidth: Int, targetHeight: Int): Layers? {
-            val foreground = decodeCover(file, targetWidth, targetHeight) ?: return null
-            val backdrop = runCatching { createBackdrop(foreground) }.getOrNull()
+            val decoded = decodeCover(file, targetWidth, targetHeight) ?: return null
+            val foreground = coverTo(decoded, targetWidth, targetHeight)
+            val backdrop = runCatching { createBackdrop(foreground, targetWidth, targetHeight) }
+                .getOrNull()
             if (backdrop == null) {
                 foreground.recycle()
                 return null
             }
             return Layers(foreground, backdrop)
+        }
+
+        /**
+         * Escala y recorta una sola vez al tamaño de la pantalla. El dibujo por
+         * frame queda como una copia de píxeles, sin filtros ni escalados.
+         * Se mantiene la proporción: lo que sobra se recorta centrado.
+         */
+        private fun coverTo(source: Bitmap, targetWidth: Int, targetHeight: Int): Bitmap {
+            if (source.width == targetWidth && source.height == targetHeight) return source
+            val output = Bitmap.createBitmap(targetWidth, targetHeight, Bitmap.Config.ARGB_8888)
+            val canvas = Canvas(output)
+            val scale = max(
+                targetWidth / source.width.toFloat(),
+                targetHeight / source.height.toFloat(),
+            )
+            val drawWidth = source.width * scale
+            val drawHeight = source.height * scale
+            val left = (targetWidth - drawWidth) / 2f
+            val top = (targetHeight - drawHeight) / 2f
+            canvas.drawBitmap(
+                source,
+                null,
+                RectF(left, top, left + drawWidth, top + drawHeight),
+                Paint(Paint.FILTER_BITMAP_FLAG),
+            )
+            source.recycle()
+            return output
+        }
+
+        /** Escala una capa ya calculada; se usa al cargar, no por frame. */
+        private fun scaleTo(source: Bitmap, width: Int, height: Int): Bitmap {
+            if (source.width == width && source.height == height) return source
+            val scaled = Bitmap.createScaledBitmap(source, width, height, true)
+            if (scaled !== source) source.recycle()
+            return scaled
         }
 
         private fun decodeCover(file: File, targetWidth: Int, targetHeight: Int): Bitmap? {
@@ -231,7 +319,11 @@ class DannXWallpaperService : WallpaperService() {
         }
 
         /** Copia chica y desenfocada: solo asoma por los costados que descubre la foto. */
-        private fun createBackdrop(source: Bitmap): Bitmap {
+        private fun createBackdrop(
+            source: Bitmap,
+            targetWidth: Int,
+            targetHeight: Int,
+        ): Bitmap {
             val backdropWidth = (source.width / BackdropDivisor).coerceAtLeast(16)
             val backdropHeight = (source.height * backdropWidth / source.width)
                 .coerceAtLeast(16)
@@ -245,24 +337,39 @@ class DannXWallpaperService : WallpaperService() {
                 height = backdropHeight,
                 radius = max(2, backdropWidth / 18),
             )
-            return Bitmap.createBitmap(
+            val blurred = Bitmap.createBitmap(
                 pixels,
                 backdropWidth,
                 backdropHeight,
                 Bitmap.Config.ARGB_8888,
             )
+            val scaledWidth = (targetWidth * (1f + LiveWallpaperGeometry.BackgroundSlack))
+                .roundToInt()
+                .coerceAtLeast(1)
+            val scaledHeight = (targetHeight * (1f + LiveWallpaperGeometry.BackgroundSlack))
+                .roundToInt()
+                .coerceAtLeast(1)
+            return scaleTo(blurred, scaledWidth, scaledHeight)
         }
 
         private fun drawFrame() {
             if (!visible || destroyed || width <= 0 || height <= 0) return
             val holder = surfaceHolder ?: return
-            val canvas: Canvas = runCatching { holder.lockCanvas() }.getOrNull() ?: return
+            val canvas: Canvas = lockSurface(holder) ?: return
             try {
                 draw(canvas)
             } finally {
                 runCatching { holder.unlockCanvasAndPost(canvas) }
             }
         }
+
+        /**
+         * El canvas acelerado evita que cada copia de la foto pase por el
+         * renderer por software. Si el surface no lo admite, se cae al normal.
+         */
+        private fun lockSurface(holder: SurfaceHolder): Canvas? =
+            runCatching { holder.lockHardwareCanvas() }.getOrNull()
+                ?: runCatching { holder.lockCanvas() }.getOrNull()
 
         private fun draw(canvas: Canvas) {
             val surfaceWidth = width.toFloat()
@@ -273,57 +380,51 @@ class DannXWallpaperService : WallpaperService() {
                 drawFallback(canvas, surfaceWidth, surfaceHeight)
                 return
             }
-            val foreground = current.foreground
-            val scale = LiveWallpaperGeometry.coverScale(
-                sourceWidth = foreground.width,
-                sourceHeight = foreground.height,
-                targetWidth = surfaceWidth,
-                targetHeight = surfaceHeight,
-            )
-            if (scale <= 0f) return
-            val foregroundWidth = foreground.width * scale
-            val foregroundHeight = foreground.height * scale
             val activeMotion = if (moves) motion else LiveMotion.STILL
+            drawLayer(
+                canvas = canvas,
+                bitmap = current.backdrop,
+                surfaceWidth = surfaceWidth,
+                surfaceHeight = surfaceHeight,
+                fraction = LiveWallpaperGeometry.BackgroundShift,
+                motion = activeMotion,
+            )
+            drawLayer(
+                canvas = canvas,
+                bitmap = current.foreground,
+                surfaceWidth = surfaceWidth,
+                surfaceHeight = surfaceHeight,
+                fraction = LiveWallpaperGeometry.ForegroundShift,
+                motion = activeMotion,
+            )
+        }
+
+        /** Dibuja una capa ya preescalada: solo se mueve, no se vuelve a escalar. */
+        private fun drawLayer(
+            canvas: Canvas,
+            bitmap: Bitmap,
+            surfaceWidth: Float,
+            surfaceHeight: Float,
+            fraction: Float,
+            motion: LiveMotion,
+        ) {
+            val layerWidth = bitmap.width.toFloat()
+            val layerHeight = bitmap.height.toFloat()
+            if (layerWidth <= 0f || layerHeight <= 0f) return
             val shift = LiveWallpaperGeometry.shift(
                 surfaceWidth,
-                xOffset,
-                LiveWallpaperGeometry.ForegroundShift,
-                activeMotion,
+                displayOffset,
+                fraction,
+                motion,
             )
             val centerX = surfaceWidth / 2f + shift
-            foregroundDst.set(
-                centerX - foregroundWidth / 2f,
-                (surfaceHeight - foregroundHeight) / 2f,
-                centerX + foregroundWidth / 2f,
-                (surfaceHeight + foregroundHeight) / 2f,
+            layerDst.set(
+                centerX - layerWidth / 2f,
+                (surfaceHeight - layerHeight) / 2f,
+                centerX + layerWidth / 2f,
+                (surfaceHeight + layerHeight) / 2f,
             )
-
-            val backdrop = current.backdrop
-            val backdropScale = LiveWallpaperGeometry.coverScale(
-                sourceWidth = backdrop.width,
-                sourceHeight = backdrop.height,
-                targetWidth = surfaceWidth * (1f + LiveWallpaperGeometry.BackgroundSlack),
-                targetHeight = surfaceHeight * (1f + LiveWallpaperGeometry.BackgroundSlack),
-            )
-            if (backdropScale > 0f) {
-                val backdropWidth = backdrop.width * backdropScale
-                val backdropHeight = backdrop.height * backdropScale
-                val backdropShift = LiveWallpaperGeometry.shift(
-                    surfaceWidth,
-                    xOffset,
-                    LiveWallpaperGeometry.BackgroundShift,
-                    activeMotion,
-                )
-                val backdropCenterX = surfaceWidth / 2f + backdropShift
-                backdropDst.set(
-                    backdropCenterX - backdropWidth / 2f,
-                    (surfaceHeight - backdropHeight) / 2f,
-                    backdropCenterX + backdropWidth / 2f,
-                    (surfaceHeight + backdropHeight) / 2f,
-                )
-                canvas.drawBitmap(backdrop, null, backdropDst, paint)
-            }
-            canvas.drawBitmap(foreground, null, foregroundDst, paint)
+            canvas.drawBitmap(bitmap, null, layerDst, paint)
         }
 
         /**
@@ -370,6 +471,16 @@ class DannXWallpaperService : WallpaperService() {
     private companion object {
         /** La copia de fondo se calcula enana: el desenfoque oculta el detalle. */
         const val BackdropDivisor = 8
+
+        /** Diferencia mínima para considerar que el fondo llegó al destino. */
+        const val OffsetEpsilon = 0.001f
+
+        /** Duración típica de un frame; se usa solo en el primero del gesto. */
+        const val NominalFrameMillis = 16.0
+
+        /** Constante del suavizado: con ~42 ms alcanza el destino en ~150 ms. */
+        const val SmoothingTauMillis = 42.0
+
         val FallbackTop: Int = Color.rgb(30, 32, 38)
         val FallbackBottom: Int = Color.rgb(8, 8, 10)
     }

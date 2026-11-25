@@ -47,7 +47,16 @@ enum class WallpaperTarget {
  * real del dispositivo ni depender de permisos especiales.
  */
 interface WallpaperApplier {
-    fun apply(bitmap: Bitmap, target: WallpaperTarget): WallpaperTarget
+    /**
+     * [cropHint] marca la porción visible del bitmap cuando este es más ancho
+     * que la pantalla; el resto queda como margen para que el launcher lo
+     * desplace.
+     */
+    fun apply(
+        bitmap: Bitmap,
+        target: WallpaperTarget,
+        cropHint: Rect? = null,
+    ): WallpaperTarget
 }
 
 /**
@@ -55,20 +64,24 @@ interface WallpaperApplier {
  * modificar en este teléfono, cae a la pantalla de inicio.
  */
 class AndroidWallpaperApplier(private val context: Context) : WallpaperApplier {
-    override fun apply(bitmap: Bitmap, target: WallpaperTarget): WallpaperTarget {
+    override fun apply(
+        bitmap: Bitmap,
+        target: WallpaperTarget,
+        cropHint: Rect?,
+    ): WallpaperTarget {
         val manager = WallpaperManager.getInstance(context)
         return when (target) {
             WallpaperTarget.SYSTEM -> {
-                manager.setBitmap(bitmap, null, true, WallpaperManager.FLAG_SYSTEM)
+                manager.setBitmap(bitmap, cropHint, true, WallpaperManager.FLAG_SYSTEM)
                 WallpaperTarget.SYSTEM
             }
 
             WallpaperTarget.LOCK -> {
                 try {
-                    manager.setBitmap(bitmap, null, true, WallpaperManager.FLAG_LOCK)
+                    manager.setBitmap(bitmap, cropHint, true, WallpaperManager.FLAG_LOCK)
                     WallpaperTarget.LOCK
                 } catch (error: Exception) {
-                    manager.setBitmap(bitmap, null, true, WallpaperManager.FLAG_SYSTEM)
+                    manager.setBitmap(bitmap, cropHint, true, WallpaperManager.FLAG_SYSTEM)
                     WallpaperTarget.SYSTEM
                 }
             }
@@ -77,15 +90,15 @@ class AndroidWallpaperApplier(private val context: Context) : WallpaperApplier {
                 try {
                     manager.setBitmap(
                         bitmap,
-                        null,
+                        cropHint,
                         true,
                         WallpaperManager.FLAG_SYSTEM or WallpaperManager.FLAG_LOCK,
                     )
                     WallpaperTarget.BOTH
                 } catch (error: Exception) {
-                    manager.setBitmap(bitmap, null, true, WallpaperManager.FLAG_SYSTEM)
+                    manager.setBitmap(bitmap, cropHint, true, WallpaperManager.FLAG_SYSTEM)
                     try {
-                        manager.setBitmap(bitmap, null, true, WallpaperManager.FLAG_LOCK)
+                        manager.setBitmap(bitmap, cropHint, true, WallpaperManager.FLAG_LOCK)
                         WallpaperTarget.BOTH
                     } catch (lockError: Exception) {
                         WallpaperTarget.SYSTEM
@@ -292,14 +305,15 @@ class WallpaperFiles(
         wallpaper: Wallpaper,
         target: WallpaperTarget,
     ): WallpaperTarget = withContext(Dispatchers.IO) {
-        val size = wallpaperTargetSize(context)
+        val screen = wallpaperTargetSize(context)
+        val layout = staticWallpaperLayout(screen.x, screen.y)
         val folder = File(context.cacheDir, "wallpaper-tmp").apply { mkdirs() }
         val temp = File(folder, "${wallpaper.id}-${System.currentTimeMillis()}.img")
         try {
             downloadToFile(wallpaper, temp)
-            val bitmap = decodeCroppedBitmap(temp, size.x, size.y)
+            val bitmap = decodeCroppedBitmap(temp, layout.width, layout.height)
             try {
-                applier.apply(bitmap, target)
+                applier.apply(bitmap, target, layout.cropHint())
             } finally {
                 bitmap.recycle()
             }
@@ -332,7 +346,8 @@ class WallpaperFiles(
      * poder recortarla por regiones sin cargar la foto completa en memoria.
      */    suspend fun setAsWallpaper(uri: Uri, target: WallpaperTarget): WallpaperTarget =
         withContext(Dispatchers.IO) {
-            val size = wallpaperTargetSize(context)
+            val screen = wallpaperTargetSize(context)
+            val layout = staticWallpaperLayout(screen.x, screen.y)
             val folder = File(context.cacheDir, "wallpaper-tmp").apply { mkdirs() }
             val temp = File(folder, "shared-${System.currentTimeMillis()}.img")
             try {
@@ -341,9 +356,9 @@ class WallpaperFiles(
                 input.use { source ->
                     temp.outputStream().use { output -> source.copyTo(output) }
                 }
-                val bitmap = decodeCroppedBitmap(temp, size.x, size.y)
+                val bitmap = decodeCroppedBitmap(temp, layout.width, layout.height)
                 try {
-                    applier.apply(bitmap, target)
+                    applier.apply(bitmap, target, layout.cropHint())
                 } finally {
                     bitmap.recycle()
                 }
@@ -384,8 +399,9 @@ class WallpaperFiles(
     suspend fun applyEditedWallpaper(
         bitmap: Bitmap,
         target: WallpaperTarget,
+        cropHint: Rect? = null,
     ): WallpaperTarget = withContext(Dispatchers.IO) {
-        applier.apply(bitmap, target)
+        applier.apply(bitmap, target, cropHint)
     }
 
     /**

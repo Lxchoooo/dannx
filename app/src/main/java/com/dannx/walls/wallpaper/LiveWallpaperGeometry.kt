@@ -35,14 +35,20 @@ object LiveWallpaperGeometry {
     fun normalizedOffset(xOffset: Float): Float =
         ((xOffset - 0.5f) * 2f).coerceIn(-1f, 1f)
 
-    /** Desplazamiento en píxeles para una capa con la fracción indicada. */
+    /**
+     * Desplazamiento en píxeles para una capa con la fracción indicada.
+     *
+     * El signo acompaña al contenido: al avanzar a la página siguiente el
+     * launcher sube `xOffset` y la capa se corre hacia la izquierda, más lento
+     * que la pantalla. Así el fondo no se siente como un reflejo invertido.
+     */
     fun shift(
         surfaceWidth: Float,
         xOffset: Float,
         fraction: Float,
         motion: LiveMotion = LiveMotion.NORMAL,
     ): Float =
-        normalizedOffset(xOffset) * max(surfaceWidth, 0f) * fraction * weight(motion)
+        -normalizedOffset(xOffset) * max(surfaceWidth, 0f) * fraction * weight(motion)
 
     /** Escala que hace entrar la foto completa cubriendo el destino. */
     fun coverScale(
