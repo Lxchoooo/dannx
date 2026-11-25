@@ -111,18 +111,30 @@ class DannXWallpaperService : WallpaperService() {
 
         /**
          * La intensidad y el modo lite se aplican en caliente: alcanza con
-         * volver a dibujar, no hace falta recargar la foto.
+         * redibujar o retomar el movimiento, sin recargar la foto.
          */
         private val appearanceListener =
             SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
                 when (key) {
                     AppearancePrefs.KEY_LIVE_MOTION -> {
                         refreshMotion()
-                        drawFrame()
+                        // Al volver de Quieto se persigue la posición real en
+                        // vez de saltar; si queda quieto, se centra de una.
+                        if (moves && motion != LiveMotion.STILL) {
+                            scheduleMotion()
+                        } else {
+                            displayOffset = xOffset
+                            drawFrame()
+                        }
                     }
                     AppearancePrefs.KEY_LITE -> {
                         moves = motionAllowed()
-                        drawFrame()
+                        if (moves) {
+                            scheduleMotion()
+                        } else {
+                            displayOffset = xOffset
+                            drawFrame()
+                        }
                     }
                 }
             }
@@ -140,7 +152,9 @@ class DannXWallpaperService : WallpaperService() {
 
         override fun onDestroy() {
             destroyed = true
+            frameScheduled = false
             runCatching {
+                Choreographer.getInstance().removeFrameCallback(frameCallback)
                 LiveWallpaperStore.prefs(applicationContext)
                     .unregisterOnSharedPreferenceChangeListener(prefsListener)
                 appearancePrefs().unregisterOnSharedPreferenceChangeListener(appearanceListener)
