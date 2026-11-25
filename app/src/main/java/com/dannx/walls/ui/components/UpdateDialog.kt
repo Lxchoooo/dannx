@@ -1,5 +1,6 @@
 package com.dannx.walls.ui.components
 
+import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -25,6 +26,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.dannx.walls.R
 import com.dannx.walls.data.update.ReleaseInfo
+import com.dannx.walls.ui.theme.LocalReduceMotion
+import com.dannx.walls.ui.theme.Motion
 import com.dannx.walls.ui.update.UpdateState
 
 /**
@@ -67,11 +70,13 @@ fun UpdateDialog(
         },
         title = { Text(title) },
         text = {
+            val reduceMotion = LocalReduceMotion.current
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
                     .heightIn(max = 380.dp)
-                    .verticalScroll(rememberScrollState()),
+                    .verticalScroll(rememberScrollState())
+                    .animateContentSize(animationSpec = Motion.spatial(reduceMotion)),
             ) {
                 when (state) {
                     UpdateState.Idle, UpdateState.Checking -> {

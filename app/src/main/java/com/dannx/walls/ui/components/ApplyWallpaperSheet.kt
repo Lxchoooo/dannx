@@ -1,6 +1,7 @@
 package com.dannx.walls.ui.components
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -30,6 +31,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.dannx.walls.R
 import com.dannx.walls.util.WallpaperTarget
+import com.dannx.walls.ui.theme.LocalReduceMotion
+import com.dannx.walls.ui.theme.Motion
 
 /** Selector de destino reutilizado por la ficha y por el editor. */
 @OptIn(ExperimentalMaterial3Api::class)
@@ -47,10 +50,12 @@ fun ApplyWallpaperSheet(
             ),
             contentColor = MaterialTheme.colorScheme.onSurface,
         ) {
+            val reduceMotion = LocalReduceMotion.current
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
                     .verticalScroll(rememberScrollState())
+                    .animateContentSize(animationSpec = Motion.spatial(reduceMotion))
                     .padding(horizontal = 20.dp)
                     .padding(bottom = 28.dp),
             ) {

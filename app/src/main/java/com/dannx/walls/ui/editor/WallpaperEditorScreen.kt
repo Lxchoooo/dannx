@@ -66,7 +66,6 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.LoadingIndicator
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
@@ -112,6 +111,7 @@ import androidx.annotation.StringRes
 import com.dannx.walls.R
 import com.dannx.walls.data.Wallpaper
 import com.dannx.walls.ui.components.ApplyWallpaperSheet
+import com.dannx.walls.ui.components.ExpressiveFilterChip
 import com.dannx.walls.ui.theme.EmphasizedEasing
 import com.dannx.walls.ui.theme.LocalReduceMotion
 import com.dannx.walls.ui.theme.Motion
@@ -1190,7 +1190,7 @@ private fun ToolSelector(selected: EditorTool, onSelect: (EditorTool) -> Unit) {
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         EditorTool.entries.forEach { item ->
-            FilterChip(
+            ExpressiveFilterChip(
                 selected = item == selected,
                 onClick = { onSelect(item) },
                 label = { Text(stringResource(item.labelRes)) },

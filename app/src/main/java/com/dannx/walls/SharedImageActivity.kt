@@ -26,7 +26,6 @@ import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -48,6 +47,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
+import com.dannx.walls.ui.components.ExpressiveFilterChip
 import com.dannx.walls.ui.theme.DannXTheme
 import com.dannx.walls.util.WallpaperFiles
 import com.dannx.walls.util.WallpaperTarget
@@ -135,7 +135,7 @@ private fun SharedImageScreen(imageUris: List<Uri>, onClose: () -> Unit) {
                     verticalArrangement = Arrangement.spacedBy(4.dp),
                 ) {
                     WallpaperTarget.entries.forEach { option ->
-                        FilterChip(
+                        ExpressiveFilterChip(
                             selected = target == option,
                             onClick = { target = option },
                             label = { Text(stringResource(targetLabel(option))) },

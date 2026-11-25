@@ -78,7 +78,6 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilledTonalIconButton
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -123,6 +122,7 @@ import com.dannx.walls.data.WallpaperCollection
 import com.dannx.walls.data.allTags
 import com.dannx.walls.data.collectAllTags
 import com.dannx.walls.data.parseTags
+import com.dannx.walls.ui.components.ExpressiveFilterChip
 import com.dannx.walls.ui.components.animateItemMotion
 import com.dannx.walls.ui.theme.LocalReduceMotion
 import com.dannx.walls.ui.theme.Motion
@@ -1139,7 +1139,7 @@ private fun StudioTabs(
         contentPadding = PaddingValues(end = 12.dp),
     ) {
         items(StudioSection.entries, key = { it.name }) { section ->
-            FilterChip(
+            ExpressiveFilterChip(
                 selected = selected == section,
                 onClick = { onSelect(section) },
                 label = { Text(stringResource(section.labelRes)) },
@@ -1150,7 +1150,6 @@ private fun StudioTabs(
                         modifier = Modifier.size(18.dp),
                     )
                 },
-                shape = CircleShape,
             )
         }
     }
@@ -1419,14 +1418,13 @@ private fun PublishPanel(
                 contentPadding = PaddingValues(end = 12.dp),
             ) {
                 items(categories, key = { it.id.ifBlank { it.name } }) { option ->
-                    FilterChip(
+                    ExpressiveFilterChip(
                         selected = selectedCategory?.name == option.name,
                         onClick = {
                             selectedCategoryId = option.id
                             categoryTouched = true
                         },
                         label = { Text(option.name) },
-                        shape = CircleShape,
                     )
                 }
             }
@@ -1462,11 +1460,10 @@ private fun PublishPanel(
                     contentPadding = PaddingValues(end = 12.dp),
                 ) {
                     item(key = "no-collection") {
-                        FilterChip(
+                        ExpressiveFilterChip(
                             selected = selectedCollectionId.isBlank(),
                             onClick = { selectedCollectionId = "" },
                             label = { Text(stringResource(R.string.studio_no_collection)) },
-                            shape = CircleShape,
                         )
                     }
                     items(
@@ -1474,11 +1471,10 @@ private fun PublishPanel(
                         key = { it.id },
                         contentType = { "collection" },
                     ) { collection ->
-                        FilterChip(
+                        ExpressiveFilterChip(
                             selected = selectedCollectionId == collection.id,
                             onClick = { selectedCollectionId = collection.id },
                             label = { Text(collection.name) },
-                            shape = CircleShape,
                         )
                     }
                 }
@@ -1604,7 +1600,7 @@ private fun LazyListScope.wallsPanel(
                     style = MaterialTheme.typography.headlineMediumEmphasized,
                     modifier = Modifier.weight(1f),
                 )
-                FilterChip(
+                ExpressiveFilterChip(
                     selected = showArchived,
                     onClick = onToggleArchived,
                     label = {
@@ -1627,7 +1623,6 @@ private fun LazyListScope.wallsPanel(
                             modifier = Modifier.size(18.dp),
                         )
                     },
-                    shape = CircleShape,
                 )
                 val reduceMotion = LocalReduceMotion.current
                 IconButton(onClick = onToggleSelectionMode) {
@@ -1824,7 +1819,7 @@ private fun LazyListScope.wallsPanel(
                 contentPadding = PaddingValues(end = 12.dp),
             ) {
                 item(key = "walls-featured-filter") {
-                    FilterChip(
+                    ExpressiveFilterChip(
                         selected = featuredOnly,
                         onClick = { onFeaturedOnlyChange(!featuredOnly) },
                         label = { Text(stringResource(R.string.studio_featured)) },
@@ -1835,23 +1830,21 @@ private fun LazyListScope.wallsPanel(
                                 modifier = Modifier.size(18.dp),
                             )
                         },
-                        shape = CircleShape,
                     )
                 }
                 if (state.categories.isNotEmpty()) {
                     item(key = "walls-all-categories") {
-                        FilterChip(
+                        ExpressiveFilterChip(
                             selected = categoryId == null,
                             onClick = { onCategoryChange(null) },
                             label = { Text(stringResource(R.string.studio_all)) },
-                            shape = CircleShape,
                         )
                     }
                     items(
                         items = state.categories,
                         key = { "walls-category-${it.id}" },
                     ) { category ->
-                        FilterChip(
+                        ExpressiveFilterChip(
                             selected = categoryId == category.id,
                             onClick = {
                                 onCategoryChange(
@@ -1859,7 +1852,6 @@ private fun LazyListScope.wallsPanel(
                                 )
                             },
                             label = { Text(category.name) },
-                            shape = CircleShape,
                         )
                     }
                 }
@@ -1880,11 +1872,10 @@ private fun LazyListScope.wallsPanel(
                     items = StudioWallSort.entries,
                     key = { "walls-sort-${it.name}" },
                 ) { option ->
-                    FilterChip(
+                    ExpressiveFilterChip(
                         selected = sort == option,
                         onClick = { onSortChange(option) },
                         label = { Text(stringResource(option.labelRes)) },
-                        shape = CircleShape,
                     )
                 }
             }
