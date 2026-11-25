@@ -58,11 +58,13 @@ import com.dannx.walls.ui.theme.MotionDuration
 fun FeedSkeleton(modifier: Modifier = Modifier) {
     val lite = LocalLiteMode.current
     val base = MaterialTheme.colorScheme.surfaceVariant
-    val sweep = if (lite) {
+    // Se entrega como función para leer el estado recién en la fase de dibujo:
+    // así el esqueleto no se recompone en cada frame.
+    val sweep: (() -> Float)? = if (lite) {
         null
     } else {
         val transition = rememberInfiniteTransition(label = "feedSkeleton")
-        val value by transition.animateFloat(
+        val value = transition.animateFloat(
             initialValue = 0f,
             targetValue = 1f,
             animationSpec = infiniteRepeatable(
@@ -70,7 +72,8 @@ fun FeedSkeleton(modifier: Modifier = Modifier) {
             ),
             label = "feedSkeletonSweep",
         )
-        value
+        val provider: () -> Float = { value.value }
+        provider
     }
     // Alturas desparejas para que se parezca a la grilla real.
     val heights = listOf(
@@ -112,20 +115,19 @@ fun FeedSkeleton(modifier: Modifier = Modifier) {
 private fun SkeletonBlock(
     modifier: Modifier,
     base: Color,
-    sweep: Float?,
+    sweep: (() -> Float)?,
 ) {
     val highlight = if (base.luminance() > 0.5f) {
         Color.White.copy(alpha = 0.55f)
     } else {
         Color.White.copy(alpha = 0.14f)
     }
-    val shimmer = if (sweep == null) {
-        Modifier
-    } else {
+    val shimmer = sweep?.let { progressOf ->
         Modifier.drawBehind {
+            val progress = progressOf()
             val band = size.width * 0.9f
             val travel = size.width + band * 2f
-            val x = -band + sweep * travel
+            val x = -band + progress * travel
             drawRect(
                 brush = Brush.linearGradient(
                     colors = listOf(Color.Transparent, highlight, Color.Transparent),
@@ -134,7 +136,7 @@ private fun SkeletonBlock(
                 ),
             )
         }
-    }
+    } ?: Modifier
     Box(
         modifier = modifier
             .clip(RoundedCornerShape(22.dp))
