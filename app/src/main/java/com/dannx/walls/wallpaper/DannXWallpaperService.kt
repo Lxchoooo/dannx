@@ -58,6 +58,7 @@ class DannXWallpaperService : WallpaperService() {
         private var height = 0
         private var xOffset = 0.5f
         private var moves = true
+        private var animatorsEnabled = true
         private var motion: LiveMotion = LiveMotion.NORMAL
         private var displayOffset = 0.5f
         private var frameScheduled = false
@@ -127,21 +128,14 @@ class DannXWallpaperService : WallpaperService() {
                             drawFrame()
                         }
                     }
-                    AppearancePrefs.KEY_LITE -> {
-                        moves = motionAllowed()
-                        if (moves) {
-                            scheduleMotion()
-                        } else {
-                            displayOffset = xOffset
-                            drawFrame()
-                        }
-                    }
+                    AppearancePrefs.KEY_LITE -> syncMotion()
                 }
             }
 
         override fun onCreate(surfaceHolder: SurfaceHolder) {
             super.onCreate(surfaceHolder)
             setOffsetNotificationsEnabled(true)
+            animatorsEnabled = ValueAnimator.areAnimatorsEnabled()
             moves = motionAllowed()
             refreshMotion()
             LiveWallpaperStore.prefs(applicationContext)
@@ -167,6 +161,9 @@ class DannXWallpaperService : WallpaperService() {
         override fun onVisibilityChanged(visible: Boolean) {
             this.visible = visible
             if (visible) {
+                // El usuario pudo apagar las animaciones del sistema mientras
+                // el fondo estaba oculto.
+                animatorsEnabled = ValueAnimator.areAnimatorsEnabled()
                 moves = motionAllowed()
                 refreshMotion()
                 // Al volver no se anima desde una posición vieja: se entra
@@ -186,10 +183,26 @@ class DannXWallpaperService : WallpaperService() {
             motion = AppearancePrefs(applicationContext).liveMotion()
         }
 
-        /** Lite o animaciones del sistema apagadas: la foto queda quieta. */
+        /**
+         * Lite, o animaciones del sistema apagadas, dejan la foto quieta.
+         * La escala del sistema se guarda en un campo para no leerla en cada
+         * frame; se refresca al mostrar el fondo y cuando cambia el ajuste.
+         */
         private fun motionAllowed(): Boolean =
-            !AppearancePrefs(applicationContext).liteMode() &&
-                ValueAnimator.areAnimatorsEnabled()
+            !AppearancePrefs(applicationContext).liteMode() && animatorsEnabled
+
+        /** Aplica el cambio de "hay movimiento" sin saltos ni repintados de más. */
+        private fun syncMotion() {
+            val allowed = motionAllowed()
+            if (allowed == moves) return
+            moves = allowed
+            if (allowed) {
+                scheduleMotion()
+            } else {
+                displayOffset = xOffset
+                drawFrame()
+            }
+        }
 
         override fun onSurfaceCreated(holder: SurfaceHolder) {
             super.onSurfaceCreated(holder)
@@ -236,6 +249,13 @@ class DannXWallpaperService : WallpaperService() {
                 yPixelOffset,
             )
             this.xOffset = xOffset
+            // Con el fondo ya en pantalla, apagar las animaciones del sistema no
+            // recrea el servicio: se detecta acá y se frena en el acto.
+            val enabled = ValueAnimator.areAnimatorsEnabled()
+            if (enabled != animatorsEnabled) {
+                animatorsEnabled = enabled
+                syncMotion()
+            }
             // Quieto o lite no cambian el frame: no hay que repintar.
             scheduleMotion()
         }
