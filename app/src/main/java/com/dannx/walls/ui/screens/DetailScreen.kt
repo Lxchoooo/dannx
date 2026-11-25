@@ -3,6 +3,8 @@ package com.dannx.walls.ui.screens
 import android.text.format.DateFormat as AndroidDateFormat
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.LocalActivity
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
@@ -141,6 +143,7 @@ import com.dannx.walls.util.WallpaperTarget
 import com.dannx.walls.util.ZoomState
 import com.dannx.walls.util.clampPan
 import com.dannx.walls.util.clampScale
+import com.dannx.walls.wallpaper.LiveWallpaperStore
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.time.LocalDateTime
@@ -173,11 +176,14 @@ fun DetailScreen(
     alreadyDownloaded: Boolean = false,
     offline: Boolean = false,
     openEditorOnApply: Boolean = true,
+    liveReadyTick: Int = 0,
     onBack: () -> Unit,
     onToggleFavorite: () -> Unit,
     onDownload: () -> Unit,
     onOpenEditor: () -> Unit,
     onSetWallpaper: (WallpaperTarget) -> Unit,
+    onSetLiveWallpaper: () -> Unit = {},
+    onLiveWallpaperApplied: () -> Unit = {},
     onShare: () -> Unit,
     onCancelAction: () -> Unit,
     onOpenFile: (String) -> Unit,
@@ -245,6 +251,28 @@ fun DetailScreen(
             delay(800)
             if (applyPhase == ApplyPhase.Loading) applyPhase = ApplyPhase.Idle
         }
+    }
+
+    val appContext = LocalContext.current
+    val liveStore = remember(appContext) { LiveWallpaperStore(appContext) }
+    var seenLiveTick by remember { mutableIntStateOf(liveReadyTick) }
+    val liveLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult(),
+    ) {
+        // El selector no devuelve un resultado confiable: al volver se
+        // consulta qué fondo animado quedó puesto.
+        if (liveStore.isActive()) {
+            applyPhase = ApplyPhase.Loading
+            onLiveWallpaperApplied()
+        } else {
+            applyPhase = ApplyPhase.Idle
+        }
+    }
+    LaunchedEffect(liveReadyTick) {
+        if (liveReadyTick <= seenLiveTick) return@LaunchedEffect
+        seenLiveTick = liveReadyTick
+        val opened = runCatching { liveLauncher.launch(liveStore.chooserIntent()) }.isSuccess
+        if (!opened) applyPhase = ApplyPhase.Idle
     }
     var entered by remember { mutableStateOf(false) }
     var fullImageLoaded by remember(wallpaper.id) { mutableStateOf(false) }
@@ -875,6 +903,11 @@ fun DetailScreen(
                 showApplySheet = false
                 applyPhase = ApplyPhase.Loading
                 onSetWallpaper(target)
+            },
+            onPickLive = {
+                showApplySheet = false
+                applyPhase = ApplyPhase.Loading
+                onSetLiveWallpaper()
             },
         )
     }

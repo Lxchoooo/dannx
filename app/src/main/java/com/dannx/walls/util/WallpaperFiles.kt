@@ -23,6 +23,7 @@ import com.dannx.walls.R
 import com.dannx.walls.data.Wallpaper
 import com.dannx.walls.data.WallsApi
 import com.dannx.walls.data.WallpaperActions
+import com.dannx.walls.wallpaper.LiveWallpaperStore
 import java.io.File
 import java.io.IOException
 import java.util.concurrent.TimeUnit
@@ -307,11 +308,29 @@ class WallpaperFiles(
         }
     }
 
+    /** Deja la foto recortada en el almacén que dibuja el fondo animado. */
+    override suspend fun prepareLiveWallpaper(wallpaper: Wallpaper) =
+        withContext(Dispatchers.IO) {
+            val size = wallpaperTargetSize(context)
+            val folder = File(context.cacheDir, "wallpaper-tmp").apply { mkdirs() }
+            val temp = File(folder, "${wallpaper.id}-live-${System.currentTimeMillis()}.img")
+            try {
+                downloadToFile(wallpaper, temp)
+                val bitmap = decodeCroppedBitmap(temp, size.x, size.y)
+                try {
+                    LiveWallpaperStore(context).save(bitmap)
+                } finally {
+                    bitmap.recycle()
+                }
+            } finally {
+                temp.delete()
+            }
+        }
+
     /**
      * Aplica una imagen que llegó desde otra app. Se copia a un temporal para
      * poder recortarla por regiones sin cargar la foto completa en memoria.
-     */
-    suspend fun setAsWallpaper(uri: Uri, target: WallpaperTarget): WallpaperTarget =
+     */    suspend fun setAsWallpaper(uri: Uri, target: WallpaperTarget): WallpaperTarget =
         withContext(Dispatchers.IO) {
             val size = wallpaperTargetSize(context)
             val folder = File(context.cacheDir, "wallpaper-tmp").apply { mkdirs() }

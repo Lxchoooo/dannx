@@ -3349,6 +3349,35 @@ class MainViewModel(
     }
 
     /**
+     * Deja lista la foto del fondo animado. El selector del sistema se abre
+     * desde la ficha, que es la única que puede lanzar una actividad.
+     */
+    fun prepareLiveWallpaper(wallpaper: Wallpaper) {
+        val token = beginAction(UiAction.APPLY)
+        actionJob = viewModelScope.launch {
+            try {
+                actions.prepareLiveWallpaper(wallpaper)
+                if (token != actionToken) return@launch
+                finishAction(token)
+                _state.update { it.copy(liveReadyTick = it.liveReadyTick + 1) }
+            } catch (error: CancellationException) {
+                finishAction(token)
+                throw error
+            } catch (error: Exception) {
+                finishAction(token)
+                if (token == actionToken) {
+                    _state.update {
+                        it.copy(
+                            message = strings.get(R.string.msg_apply_failed),
+                            messageAction = null,
+                        )
+                    }
+                }
+            }
+        }
+    }
+
+    /**
      * El editor aplica la imagen por su cuenta y avisa acá para mostrar el
      * mismo mensaje que el flujo anterior.
      */

@@ -231,6 +231,13 @@ interface WallpaperActions {
     ): String
 
     suspend fun setAsWallpaper(wallpaper: Wallpaper, target: WallpaperTarget): WallpaperTarget
+
+    /**
+     * Deja la foto lista para el fondo animado del sistema. El selector se
+     * abre desde la interfaz; acá solo se guarda la imagen que dibuja el
+     * servicio.
+     */
+    suspend fun prepareLiveWallpaper(wallpaper: Wallpaper)
     suspend fun prepareShare(wallpaper: Wallpaper): SharedImage
     fun share(image: SharedImage, title: String)
     fun exists(uri: String): Boolean

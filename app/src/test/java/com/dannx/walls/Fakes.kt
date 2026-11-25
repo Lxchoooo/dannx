@@ -448,6 +448,7 @@ class FakeAppCache(private var bytes: Long = 0L) : AppCacheStore {
 class FakeActions : WallpaperActions {
     var savedUri: String? = null
     var appliedTarget: WallpaperTarget? = null
+    val livePreparedIds: MutableList<String> = mutableListOf()
     var shared: Boolean = false
     var sharedImageCount: Int = 0
     var failWith: Throwable? = null
@@ -479,6 +480,12 @@ class FakeActions : WallpaperActions {
         failWith?.let { throw it }
         appliedTarget = target
         return target
+    }
+
+    override suspend fun prepareLiveWallpaper(wallpaper: Wallpaper) {
+        beforeApply?.await()
+        failWith?.let { throw it }
+        livePreparedIds += wallpaper.id
     }
 
     override suspend fun prepareShare(wallpaper: Wallpaper): SharedImage {

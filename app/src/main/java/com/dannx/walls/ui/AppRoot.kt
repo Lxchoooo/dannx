@@ -792,6 +792,7 @@ private fun MainApp(
                                         alreadyDownloaded = wallpaper.id in state.downloadedIds,
                                         offline = state.offline,
                                         openEditorOnApply = state.openEditorOnApply,
+                                        liveReadyTick = state.liveReadyTick,
                                         onBack = {
                                             viewModel.clearWallpaperDetail()
                                             navController.popBackStack()
@@ -804,6 +805,8 @@ private fun MainApp(
                                             }
                                         },
                                         onSetWallpaper = { target -> viewModel.setWallpaper(wallpaper, target) },
+                                        onSetLiveWallpaper = { viewModel.prepareLiveWallpaper(wallpaper) },
+                                        onLiveWallpaperApplied = viewModel::onLiveWallpaperApplied,
                                         onShare = { viewModel.share(wallpaper) },
                                         onCancelAction = { viewModel.cancelAction() },
                                         onOpenFile = { uri ->

@@ -140,6 +140,8 @@ data class UiState(
      * tacto de confirmación (aplicar fondo, crear colección).
      */
     val applyTick: Int = 0,
+    /** Sube cuando la foto del fondo animado está lista para el selector del sistema. */
+    val liveReadyTick: Int = 0,
     val collectionCreatedTick: Int = 0,
     /** Edición en bloque de tags: (fondos editados, total). */
     val bulkProgress: Pair<Int, Int>? = null,
