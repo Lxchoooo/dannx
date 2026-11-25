@@ -70,6 +70,49 @@ class LiveWallpaperGeometryTest {
     }
 
     @Test
+    fun `el fondo desenfocado siempre tapa toda la pantalla`() {
+        // Recorre todas las posiciones posibles del launcher en las tres
+        // intensidades: la copia de fondo nunca puede dejar ver un borde.
+        val width = 1080f
+        val layerWidth = width * (1f + LiveWallpaperGeometry.BackgroundSlack)
+        for (step in 0..40) {
+            val offset = step / 40f
+            for (motion in LiveMotion.entries) {
+                val shift = LiveWallpaperGeometry.shift(
+                    width,
+                    offset,
+                    LiveWallpaperGeometry.BackgroundShift,
+                    motion,
+                )
+                val left = width / 2f + shift - layerWidth / 2f
+                val right = width / 2f + shift + layerWidth / 2f
+                assertTrue("borde izquierdo descubierto: $offset, $motion", left <= 0f)
+                assertTrue("borde derecho descubierto: $offset, $motion", right >= width)
+            }
+        }
+    }
+
+    @Test
+    fun `la foto nitida nunca deja mas hueco que su recorrido`() {
+        val width = 1080f
+        val maxShift = width * LiveWallpaperGeometry.ForegroundShift
+        for (step in 0..40) {
+            val offset = step / 40f
+            for (motion in LiveMotion.entries) {
+                val shift = abs(
+                    LiveWallpaperGeometry.shift(
+                        width,
+                        offset,
+                        LiveWallpaperGeometry.ForegroundShift,
+                        motion,
+                    ),
+                )
+                assertTrue("se corrió de más: $offset, $motion", shift <= maxShift + delta)
+            }
+        }
+    }
+
+    @Test
     fun `la foto cubre el destino sin deformarse`() {
         assertEquals(
             1f,
