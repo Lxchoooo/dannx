@@ -41,6 +41,8 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.dannx.walls.R
@@ -177,6 +179,7 @@ fun EmptyState(
                     text = title,
                     style = MaterialTheme.typography.titleLarge,
                     textAlign = TextAlign.Center,
+                    modifier = Modifier.semantics { heading() },
                 )
             }
         }
@@ -257,28 +260,43 @@ fun ErrorState(
             .padding(vertical = 40.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Icon(
-            imageVector = Icons.Rounded.CloudOff,
-            contentDescription = null,
-            modifier = Modifier.size(42.dp),
-            tint = MaterialTheme.colorScheme.error,
-        )
-        Spacer(Modifier.height(12.dp))
-        Text(
-            text = stringResource(R.string.state_error_title),
-            style = MaterialTheme.typography.titleLarge,
-            textAlign = TextAlign.Center,
-        )
-        Spacer(Modifier.height(6.dp))
-        Text(
-            text = message,
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            textAlign = TextAlign.Center,
-        )
-        Spacer(Modifier.height(16.dp))
-        Button(onClick = onRetry) {
-            Text(stringResource(R.string.state_retry))
+        EmptyStateStage(index = 0) {
+            Icon(
+                imageVector = Icons.Rounded.CloudOff,
+                contentDescription = null,
+                modifier = Modifier.size(42.dp),
+                tint = MaterialTheme.colorScheme.error,
+            )
+        }
+        EmptyStateStage(index = 1) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Spacer(Modifier.height(12.dp))
+                Text(
+                    text = stringResource(R.string.state_error_title),
+                    style = MaterialTheme.typography.titleLarge,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.semantics { heading() },
+                )
+            }
+        }
+        EmptyStateStage(index = 2) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Spacer(Modifier.height(6.dp))
+                Text(
+                    text = message,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center,
+                )
+            }
+        }
+        EmptyStateStage(index = 3) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Spacer(Modifier.height(16.dp))
+                Button(onClick = onRetry) {
+                    Text(stringResource(R.string.state_retry))
+                }
+            }
         }
     }
 }

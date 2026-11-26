@@ -77,6 +77,8 @@ import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.dannx.walls.R
@@ -391,6 +393,7 @@ private fun PageContent(
                     style = MaterialTheme.typography.displayMedium,
                     textAlign = TextAlign.Center,
                     color = MaterialTheme.colorScheme.onBackground,
+                    modifier = Modifier.semantics { heading() },
                 )
             }
             Spacer(Modifier.height(14.dp))

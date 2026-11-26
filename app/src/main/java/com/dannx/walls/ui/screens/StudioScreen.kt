@@ -105,6 +105,8 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -286,6 +288,7 @@ fun StudioScreen(
                 Text(
                     text = stringResource(R.string.studio_title),
                     style = MaterialTheme.typography.displayMediumEmphasized,
+                    modifier = Modifier.semantics { heading() },
                 )
                 Text(
                     text = if (session == null) {

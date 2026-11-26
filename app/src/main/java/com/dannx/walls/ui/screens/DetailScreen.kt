@@ -115,6 +115,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
 import androidx.core.view.WindowCompat
 import coil.compose.AsyncImage
 import coil.request.CachePolicy
@@ -631,6 +633,7 @@ fun DetailScreen(
                     text = wallpaper.title,
                     style = MaterialTheme.typography.headlineLargeEmphasized,
                     color = Color.White,
+                    modifier = Modifier.semantics { heading() },
                 )
                 Spacer(Modifier.height(4.dp))
                 Text(
