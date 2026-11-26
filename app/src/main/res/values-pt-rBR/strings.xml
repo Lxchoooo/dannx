@@ -243,6 +243,8 @@
     <string name="settings_cache">Cache</string>
     <string name="settings_cache_hint">Guardamos o feed e as imagens para o app abrir mais rápido.</string>
     <string name="settings_cache_used">Espaço usado: %1$s</string>
+    <string name="settings_cache_clear_title">Limpar o cache?</string>
+    <string name="settings_cache_clear_body">O feed e as imagens salvos serão baixados de novo na próxima vez que você precisar deles.</string>
     <string name="settings_credits">Créditos</string>
     <string name="settings_github" translatable="false">GitHub</string>
     <string name="settings_version">Versão %1$s</string>
@@ -251,6 +253,7 @@
     <string name="settings_check_updates">Verificar atualizações</string>
     <string name="settings_advanced">Avançado</string>
     <string name="settings_reset">Redefinir configurações</string>
+    <string name="settings_reset_body">O tema, as cores e o movimento voltam ao padrão do app. Seus favoritos e coleções não são afetados.</string>
     <string name="settings_sign_out">Sair da conta</string>
     <string name="settings_about">Sobre</string>
     <string name="settings_privacy">Privacidade</string>

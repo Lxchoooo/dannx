@@ -243,6 +243,8 @@
     <string name="settings_cache">Caché</string>
     <string name="settings_cache_hint">Guardamos el catálogo y las imágenes para que la app abra más rápido.</string>
     <string name="settings_cache_used">Espacio usado: %1$s</string>
+    <string name="settings_cache_clear_title">¿Borrar la caché?</string>
+    <string name="settings_cache_clear_body">El catálogo y las imágenes guardadas se volverán a descargar la próxima vez que los necesites.</string>
     <string name="settings_credits">Créditos</string>
     <string name="settings_github" translatable="false">GitHub</string>
     <string name="settings_version">Versión %1$s</string>
@@ -251,6 +253,7 @@
     <string name="settings_check_updates">Buscar actualizaciones</string>
     <string name="settings_advanced">Avanzado</string>
     <string name="settings_reset">Restablecer ajustes</string>
+    <string name="settings_reset_body">El tema, los colores y el movimiento vuelven a como viene la app. Tus favoritos y colecciones no se tocan.</string>
     <string name="settings_sign_out">Cerrar sesión</string>
     <string name="settings_about">Acerca de</string>
     <string name="settings_privacy">Privacidad</string>
