@@ -110,6 +110,8 @@ data class UiState(
     val detailRelated: List<Wallpaper> = emptyList(),
     val detailCollectionId: String? = null,
     val detailCollection: LoadState<CollectionDetailData>? = null,
+    /** Recarga del detalle en curso sin vaciar la grilla (gesto de actualizar). */
+    val detailCollectionRefreshing: Boolean = false,
     val query: String = "",
     val recentSearches: List<String> = emptyList(),
     val category: String? = null,

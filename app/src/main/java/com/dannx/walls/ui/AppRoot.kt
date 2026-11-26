@@ -615,6 +615,9 @@ private fun MainApp(
                                                 data.collection.wallpaperIds.filterNot { it in ids },
                                             )
                                         },
+                                        onRefresh = {
+                                            viewModel.loadCollectionDetail(id, force = true)
+                                        },
                                     )
                                 }
 

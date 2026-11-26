@@ -66,8 +66,6 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.carousel.HorizontalMultiBrowseCarousel
 import androidx.compose.material3.carousel.rememberCarouselState
-import androidx.compose.material3.pulltorefresh.PullToRefreshBox
-import androidx.compose.material3.pulltorefresh.PullToRefreshDefaults
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
 import androidx.compose.runtime.Composable
@@ -124,6 +122,7 @@ import com.dannx.walls.ui.components.FeaturedCard
 import com.dannx.walls.ui.components.HeroHeight
 import com.dannx.walls.ui.components.FeedSkeleton
 import com.dannx.walls.ui.components.OfflineBanner
+import com.dannx.walls.ui.components.PullRefreshBox
 import com.dannx.walls.ui.components.StaggeredAppear
 import com.dannx.walls.ui.components.StatefulImage
 import com.dannx.walls.ui.components.WallpaperCard
@@ -303,39 +302,13 @@ fun HomeScreen(
         min(HeroHeight.toPx(), LocalWindowInfo.current.containerSize.height * 0.55f).toDp()
     }
 
-    PullToRefreshBox(
+    PullRefreshBox(
         isRefreshing = state.refreshing,
         onRefresh = onRefresh,
         state = pullState,
         modifier = Modifier
             .fillMaxSize()
             .statusBarsPadding(),
-        indicator = {
-            if (liteMode) {
-                if (state.refreshing) {
-                    Surface(
-                        modifier = Modifier
-                            .align(Alignment.TopCenter)
-                            .padding(top = 8.dp),
-                        shape = CircleShape,
-                        color = MaterialTheme.colorScheme.surfaceContainerHigh,
-                        tonalElevation = 3.dp,
-                    ) {
-                        Text(
-                            text = stringResource(R.string.feed_refreshing),
-                            style = MaterialTheme.typography.labelMedium,
-                            modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
-                        )
-                    }
-                }
-            } else {
-                PullToRefreshDefaults.Indicator(
-                    state = pullState,
-                    isRefreshing = state.refreshing,
-                    modifier = Modifier.align(Alignment.TopCenter),
-                )
-            }
-        },
     ) {
         LazyVerticalGrid(
             columns = GridCells.Fixed(columns),
@@ -841,6 +814,10 @@ fun HomeScreen(
                         EmptyState(
                             title = stringResource(R.string.state_empty_feed_title),
                             message = stringResource(R.string.state_empty_feed_body),
+                            // Sin nada que mostrar, lo único posible es
+                            // volver a pedir el feed.
+                            actionLabel = stringResource(R.string.action_refresh_feed),
+                            onAction = onRefresh,
                         )
                     }
                 }

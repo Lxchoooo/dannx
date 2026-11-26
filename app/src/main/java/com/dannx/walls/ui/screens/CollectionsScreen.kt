@@ -73,6 +73,8 @@ import com.dannx.walls.data.WallpaperCollection
 import com.dannx.walls.ui.components.EmptyState
 import com.dannx.walls.ui.components.ErrorState
 import com.dannx.walls.ui.components.FeedSkeleton
+import com.dannx.walls.ui.components.OfflineBanner
+import com.dannx.walls.ui.components.PullRefreshBox
 import com.dannx.walls.ui.components.StatefulImage
 import com.dannx.walls.ui.components.animateItemMotion
 import com.dannx.walls.ui.components.screenImageSize
@@ -96,78 +98,92 @@ fun CollectionsScreen(
         }
     }
 
-    LazyColumn(
+    PullRefreshBox(
+        isRefreshing = state.refreshing,
+        onRefresh = onRefresh,
         modifier = Modifier
             .fillMaxSize()
             .statusBarsPadding(),
-        contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 14.dp, bottom = 28.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        item {
-            Column(Modifier.fillMaxWidth()) {
-                Text(
-                    text = stringResource(R.string.collections_title),
-                    style = MaterialTheme.typography.displayMediumEmphasized,
-                    modifier = Modifier.semantics { heading() },
-                )
-                Text(
-                    text = stringResource(R.string.collections_subtitle),
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                Spacer(Modifier.height(16.dp))
-                Button(
-                    onClick = { showCreate = true },
-                    shape = CircleShape,
-                    enabled = !state.collectionBusy,
-                ) {
-                    Icon(Icons.Rounded.Add, contentDescription = null)
-                    Spacer(Modifier.width(8.dp))
-                    Text(stringResource(R.string.collections_create))
-                }
-                Spacer(Modifier.height(8.dp))
-            }
-        }
-
-        when {
-            state.collections is LoadState.Loading && state.collectionItems.isEmpty() -> {
-                item {
-                    FeedSkeleton()
-                }
-            }
-
-            state.collections is LoadState.Error && state.collectionItems.isEmpty() -> {
-                item {
-                    ErrorState(
-                        message = (state.collections as LoadState.Error).message,
-                        onRetry = onRefresh,
+        LazyColumn(
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 14.dp, bottom = 28.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            item {
+                Column(Modifier.fillMaxWidth()) {
+                    Text(
+                        text = stringResource(R.string.collections_title),
+                        style = MaterialTheme.typography.displayMediumEmphasized,
+                        modifier = Modifier.semantics { heading() },
                     )
+                    Text(
+                        text = stringResource(R.string.collections_subtitle),
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Spacer(Modifier.height(16.dp))
+                    Button(
+                        onClick = { showCreate = true },
+                        shape = CircleShape,
+                        enabled = !state.collectionBusy,
+                    ) {
+                        Icon(Icons.Rounded.Add, contentDescription = null)
+                        Spacer(Modifier.width(8.dp))
+                        Text(stringResource(R.string.collections_create))
+                    }
+                    Spacer(Modifier.height(8.dp))
                 }
             }
 
-            state.collectionItems.isEmpty() -> {
-                item {
-                    EmptyState(
-                        title = stringResource(R.string.state_empty_collections_title),
-                        message = stringResource(R.string.state_empty_collections_body),
-                        icon = Icons.Rounded.CollectionsBookmark,
-                    )
+            if (state.offline) {
+                item { OfflineBanner() }
+            }
+
+            when {
+                state.collections is LoadState.Loading && state.collectionItems.isEmpty() -> {
+                    item {
+                        FeedSkeleton()
+                    }
+                }
+
+                state.collections is LoadState.Error && state.collectionItems.isEmpty() -> {
+                    item {
+                        ErrorState(
+                            message = (state.collections as LoadState.Error).message,
+                            onRetry = onRefresh,
+                        )
+                    }
+                }
+
+                state.collectionItems.isEmpty() -> {
+                    item {
+                        EmptyState(
+                            title = stringResource(R.string.state_empty_collections_title),
+                            message = stringResource(R.string.state_empty_collections_body),
+                            icon = Icons.Rounded.CollectionsBookmark,
+                            // La acción obvia de esta pantalla: sin colecciones,
+                            // lo que quiere el usuario es crear la primera.
+                            actionLabel = stringResource(R.string.collections_create),
+                            onAction = { showCreate = true },
+                        )
+                    }
                 }
             }
-        }
 
-        if (state.collectionItems.isNotEmpty()) {
-            items(
-                items = state.collectionItems,
-                key = { it.id },
-                contentType = { "collection" },
-            ) { collection ->
-                Box(modifier = animateItemMotion()) {
-                    CollectionCard(
-                        state = state,
-                        collection = collection,
-                        onClick = { onOpenCollection(collection) },
-                    )
+            if (state.collectionItems.isNotEmpty()) {
+                items(
+                    items = state.collectionItems,
+                    key = { it.id },
+                    contentType = { "collection" },
+                ) { collection ->
+                    Box(modifier = animateItemMotion()) {
+                        CollectionCard(
+                            state = state,
+                            collection = collection,
+                            onClick = { onOpenCollection(collection) },
+                        )
+                    }
                 }
             }
         }

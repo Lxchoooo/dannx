@@ -41,6 +41,8 @@ import com.dannx.walls.data.Wallpaper
 import com.dannx.walls.ui.components.EmptyState
 import com.dannx.walls.ui.components.ErrorState
 import com.dannx.walls.ui.components.FeedSkeleton
+import com.dannx.walls.ui.components.OfflineBanner
+import com.dannx.walls.ui.components.PullRefreshBox
 import com.dannx.walls.ui.components.SelectionToolbar
 import com.dannx.walls.ui.components.StaggeredAppear
 import com.dannx.walls.ui.components.WallpaperCard
@@ -75,147 +77,159 @@ fun FavoritesScreen(
         selectedIds = updated
         if (updated.isEmpty()) selectionMode = false
     }
-    LazyVerticalGrid(
-        columns = GridCells.Fixed(2),
+    PullRefreshBox(
+        isRefreshing = state.refreshing,
+        onRefresh = onRefresh,
         modifier = Modifier
             .fillMaxSize()
             .statusBarsPadding(),
-        contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 14.dp, bottom = 28.dp),
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        item(span = { GridItemSpan(2) }) {
-            Column(Modifier.fillMaxWidth()) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Column(Modifier.weight(1f)) {
-                        Text(
-                            text = stringResource(R.string.favorites_title),
-                            style = MaterialTheme.typography.displayMediumEmphasized,
-                            modifier = Modifier.semantics { heading() },
-                        )
-                        Text(
-                            text = pluralStringResource(
-                                R.plurals.favorites_saved_count,
-                                items.size,
-                                items.size,
-                            ),
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-                    if (!selectionMode && items.isNotEmpty()) {
-                        TextButton(
-                            onClick = {
-                                selectionMode = true
-                                selectedIds = emptyList()
-                            },
-                        ) {
-                            Text(stringResource(R.string.selection_enter))
+        LazyVerticalGrid(
+            columns = GridCells.Fixed(2),
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 14.dp, bottom = 28.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            item(span = { GridItemSpan(2) }) {
+                Column(Modifier.fillMaxWidth()) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Column(Modifier.weight(1f)) {
+                            Text(
+                                text = stringResource(R.string.favorites_title),
+                                style = MaterialTheme.typography.displayMediumEmphasized,
+                                modifier = Modifier.semantics { heading() },
+                            )
+                            Text(
+                                text = pluralStringResource(
+                                    R.plurals.favorites_saved_count,
+                                    items.size,
+                                    items.size,
+                                ),
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                        if (!selectionMode && items.isNotEmpty()) {
+                            TextButton(
+                                onClick = {
+                                    selectionMode = true
+                                    selectedIds = emptyList()
+                                },
+                            ) {
+                                Text(stringResource(R.string.selection_enter))
+                            }
                         }
                     }
-                }
-                if (selectionMode) {
-                    Spacer(Modifier.height(10.dp))
-                    SelectionToolbar(
-                        count = selectedIds.size,
-                        onCancel = { clearSelection() },
-                        onDownload = if (selectedItems.isNotEmpty()) {
-                            {
-                                onDownloadMany(selectedItems)
-                                clearSelection()
-                            }
-                        } else {
-                            null
-                        },
-                        onShare = if (selectedItems.isNotEmpty()) {
-                            {
-                                onShareMany(selectedItems)
-                                clearSelection()
-                            }
-                        } else {
-                            null
-                        },
-                        onRemove = if (selectedIds.isNotEmpty()) {
-                            {
-                                onRemoveFavorites(selectedIds.toSet())
-                                clearSelection()
-                            }
-                        } else {
-                            null
-                        },
-                        allSelected = allSelected,
-                        onToggleSelectAll = if (items.isEmpty()) {
-                            null
-                        } else {
-                            {
-                                selectedIds = if (allSelected) {
-                                    emptyList()
-                                } else {
-                                    items.map { it.id }
+                    if (selectionMode) {
+                        Spacer(Modifier.height(10.dp))
+                        SelectionToolbar(
+                            count = selectedIds.size,
+                            onCancel = { clearSelection() },
+                            onDownload = if (selectedItems.isNotEmpty()) {
+                                {
+                                    onDownloadMany(selectedItems)
+                                    clearSelection()
                                 }
-                            }
-                        },
+                            } else {
+                                null
+                            },
+                            onShare = if (selectedItems.isNotEmpty()) {
+                                {
+                                    onShareMany(selectedItems)
+                                    clearSelection()
+                                }
+                            } else {
+                                null
+                            },
+                            onRemove = if (selectedIds.isNotEmpty()) {
+                                {
+                                    onRemoveFavorites(selectedIds.toSet())
+                                    clearSelection()
+                                }
+                            } else {
+                                null
+                            },
+                            allSelected = allSelected,
+                            onToggleSelectAll = if (items.isEmpty()) {
+                                null
+                            } else {
+                                {
+                                    selectedIds = if (allSelected) {
+                                        emptyList()
+                                    } else {
+                                        items.map { it.id }
+                                    }
+                                }
+                            },
+                        )
+                    }
+                    Spacer(Modifier.height(12.dp))
+                }
+            }
+
+            if (state.offline) {
+                item(span = { GridItemSpan(2) }) {
+                    OfflineBanner()
+                }
+            }
+
+            if (state.feed is LoadState.Loading && items.isEmpty()) {
+                item(span = { GridItemSpan(2) }) {
+                    FeedSkeleton()
+                }
+            } else if (state.feed is LoadState.Error && items.isEmpty()) {
+                item(span = { GridItemSpan(2) }) {
+                    ErrorState(
+                        message = (state.feed as LoadState.Error).message,
+                        onRetry = onRefresh,
                     )
                 }
-                Spacer(Modifier.height(12.dp))
-            }
-        }
-
-        if (state.feed is LoadState.Loading && items.isEmpty()) {
-            item(span = { GridItemSpan(2) }) {
-                FeedSkeleton()
-            }
-        } else if (state.feed is LoadState.Error && items.isEmpty()) {
-            item(span = { GridItemSpan(2) }) {
-                ErrorState(
-                    message = (state.feed as LoadState.Error).message,
-                    onRetry = onRefresh,
-                )
-            }
-        } else if (items.isEmpty()) {
-            item(span = { GridItemSpan(2) }) {
-                EmptyState(
-                    title = stringResource(R.string.state_empty_favorites_title),
-                    message = stringResource(R.string.state_empty_favorites_body),
-                    icon = Icons.Rounded.FavoriteBorder,
-                    actionLabel = stringResource(R.string.state_explore),
-                    onAction = onExplore,
-                )
-            }
-        } else {
-            itemsIndexed(
-                items = items,
-                key = { _, wallpaper -> wallpaper.id },
-                contentType = { _, _ -> "wall" },
-            ) { index, wallpaper ->
-                val isSelected = wallpaper.id in selectedSet
-                StaggeredAppear(
-                    index = index,
-                    modifier = animateItemMotion(),
-                ) {
-                    WallpaperCard(
-                        wallpaper = wallpaper,
-                        isFavorite = true,
-                        onClick = {
-                            if (selectionMode) {
-                                toggleSelection(wallpaper.id)
-                            } else {
-                                onOpenWallpaper(wallpaper)
-                            }
-                        },
-                        onToggleFavorite = { onToggleFavorite(wallpaper.id) },
-                        onLongClick = {
-                            if (!selectionMode) {
-                                selectionMode = true
-                                selectedIds = listOf(wallpaper.id)
-                            }
-                        },
-                        selected = isSelected,
-                        showFavorite = !selectionMode,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .aspectRatio(9f / 16f),
+            } else if (items.isEmpty()) {
+                item(span = { GridItemSpan(2) }) {
+                    EmptyState(
+                        title = stringResource(R.string.state_empty_favorites_title),
+                        message = stringResource(R.string.state_empty_favorites_body),
+                        icon = Icons.Rounded.FavoriteBorder,
+                        actionLabel = stringResource(R.string.state_explore),
+                        onAction = onExplore,
                     )
+                }
+            } else {
+                itemsIndexed(
+                    items = items,
+                    key = { _, wallpaper -> wallpaper.id },
+                    contentType = { _, _ -> "wall" },
+                ) { index, wallpaper ->
+                    val isSelected = wallpaper.id in selectedSet
+                    StaggeredAppear(
+                        index = index,
+                        modifier = animateItemMotion(),
+                    ) {
+                        WallpaperCard(
+                            wallpaper = wallpaper,
+                            isFavorite = true,
+                            onClick = {
+                                if (selectionMode) {
+                                    toggleSelection(wallpaper.id)
+                                } else {
+                                    onOpenWallpaper(wallpaper)
+                                }
+                            },
+                            onToggleFavorite = { onToggleFavorite(wallpaper.id) },
+                            onLongClick = {
+                                if (!selectionMode) {
+                                    selectionMode = true
+                                    selectedIds = listOf(wallpaper.id)
+                                }
+                            },
+                            selected = isSelected,
+                            showFavorite = !selectionMode,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .aspectRatio(9f / 16f),
+                        )
+                    }
                 }
             }
         }

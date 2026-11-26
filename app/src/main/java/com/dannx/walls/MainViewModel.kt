@@ -466,6 +466,12 @@ class MainViewModel(
                         currentCollections
                     },
                 )
+                // Con contenido en pantalla el fallo no cambia la vista: se
+                // avisa por snackbar para que un gesto de actualizar no parezca
+                // que no hizo nada. Las recargas silenciosas (al reanudar la
+                // app) y el caso offline ya tienen su propio aviso.
+                val notify = expired ||
+                    (!silent && fallbackWallpapers.isNotEmpty() && kind != ErrorKind.OFFLINE)
                 _state.update {
                     it.copy(
                         feed = if (fallbackWallpapers.isEmpty()) {
@@ -492,7 +498,7 @@ class MainViewModel(
                         session = if (expired) null else it.session,
                         adminWallpapers = if (expired) emptyList() else it.adminWallpapers,
                         trashWallpapers = if (expired) emptyList() else it.trashWallpapers,
-                        message = if (expired) error.userMessage() else it.message,
+                        message = if (notify) error.userMessage() else it.message,
                         offline = fallbackWallpapers.isNotEmpty() && kind == ErrorKind.OFFLINE,
                         refreshing = false,
                         loadingMore = false,
@@ -905,6 +911,7 @@ class MainViewModel(
                         detailCollection = LoadState.Content(
                             CollectionDetailData(collection, it.wallpapersFor(collection)),
                         ),
+                        detailCollectionRefreshing = false,
                     )
                 }
                 return
@@ -924,10 +931,20 @@ class MainViewModel(
                 if (collectionDetailToken != token) {
                     it
                 } else {
-                    it.copy(
-                        detailCollectionId = collectionId,
-                        detailCollection = LoadState.Loading,
-                    )
+                    val onScreen = it.detailCollectionId == collectionId &&
+                        it.detailCollection is LoadState.Content
+                    // Si ya hay contenido a la vista, la recarga no lo
+                    // reemplaza por la pantalla de carga: solo enciende el
+                    // indicador del gesto de actualizar.
+                    if (force && onScreen) {
+                        it.copy(detailCollectionRefreshing = true)
+                    } else {
+                        it.copy(
+                            detailCollectionId = collectionId,
+                            detailCollection = LoadState.Loading,
+                            detailCollectionRefreshing = false,
+                        )
+                    }
                 }
             }
             try {
@@ -990,11 +1007,24 @@ class MainViewModel(
             } catch (error: Exception) {
                 if (collectionDetailToken == token) {
                     _state.update {
-                        it.copy(
-                            detailCollectionId = collectionId,
-                            detailCollection = LoadState.Error(error.userMessage(), error.kind()),
-                        )
+                        val onScreen = it.detailCollectionId == collectionId &&
+                            it.detailCollection is LoadState.Content
+                        if (onScreen) {
+                            // La recarga falló pero lo que ya estaba sigue
+                            // en pantalla: se avisa sin cerrar la vista.
+                            it.copy(message = error.userMessage())
+                        } else {
+                            it.copy(
+                                detailCollectionId = collectionId,
+                                detailCollection = LoadState.Error(error.userMessage(), error.kind()),
+                            )
+                        }
                     }
+                }
+            } finally {
+                // Si otro token tomó el relevo, él pone sus propios flags.
+                if (collectionDetailToken == token) {
+                    _state.update { it.copy(detailCollectionRefreshing = false) }
                 }
             }
         }
@@ -1003,7 +1033,13 @@ class MainViewModel(
     fun clearCollectionDetail() {
         collectionDetailToken += 1
         collectionDetailJob?.cancel()
-        _state.update { it.copy(detailCollectionId = null, detailCollection = null) }
+        _state.update {
+            it.copy(
+                detailCollectionId = null,
+                detailCollection = null,
+                detailCollectionRefreshing = false,
+            )
+        }
     }
 
     private class CollectionNotFound : Exception()
