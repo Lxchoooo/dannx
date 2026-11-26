@@ -76,6 +76,8 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
@@ -127,6 +129,7 @@ fun OnboardingScreen(
     )
     val scope = rememberCoroutineScope()
     var finishing by remember { mutableStateOf(false) }
+    val haptics = LocalHapticFeedback.current
 
     // Entrada en cascada: marca, título y mensaje suben a su turno. En lite o
     // con movimiento reducido arranca terminada, sin capturas a medio camino.
@@ -189,7 +192,10 @@ fun OnboardingScreen(
             ) {
                 Spacer(Modifier.weight(1f))
                 TextButton(
-                    onClick = onFinish,
+                    onClick = {
+                        haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                        onFinish()
+                    },
                     enabled = !finishing,
                     modifier = Modifier.graphicsLayer {
                         val p = stage(intro.value, 0.15f, 0.6f)
@@ -262,6 +268,7 @@ fun OnboardingScreen(
             val isLast = pagerState.currentPage == pages.lastIndex
             Button(
                 onClick = {
+                    haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                     when {
                         isLast && motionOff -> onFinish()
                         isLast -> finishing = true

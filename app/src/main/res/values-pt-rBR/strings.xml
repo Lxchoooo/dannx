@@ -255,6 +255,10 @@
     <string name="settings_reset">Redefinir configurações</string>
     <string name="settings_reset_body">O tema, as cores e o movimento voltam ao padrão do app. Seus favoritos e coleções não são afetados.</string>
     <string name="settings_sign_out">Sair da conta</string>
+    <string name="settings_sign_out_title">Sair da conta?</string>
+    <string name="settings_sign_out_body">Você precisará desta conta de novo para publicar ou gerenciar seus wallpapers.</string>
+    <string name="settings_sign_out_title">Sair da conta?</string>
+    <string name="settings_sign_out_body">Você precisará desta conta de novo para publicar ou gerenciar seus wallpapers.</string>
     <string name="settings_about">Sobre</string>
     <string name="settings_privacy">Privacidade</string>
 

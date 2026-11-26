@@ -50,7 +50,9 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
@@ -116,6 +118,7 @@ fun SettingsScreen(
     // elegida.
     var confirmClearCache by rememberSaveable { mutableStateOf(false) }
     var confirmResetAppearance by rememberSaveable { mutableStateOf(false) }
+    var confirmSignOut by rememberSaveable { mutableStateOf(false) }
     Scaffold(
         topBar = {
             TopAppBar(
@@ -136,6 +139,7 @@ fun SettingsScreen(
             )
         },
     ) { padding ->
+        val haptics = LocalHapticFeedback.current
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
             contentPadding = PaddingValues(
@@ -160,7 +164,10 @@ fun SettingsScreen(
                             ThemeMode.entries.forEachIndexed { index, mode ->
                                 SegmentedButton(
                                     selected = state.themeMode == mode,
-                                    onClick = { onThemeModeChange(mode) },
+                                    onClick = {
+                                        haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                        onThemeModeChange(mode)
+                                    },
                                     shape = SegmentedButtonDefaults.itemShape(
                                         index = index,
                                         count = ThemeMode.entries.size,
@@ -197,7 +204,10 @@ fun SettingsScreen(
                     onColorSeedChange = onColorSeedChange,
                     onPaletteStyleChange = onPaletteStyleChange,
                     onContrastLevelChange = onContrastLevelChange,
-                    onAmoledChange = onAmoledChange,
+                    onAmoledChange = {
+                        haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                        onAmoledChange(it)
+                    },
                 )
             }
             staggeredItem(4) { SectionTitle(stringResource(R.string.settings_behavior)) }
@@ -208,7 +218,10 @@ fun SettingsScreen(
                         title = stringResource(R.string.settings_lite),
                         hint = stringResource(R.string.settings_lite_hint),
                         checked = state.liteMode,
-                        onCheckedChange = onLiteModeChange,
+                        onCheckedChange = {
+                            haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                            onLiteModeChange(it)
+                        },
                     )
                 }
             }
@@ -236,7 +249,10 @@ fun SettingsScreen(
                             LiveMotion.entries.forEachIndexed { index, motion ->
                                 SegmentedButton(
                                     selected = state.liveMotion == motion,
-                                    onClick = { onLiveMotionChange(motion) },
+                                    onClick = {
+                                        haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                        onLiveMotionChange(motion)
+                                    },
                                     shape = SegmentedButtonDefaults.itemShape(
                                         index = index,
                                         count = LiveMotion.entries.size,
@@ -264,7 +280,10 @@ fun SettingsScreen(
                         title = stringResource(R.string.settings_open_editor),
                         hint = stringResource(R.string.settings_open_editor_hint),
                         checked = state.openEditorOnApply,
-                        onCheckedChange = onOpenEditorOnApplyChange,
+                        onCheckedChange = {
+                            haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                            onOpenEditorOnApplyChange(it)
+                        },
                     )
                 }
             }
@@ -362,7 +381,7 @@ fun SettingsScreen(
                         }
                         if (state.session != null) {
                             TextButton(
-                                onClick = onSignOut,
+                                onClick = { confirmSignOut = true },
                                 colors = ButtonDefaults.textButtonColors(
                                     contentColor = MaterialTheme.colorScheme.error,
                                 ),
@@ -416,6 +435,29 @@ fun SettingsScreen(
             },
             dismissButton = {
                 TextButton(onClick = { confirmResetAppearance = false }) {
+                    Text(stringResource(R.string.action_cancel))
+                }
+            },
+        )
+    }
+
+    if (confirmSignOut) {
+        AlertDialog(
+            onDismissRequest = { confirmSignOut = false },
+            title = { Text(stringResource(R.string.settings_sign_out_title)) },
+            text = { Text(stringResource(R.string.settings_sign_out_body)) },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        confirmSignOut = false
+                        onSignOut()
+                    },
+                ) {
+                    Text(stringResource(R.string.settings_sign_out))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { confirmSignOut = false }) {
                     Text(stringResource(R.string.action_cancel))
                 }
             },

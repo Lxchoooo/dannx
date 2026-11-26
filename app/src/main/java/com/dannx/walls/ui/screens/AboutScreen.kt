@@ -37,7 +37,9 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
@@ -56,6 +58,7 @@ import com.dannx.walls.util.openUrl
 @Composable
 fun AboutScreen(onBack: () -> Unit) {
     val context = LocalContext.current
+    val haptics = LocalHapticFeedback.current
     var showLicenses by rememberSaveable { mutableStateOf(false) }
 
     Scaffold(
@@ -147,10 +150,16 @@ fun AboutScreen(onBack: () -> Unit) {
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                         Spacer(Modifier.height(8.dp))
-                        TextButton(onClick = { showLicenses = true }) {
+                        TextButton(onClick = {
+                            haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                            showLicenses = true
+                        }) {
                             Text(stringResource(R.string.about_licenses))
                         }
-                        TextButton(onClick = { openUrl(context, AppLinks.License) }) {
+                        TextButton(onClick = {
+                            haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                            openUrl(context, AppLinks.License)
+                        }) {
                             Text(stringResource(R.string.about_view_license))
                             Spacer(Modifier.width(6.dp))
                             Icon(

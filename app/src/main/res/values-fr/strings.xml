@@ -255,6 +255,10 @@
     <string name="settings_reset">Réinitialiser les paramètres</string>
     <string name="settings_reset_body">Le thème, les couleurs et le mouvement reviennent aux valeurs d\'origine. Vos favoris et collections ne sont pas touchés.</string>
     <string name="settings_sign_out">Se déconnecter</string>
+    <string name="settings_sign_out_title">Se déconnecter ?</string>
+    <string name="settings_sign_out_body">Vous aurez à nouveau besoin de ce compte pour publier ou gérer vos fonds d\'écran.</string>
+    <string name="settings_sign_out_title">Se déconnecter ?</string>
+    <string name="settings_sign_out_body">Vous aurez à nouveau besoin de ce compte pour publier ou gérer vos fonds d\'écran.</string>
     <string name="settings_about">À propos</string>
     <string name="settings_privacy">Confidentialité</string>
 

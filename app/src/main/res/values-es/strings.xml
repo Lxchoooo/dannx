@@ -255,6 +255,8 @@
     <string name="settings_reset">Restablecer ajustes</string>
     <string name="settings_reset_body">El tema, los colores y el movimiento vuelven a como viene la app. Tus favoritos y colecciones no se tocan.</string>
     <string name="settings_sign_out">Cerrar sesión</string>
+    <string name="settings_sign_out_title">¿Cerrar sesión?</string>
+    <string name="settings_sign_out_body">Necesitarás esta cuenta de nuevo para publicar o administrar tus fondos.</string>
     <string name="settings_about">Acerca de</string>
     <string name="settings_privacy">Privacidad</string>
 

@@ -30,6 +30,8 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.res.pluralStringResource
@@ -74,6 +76,7 @@ fun FavoritesScreen(
         selectedIds = emptyList()
     }
     BackHandler(enabled = selectionMode) { clearSelection() }
+    val haptics = LocalHapticFeedback.current
     fun toggleSelection(id: String) {
         val updated = if (id in selectedSet) selectedIds - id else selectedIds + id
         selectedIds = updated
@@ -121,6 +124,7 @@ fun FavoritesScreen(
                         if (!selectionMode && items.isNotEmpty()) {
                             TextButton(
                                 onClick = {
+                                    haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                                     selectionMode = true
                                     selectedIds = emptyList()
                                 },

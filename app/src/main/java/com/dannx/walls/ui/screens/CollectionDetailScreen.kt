@@ -40,6 +40,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.res.pluralStringResource
@@ -51,6 +53,7 @@ import com.dannx.walls.data.Wallpaper
 import com.dannx.walls.data.WallpaperCollection
 import com.dannx.walls.ui.LocalWindowSizeClass
 import com.dannx.walls.ui.components.EmptyState
+import com.dannx.walls.ui.components.OfflineBanner
 import com.dannx.walls.ui.components.PullRefreshBox
 import com.dannx.walls.ui.components.SelectionToolbar
 import com.dannx.walls.ui.components.StaggeredAppear
@@ -86,6 +89,7 @@ fun CollectionDetailScreen(
         selectedIds = emptyList()
     }
     BackHandler(enabled = selectionMode) { clearSelection() }
+    val haptics = LocalHapticFeedback.current
     fun toggleSelection(id: String) {
         val updated = if (id in selectedSet) selectedIds - id else selectedIds + id
         selectedIds = updated
@@ -149,6 +153,7 @@ fun CollectionDetailScreen(
                         if (items.isNotEmpty() && !selectionMode) {
                             TextButton(
                                 onClick = {
+                                    haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                                     selectionMode = true
                                     selectedIds = emptyList()
                                 },
@@ -228,6 +233,12 @@ fun CollectionDetailScreen(
                         )
                     }
                     Spacer(Modifier.height(14.dp))
+                }
+            }
+
+            if (state.offline) {
+                item(span = { GridItemSpan(gridColumns) }) {
+                    OfflineBanner()
                 }
             }
 

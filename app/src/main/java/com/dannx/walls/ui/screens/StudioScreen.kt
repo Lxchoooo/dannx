@@ -124,6 +124,7 @@ import com.dannx.walls.data.WallpaperCollection
 import com.dannx.walls.data.allTags
 import com.dannx.walls.data.collectAllTags
 import com.dannx.walls.data.parseTags
+import com.dannx.walls.ui.components.EmptyState
 import com.dannx.walls.ui.components.ExpressiveFilterChip
 import com.dannx.walls.ui.components.StaggeredAppear
 import com.dannx.walls.ui.components.animateItemMotion
@@ -220,6 +221,7 @@ fun StudioScreen(
         ?: StudioWallSort.RECENT
     var selectionMode by remember { mutableStateOf(false) }
     var selectedIds by remember { mutableStateOf<Set<String>>(emptySet()) }
+    var confirmSignOut by rememberSaveable { mutableStateOf(false) }
     var bulkCategoryDialog by remember { mutableStateOf(false) }
     var bulkTagsDialog by remember { mutableStateOf(false) }
     var bulkDeleteConfirm by remember { mutableStateOf(false) }
@@ -278,7 +280,7 @@ fun StudioScreen(
                             )
                         }
                         Spacer(Modifier.width(8.dp))
-                        FilledTonalIconButton(onClick = onSignOut) {
+                        FilledTonalIconButton(onClick = { confirmSignOut = true }) {
                             Icon(
                                 Icons.Rounded.Logout,
                                 contentDescription = stringResource(R.string.settings_sign_out),
@@ -521,6 +523,19 @@ fun StudioScreen(
         item(key = "studio-bottom") {
             Spacer(Modifier.height(32.dp))
         }
+    }
+
+    if (confirmSignOut) {
+        ConfirmDialog(
+            title = stringResource(R.string.settings_sign_out_title),
+            text = stringResource(R.string.settings_sign_out_body),
+            confirm = stringResource(R.string.settings_sign_out),
+            onDismiss = { confirmSignOut = false },
+            onConfirm = {
+                confirmSignOut = false
+                onSignOut()
+            },
+        )
     }
 
     editWallpaper?.let { wallpaper ->
@@ -1894,35 +1909,25 @@ private fun LazyListScope.wallsPanel(
 
     if (walls.isEmpty()) {
         item(key = "walls-empty") {
-            Column {
-                Text(
-                    text = when {
-                        hasFilters -> stringResource(R.string.studio_no_results)
-                        showArchived -> stringResource(R.string.studio_walls_empty_archived)
-                        else -> stringResource(R.string.studio_walls_empty)
-                    },
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                Spacer(Modifier.height(10.dp))
-                when {
-                    hasFilters -> TextButton(onClick = onClearFilters) {
-                        Text(stringResource(R.string.state_clear_filters))
-                    }
-                    showArchived -> TextButton(onClick = onToggleArchived) {
-                        Text(stringResource(R.string.studio_published))
-                    }
-                    else -> Button(onClick = onPublish, shape = CircleShape) {
-                        Icon(
-                            Icons.Rounded.Add,
-                            contentDescription = null,
-                            modifier = Modifier.size(18.dp),
-                        )
-                        Spacer(Modifier.width(6.dp))
-                        Text(stringResource(R.string.studio_new_wallpaper))
-                    }
-                }
-            }
+            EmptyState(
+                title = when {
+                    hasFilters -> stringResource(R.string.studio_no_results)
+                    showArchived -> stringResource(R.string.studio_walls_empty_archived)
+                    else -> stringResource(R.string.studio_walls_empty)
+                },
+                message = null,
+                icon = Icons.Rounded.Image,
+                actionLabel = when {
+                    hasFilters -> stringResource(R.string.state_clear_filters)
+                    showArchived -> stringResource(R.string.studio_published)
+                    else -> stringResource(R.string.studio_new_wallpaper)
+                },
+                onAction = when {
+                    hasFilters -> onClearFilters
+                    showArchived -> onToggleArchived
+                    else -> onPublish
+                },
+            )
         }
     } else {
         itemsIndexed(
@@ -1997,10 +2002,10 @@ private fun LazyListScope.trashPanel(
 
     if (trash.isEmpty()) {
         item(key = "trash-empty") {
-            Text(
-                text = stringResource(R.string.studio_trash_empty),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            EmptyState(
+                title = stringResource(R.string.studio_trash_empty),
+                message = null,
+                icon = Icons.Rounded.Delete,
             )
         }
         return
