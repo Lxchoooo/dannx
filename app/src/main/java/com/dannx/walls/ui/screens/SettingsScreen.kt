@@ -19,7 +19,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
-import androidx.compose.foundation.selection.toggleable
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.Animation
@@ -40,7 +39,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -54,7 +52,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
@@ -71,6 +68,7 @@ import com.dannx.walls.ui.components.ColorSettingsCard
 import com.dannx.walls.ui.components.SettingsCard
 import com.dannx.walls.ui.components.SettingsCardHeader
 import com.dannx.walls.ui.components.SettingsIcon
+import com.dannx.walls.ui.components.SettingsRow
 import com.dannx.walls.ui.components.StaggeredAppear
 import com.dannx.walls.ui.components.UpdateDialog
 import com.dannx.walls.ui.update.UpdateState
@@ -177,24 +175,11 @@ fun SettingsScreen(
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                 staggeredItem(2) {
                     SettingsCard {
-                        Row(
-                            modifier = Modifier.padding(16.dp),
-                            verticalAlignment = Alignment.CenterVertically,
+                        SettingsRow(
+                            icon = Icons.Rounded.Language,
+                            title = stringResource(R.string.settings_language),
+                            hint = stringResource(R.string.settings_language_hint),
                         ) {
-                            SettingsIcon(Icons.Rounded.Language)
-                            Spacer(Modifier.width(12.dp))
-                            Column(Modifier.weight(1f)) {
-                                Text(
-                                    stringResource(R.string.settings_language),
-                                    style = MaterialTheme.typography.titleMediumEmphasized,
-                                )
-                                Text(
-                                    stringResource(R.string.settings_language_hint),
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                )
-                            }
-                            Spacer(Modifier.width(12.dp))
                             TextButton(onClick = { openAppLanguageSettings(context) }) {
                                 Text(stringResource(R.string.action_change))
                             }
@@ -218,33 +203,13 @@ fun SettingsScreen(
             staggeredItem(4) { SectionTitle(stringResource(R.string.settings_behavior)) }
             staggeredItem(5) {
                 SettingsCard {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .toggleable(
-                                value = state.liteMode,
-                                role = Role.Switch,
-                                onValueChange = onLiteModeChange,
-                            )
-                            .padding(16.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        SettingsIcon(Icons.Rounded.Speed)
-                        Spacer(Modifier.width(12.dp))
-                        Column(Modifier.weight(1f)) {
-                            Text(stringResource(R.string.settings_lite), style = MaterialTheme.typography.titleMediumEmphasized)
-                            Text(
-                                stringResource(R.string.settings_lite_hint),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                        }
-                        Spacer(Modifier.width(12.dp))
-                        Switch(
-                            checked = state.liteMode,
-                            onCheckedChange = null,
-                        )
-                    }
+                    SettingsRow(
+                        icon = Icons.Rounded.Speed,
+                        title = stringResource(R.string.settings_lite),
+                        hint = stringResource(R.string.settings_lite_hint),
+                        checked = state.liteMode,
+                        onCheckedChange = onLiteModeChange,
+                    )
                 }
             }
 
@@ -294,55 +259,24 @@ fun SettingsScreen(
 
             staggeredItem(7) {
                 SettingsCard {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .toggleable(
-                                value = state.openEditorOnApply,
-                                role = Role.Switch,
-                                onValueChange = onOpenEditorOnApplyChange,
-                            )
-                            .padding(16.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        SettingsIcon(Icons.Rounded.Tune)
-                        Spacer(Modifier.width(12.dp))
-                        Column(Modifier.weight(1f)) {
-                            Text(
-                                stringResource(R.string.settings_open_editor),
-                                style = MaterialTheme.typography.titleMediumEmphasized,
-                            )
-                            Text(
-                                stringResource(R.string.settings_open_editor_hint),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                        }
-                        Spacer(Modifier.width(12.dp))
-                        Switch(
-                            checked = state.openEditorOnApply,
-                            onCheckedChange = null,
-                        )
-                    }
+                    SettingsRow(
+                        icon = Icons.Rounded.Tune,
+                        title = stringResource(R.string.settings_open_editor),
+                        hint = stringResource(R.string.settings_open_editor_hint),
+                        checked = state.openEditorOnApply,
+                        onCheckedChange = onOpenEditorOnApplyChange,
+                    )
                 }
             }
 
             staggeredItem(8) { SectionTitle(stringResource(R.string.settings_storage)) }
             staggeredItem(9) {
                 SettingsCard {
-                    Row(
-                        modifier = Modifier.padding(16.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        SettingsIcon(Icons.Rounded.CleaningServices)
-                        Spacer(Modifier.width(12.dp))
-                        Column(Modifier.weight(1f)) {
-                            Text(stringResource(R.string.settings_cache), style = MaterialTheme.typography.titleMediumEmphasized)
-                            Text(
-                                stringResource(R.string.settings_cache_hint),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
+                    SettingsRow(
+                        icon = Icons.Rounded.CleaningServices,
+                        title = stringResource(R.string.settings_cache),
+                        hint = stringResource(R.string.settings_cache_hint),
+                        extra = {
                             Spacer(Modifier.height(4.dp))
                             Text(
                                 text = stringResource(
@@ -352,11 +286,13 @@ fun SettingsScreen(
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
-                        }
-                        TextButton(onClick = { confirmClearCache = true }) {
-                            Text(stringResource(R.string.action_clear))
-                        }
-                    }
+                        },
+                        trailing = {
+                            TextButton(onClick = { confirmClearCache = true }) {
+                                Text(stringResource(R.string.action_clear))
+                            }
+                        },
+                    )
                 }
             }
 

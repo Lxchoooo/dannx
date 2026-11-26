@@ -9,16 +9,19 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.toggleable
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 
 /** Tarjeta de Ajustes con el contorno fino que comparten las del resto de la app. */
@@ -52,6 +55,63 @@ fun SettingsIcon(icon: ImageVector) {
             contentDescription = null,
             modifier = Modifier.padding(9.dp),
         )
+    }
+}
+
+/**
+ * Fila estándar de Ajustes: ícono, título, pista y un control al final.
+ *
+ * Con `checked` la fila entera es el interruptor (el toque en cualquier punto
+ * conmuta) y el [Switch] va decorativo al final; sin `checked`, el control es
+ * el contenido de `trailing` (un botón de acción, por ejemplo). `extra` agrega
+ * líneas bajo la pista, como el uso de caché.
+ */
+@Composable
+fun SettingsRow(
+    icon: ImageVector,
+    title: String,
+    hint: String,
+    modifier: Modifier = Modifier,
+    checked: Boolean? = null,
+    onCheckedChange: ((Boolean) -> Unit)? = null,
+    extra: (@Composable () -> Unit)? = null,
+    trailing: (@Composable () -> Unit)? = null,
+) {
+    val toggleModifier = if (checked != null) {
+        Modifier.toggleable(
+            value = checked,
+            role = Role.Switch,
+            onValueChange = { onCheckedChange?.invoke(it) },
+        )
+    } else {
+        Modifier
+    }
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .then(toggleModifier)
+            .padding(16.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        SettingsIcon(icon)
+        Spacer(Modifier.width(12.dp))
+        Column(Modifier.weight(1f)) {
+            Text(title, style = MaterialTheme.typography.titleMediumEmphasized)
+            Text(
+                hint,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            extra?.invoke()
+        }
+        if (checked != null || trailing != null) {
+            Spacer(Modifier.width(12.dp))
+        }
+        if (checked != null) {
+            Switch(checked = checked, onCheckedChange = null)
+        } else {
+            trailing?.invoke()
+        }
     }
 }
 
