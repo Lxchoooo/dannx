@@ -19,8 +19,10 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.GridItemSpan
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
@@ -39,6 +41,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
@@ -70,11 +73,13 @@ import coil.request.ImageRequest
 import com.dannx.walls.LoadState
 import com.dannx.walls.UiState
 import com.dannx.walls.data.WallpaperCollection
+import com.dannx.walls.ui.LocalWindowSizeClass
 import com.dannx.walls.ui.components.EmptyState
 import com.dannx.walls.ui.components.ErrorState
 import com.dannx.walls.ui.components.FeedSkeleton
 import com.dannx.walls.ui.components.OfflineBanner
 import com.dannx.walls.ui.components.PullRefreshBox
+import com.dannx.walls.ui.components.StaggeredAppear
 import com.dannx.walls.ui.components.StatefulImage
 import com.dannx.walls.ui.components.animateItemMotion
 import com.dannx.walls.ui.components.screenImageSize
@@ -98,6 +103,13 @@ fun CollectionsScreen(
         }
     }
 
+    // En pantallas anchas las colecciones van en dos columnas; en celulares,
+    // una lista. El ancho de la tarjeta se adapta sola por fillMaxWidth.
+    val gridColumns = when (LocalWindowSizeClass.current.widthSizeClass) {
+        WindowWidthSizeClass.Compact -> 1
+        else -> 2
+    }
+
     PullRefreshBox(
         isRefreshing = state.refreshing,
         onRefresh = onRefresh,
@@ -105,12 +117,14 @@ fun CollectionsScreen(
             .fillMaxSize()
             .statusBarsPadding(),
     ) {
-        LazyColumn(
+        LazyVerticalGrid(
+            columns = GridCells.Fixed(gridColumns),
             modifier = Modifier.fillMaxSize(),
             contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 14.dp, bottom = 28.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            item {
+            item(span = { GridItemSpan(gridColumns) }) {
                 Column(Modifier.fillMaxWidth()) {
                     Text(
                         text = stringResource(R.string.collections_title),
@@ -137,18 +151,18 @@ fun CollectionsScreen(
             }
 
             if (state.offline) {
-                item { OfflineBanner() }
+                item(span = { GridItemSpan(gridColumns) }) { OfflineBanner() }
             }
 
             when {
                 state.collections is LoadState.Loading && state.collectionItems.isEmpty() -> {
-                    item {
+                    item(span = { GridItemSpan(gridColumns) }) {
                         FeedSkeleton()
                     }
                 }
 
                 state.collections is LoadState.Error && state.collectionItems.isEmpty() -> {
-                    item {
+                    item(span = { GridItemSpan(gridColumns) }) {
                         ErrorState(
                             message = (state.collections as LoadState.Error).message,
                             onRetry = onRefresh,
@@ -157,7 +171,7 @@ fun CollectionsScreen(
                 }
 
                 state.collectionItems.isEmpty() -> {
-                    item {
+                    item(span = { GridItemSpan(gridColumns) }) {
                         EmptyState(
                             title = stringResource(R.string.state_empty_collections_title),
                             message = stringResource(R.string.state_empty_collections_body),
@@ -172,12 +186,12 @@ fun CollectionsScreen(
             }
 
             if (state.collectionItems.isNotEmpty()) {
-                items(
+                itemsIndexed(
                     items = state.collectionItems,
-                    key = { it.id },
-                    contentType = { "collection" },
-                ) { collection ->
-                    Box(modifier = animateItemMotion()) {
+                    key = { _, collection -> collection.id },
+                    contentType = { _, _ -> "collection" },
+                ) { index, collection ->
+                    StaggeredAppear(index = index, modifier = animateItemMotion()) {
                         CollectionCard(
                             state = state,
                             collection = collection,

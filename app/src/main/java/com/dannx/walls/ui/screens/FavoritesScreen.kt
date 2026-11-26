@@ -21,6 +21,7 @@ import androidx.compose.material.icons.rounded.FavoriteBorder
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -38,6 +39,7 @@ import com.dannx.walls.R
 import com.dannx.walls.LoadState
 import com.dannx.walls.UiState
 import com.dannx.walls.data.Wallpaper
+import com.dannx.walls.ui.LocalWindowSizeClass
 import com.dannx.walls.ui.components.EmptyState
 import com.dannx.walls.ui.components.ErrorState
 import com.dannx.walls.ui.components.FeedSkeleton
@@ -77,6 +79,12 @@ fun FavoritesScreen(
         selectedIds = updated
         if (updated.isEmpty()) selectionMode = false
     }
+    // Mismo criterio que el feed de portada: más columnas en pantallas anchas.
+    val gridColumns = when (LocalWindowSizeClass.current.widthSizeClass) {
+        WindowWidthSizeClass.Compact -> 2
+        WindowWidthSizeClass.Medium -> 3
+        else -> 4
+    }
     PullRefreshBox(
         isRefreshing = state.refreshing,
         onRefresh = onRefresh,
@@ -85,13 +93,13 @@ fun FavoritesScreen(
             .statusBarsPadding(),
     ) {
         LazyVerticalGrid(
-            columns = GridCells.Fixed(2),
+            columns = GridCells.Fixed(gridColumns),
             modifier = Modifier.fillMaxSize(),
             contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 14.dp, bottom = 28.dp),
             horizontalArrangement = Arrangement.spacedBy(12.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            item(span = { GridItemSpan(2) }) {
+            item(span = { GridItemSpan(gridColumns) }) {
                 Column(Modifier.fillMaxWidth()) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Column(Modifier.weight(1f)) {
@@ -169,24 +177,24 @@ fun FavoritesScreen(
             }
 
             if (state.offline) {
-                item(span = { GridItemSpan(2) }) {
+                item(span = { GridItemSpan(gridColumns) }) {
                     OfflineBanner()
                 }
             }
 
             if (state.feed is LoadState.Loading && items.isEmpty()) {
-                item(span = { GridItemSpan(2) }) {
+                item(span = { GridItemSpan(gridColumns) }) {
                     FeedSkeleton()
                 }
             } else if (state.feed is LoadState.Error && items.isEmpty()) {
-                item(span = { GridItemSpan(2) }) {
+                item(span = { GridItemSpan(gridColumns) }) {
                     ErrorState(
                         message = (state.feed as LoadState.Error).message,
                         onRetry = onRefresh,
                     )
                 }
             } else if (items.isEmpty()) {
-                item(span = { GridItemSpan(2) }) {
+                item(span = { GridItemSpan(gridColumns) }) {
                     EmptyState(
                         title = stringResource(R.string.state_empty_favorites_title),
                         message = stringResource(R.string.state_empty_favorites_body),

@@ -555,18 +555,20 @@ private fun MainApp(
                             enterFrom = tabDirection(previousTabRoute, "collections"),
                             onNavigate = { route -> navController.navigateTopLevel(route) },
                         ) {
-                            CollectionsScreen(
-                                state = state,
-                                onRefresh = viewModel::refresh,
-                                onOpenCollection = { collection ->
-                                    navController.navigate("collection/${collection.id}") {
-                                        launchSingleTop = true
-                                    }
-                                },
-                                onCreateCollection = { name, description, isPublic, onDevice ->
-                                    viewModel.createCollection(name, description, isPublic, onDevice)
-                                },
-                            )
+                            ProvideSharedVisibilityScope {
+                                CollectionsScreen(
+                                    state = state,
+                                    onRefresh = viewModel::refresh,
+                                    onOpenCollection = { collection ->
+                                        navController.navigate("collection/${collection.id}") {
+                                            launchSingleTop = true
+                                        }
+                                    },
+                                    onCreateCollection = { name, description, isPublic, onDevice ->
+                                        viewModel.createCollection(name, description, isPublic, onDevice)
+                                    },
+                                )
+                            }
                         }
                     }
                     composable(

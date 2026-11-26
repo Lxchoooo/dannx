@@ -125,6 +125,7 @@ import com.dannx.walls.data.allTags
 import com.dannx.walls.data.collectAllTags
 import com.dannx.walls.data.parseTags
 import com.dannx.walls.ui.components.ExpressiveFilterChip
+import com.dannx.walls.ui.components.StaggeredAppear
 import com.dannx.walls.ui.components.animateItemMotion
 import com.dannx.walls.ui.theme.LocalReduceMotion
 import com.dannx.walls.ui.theme.Motion
@@ -1924,25 +1925,26 @@ private fun LazyListScope.wallsPanel(
             }
         }
     } else {
-        items(
+        itemsIndexed(
             items = walls,
-            key = { it.id },
-            contentType = { "wall" },
-        ) { wallpaper ->
-            StudioWallpaperRow(
-                wallpaper = wallpaper,
-                modifier = animateItemMotion(),
-                categoryName = state.categoryNameFor(wallpaper),
-                selectable = selectionMode,
-                selected = wallpaper.id in selectedIds,
-                onToggleSelected = { onToggleSelected(wallpaper.id) },
-                onStartSelection = { onStartSelection(wallpaper.id) },
-                onEdit = { onEdit(wallpaper) },
-                onReplace = { onReplace(wallpaper) },
-                onToggleFeatured = { onToggleFeatured(wallpaper) },
-                onArchive = { onArchive(wallpaper.id, !wallpaper.isArchived) },
-                onDelete = { onDelete(wallpaper) },
-            )
+            key = { _, wall -> wall.id },
+            contentType = { _, _ -> "wall" },
+        ) { index, wallpaper ->
+            StaggeredAppear(index = index, modifier = animateItemMotion()) {
+                StudioWallpaperRow(
+                    wallpaper = wallpaper,
+                    categoryName = state.categoryNameFor(wallpaper),
+                    selectable = selectionMode,
+                    selected = wallpaper.id in selectedIds,
+                    onToggleSelected = { onToggleSelected(wallpaper.id) },
+                    onStartSelection = { onStartSelection(wallpaper.id) },
+                    onEdit = { onEdit(wallpaper) },
+                    onReplace = { onReplace(wallpaper) },
+                    onToggleFeatured = { onToggleFeatured(wallpaper) },
+                    onArchive = { onArchive(wallpaper.id, !wallpaper.isArchived) },
+                    onDelete = { onDelete(wallpaper) },
+                )
+            }
         }
     }
 }

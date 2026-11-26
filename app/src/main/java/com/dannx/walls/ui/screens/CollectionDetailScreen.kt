@@ -31,6 +31,7 @@ import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -48,9 +49,11 @@ import com.dannx.walls.R
 import com.dannx.walls.UiState
 import com.dannx.walls.data.Wallpaper
 import com.dannx.walls.data.WallpaperCollection
+import com.dannx.walls.ui.LocalWindowSizeClass
 import com.dannx.walls.ui.components.EmptyState
 import com.dannx.walls.ui.components.PullRefreshBox
 import com.dannx.walls.ui.components.SelectionToolbar
+import com.dannx.walls.ui.components.StaggeredAppear
 import com.dannx.walls.ui.components.WallpaperCard
 import com.dannx.walls.ui.components.animateItemMotion
 
@@ -89,6 +92,13 @@ fun CollectionDetailScreen(
         if (updated.isEmpty()) selectionMode = false
     }
 
+    // Más columnas en pantallas anchas, igual que en portada y favoritos.
+    val gridColumns = when (LocalWindowSizeClass.current.widthSizeClass) {
+        WindowWidthSizeClass.Compact -> 2
+        WindowWidthSizeClass.Medium -> 3
+        else -> 4
+    }
+
     PullRefreshBox(
         isRefreshing = state.detailCollectionRefreshing,
         onRefresh = onRefresh,
@@ -97,13 +107,13 @@ fun CollectionDetailScreen(
             .statusBarsPadding(),
     ) {
         LazyVerticalGrid(
-            columns = GridCells.Fixed(2),
+            columns = GridCells.Fixed(gridColumns),
             modifier = Modifier.fillMaxSize(),
             contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 10.dp, bottom = 28.dp),
             horizontalArrangement = Arrangement.spacedBy(12.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            item(span = { GridItemSpan(2) }) {
+            item(span = { GridItemSpan(gridColumns) }) {
                 Column(Modifier.fillMaxWidth()) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         FilledTonalIconButton(onClick = onBack) {
@@ -222,7 +232,7 @@ fun CollectionDetailScreen(
             }
 
             if (items.isEmpty()) {
-                item(span = { GridItemSpan(2) }) {
+                item(span = { GridItemSpan(gridColumns) }) {
                     EmptyState(
                         title = stringResource(R.string.collection_empty_title),
                         message = if (collection.isPublic) {
@@ -240,49 +250,51 @@ fun CollectionDetailScreen(
                     items = items,
                     key = { _, wallpaper -> wallpaper.id },
                     contentType = { _, _ -> "wall" },
-                ) { _, wallpaper ->
+                ) { index, wallpaper ->
                     val isSelected = wallpaper.id in selectedSet
-                    Box(modifier = animateItemMotion()) {
-                        WallpaperCard(
-                            wallpaper = wallpaper,
-                            isFavorite = wallpaper.id in state.favorites,
-                            onClick = {
-                                if (selectionMode) {
-                                    toggleSelection(wallpaper.id)
-                                } else {
-                                    onOpenWallpaper(wallpaper)
-                                }
-                            },
-                            onToggleFavorite = { onToggleFavorite(wallpaper.id) },
-                            onLongClick = {
-                                if (!selectionMode) {
-                                    selectionMode = true
-                                    selectedIds = listOf(wallpaper.id)
-                                }
-                            },
-                            selected = isSelected,
-                            showFavorite = !selectionMode,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .aspectRatio(9f / 16f),
-                        )
-                        if (canEdit && !selectionMode) {
-                            FilledTonalIconButton(
-                                onClick = { onRemove(wallpaper.id) },
+                    StaggeredAppear(index = index, modifier = animateItemMotion()) {
+                        Box {
+                            WallpaperCard(
+                                wallpaper = wallpaper,
+                                isFavorite = wallpaper.id in state.favorites,
+                                onClick = {
+                                    if (selectionMode) {
+                                        toggleSelection(wallpaper.id)
+                                    } else {
+                                        onOpenWallpaper(wallpaper)
+                                    }
+                                },
+                                onToggleFavorite = { onToggleFavorite(wallpaper.id) },
+                                onLongClick = {
+                                    if (!selectionMode) {
+                                        selectionMode = true
+                                        selectedIds = listOf(wallpaper.id)
+                                    }
+                                },
+                                selected = isSelected,
+                                showFavorite = !selectionMode,
                                 modifier = Modifier
-                                    .align(Alignment.TopStart)
-                                    .padding(10.dp)
-                                    .size(48.dp),
-                                colors = IconButtonDefaults.filledTonalIconButtonColors(
-                                    containerColor = Color.Black.copy(alpha = 0.4f),
-                                    contentColor = Color.White,
-                                ),
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Rounded.RemoveCircleOutline,
-                                    contentDescription = stringResource(R.string.collection_remove_item),
-                                    modifier = Modifier.size(20.dp),
-                                )
+                                    .fillMaxWidth()
+                                    .aspectRatio(9f / 16f),
+                            )
+                            if (canEdit && !selectionMode) {
+                                FilledTonalIconButton(
+                                    onClick = { onRemove(wallpaper.id) },
+                                    modifier = Modifier
+                                        .align(Alignment.TopStart)
+                                        .padding(10.dp)
+                                        .size(48.dp),
+                                    colors = IconButtonDefaults.filledTonalIconButtonColors(
+                                        containerColor = Color.Black.copy(alpha = 0.4f),
+                                        contentColor = Color.White,
+                                    ),
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Rounded.RemoveCircleOutline,
+                                        contentDescription = stringResource(R.string.collection_remove_item),
+                                        modifier = Modifier.size(20.dp),
+                                    )
+                                }
                             }
                         }
                     }
