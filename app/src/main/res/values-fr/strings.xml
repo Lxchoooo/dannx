@@ -465,7 +465,6 @@
     <string name="studio_collection_empty">La collection n\'a pas de fonds d\'écran.</string>
     <string name="studio_tag_name">Nom de l\'étiquette</string>
     <string name="studio_apply_to">Appliquer à</string>
-    <string name="studio_rename_tag">Renommer l\'étiquette</string>
     <string name="studio_edit_tag">Modifier l\'étiquette</string>
     <string name="studio_edit_tag_title">Modifier l\'étiquette</string>
     <string name="studio_tag_category">Catégorie pour ces fonds d\'écran</string>
@@ -567,7 +566,6 @@
     <string name="msg_pick_name_and_wallpaper">Choisissez un nom et au moins un fond d\'écran.</string>
     <string name="msg_tag_applied">Étiquette « %1$s » appliquée.</string>
     <string name="msg_tag_replace_required">Choisissez l\'étiquette à remplacer.</string>
-    <string name="msg_tag_renamed">Étiquette « %1$s » renommée en « %2$s ».</string>
     <string name="msg_tag_group_updated">Étiquette « %1$s » mise à jour sur %2$d fonds d\'écran.</string>
     <string name="msg_tag_deleted">Étiquette « %1$s » supprimée.</string>
     <string name="msg_tag_rule_cleared">Règle de « %1$s » retirée.</string>

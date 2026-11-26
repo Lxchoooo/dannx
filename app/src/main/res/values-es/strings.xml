@@ -465,7 +465,6 @@
     <string name="studio_collection_empty">La colección no tiene fondos.</string>
     <string name="studio_tag_name">Nombre de la etiqueta</string>
     <string name="studio_apply_to">Aplicar a</string>
-    <string name="studio_rename_tag">Renombrar etiqueta</string>
     <string name="studio_edit_tag">Editar etiqueta</string>
     <string name="studio_edit_tag_title">Editar etiqueta</string>
     <string name="studio_tag_category">Categoría para estos fondos</string>
@@ -567,7 +566,6 @@
     <string name="msg_pick_name_and_wallpaper">Elige un nombre y al menos un fondo.</string>
     <string name="msg_tag_applied">Etiqueta “%1$s” aplicada.</string>
     <string name="msg_tag_replace_required">Elige la etiqueta que quieres reemplazar.</string>
-    <string name="msg_tag_renamed">Etiqueta “%1$s” renombrada a “%2$s”.</string>
     <string name="msg_tag_group_updated">Etiqueta “%1$s” actualizada en %2$d fondos.</string>
     <string name="msg_tag_deleted">Etiqueta “%1$s” eliminada.</string>
     <string name="msg_tag_rule_cleared">Regla de “%1$s” quitada.</string>

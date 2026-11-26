@@ -465,7 +465,6 @@
     <string name="studio_collection_empty">A coleção não tem papéis de parede.</string>
     <string name="studio_tag_name">Nome da etiqueta</string>
     <string name="studio_apply_to">Aplicar a</string>
-    <string name="studio_rename_tag">Renomear etiqueta</string>
     <string name="studio_edit_tag">Editar etiqueta</string>
     <string name="studio_edit_tag_title">Editar etiqueta</string>
     <string name="studio_tag_category">Categoria para estes papéis de parede</string>
@@ -567,7 +566,6 @@
     <string name="msg_pick_name_and_wallpaper">Escolha um nome e ao menos um papel de parede.</string>
     <string name="msg_tag_applied">Etiqueta “%1$s” aplicada.</string>
     <string name="msg_tag_replace_required">Escolha a etiqueta que deseja substituir.</string>
-    <string name="msg_tag_renamed">Etiqueta “%1$s” renomeada para “%2$s”.</string>
     <string name="msg_tag_group_updated">Etiqueta “%1$s” atualizada em %2$d papéis de parede.</string>
     <string name="msg_tag_deleted">Etiqueta “%1$s” excluída.</string>
     <string name="msg_tag_rule_cleared">Regra de “%1$s” removida.</string>
