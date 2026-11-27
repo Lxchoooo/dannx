@@ -962,6 +962,9 @@ private fun TopLevelScaffold(
         }
     }
     val reduceMotion = LocalReduceMotion.current
+    // La misma señal para la barra y la pantalla visible: tocar la pestaña
+    // que ya está abierta pide volver arriba en vez de recargar nada.
+    val tabScroll = remember { TabScrollBus() }
     // Entrada direccional del contenido: la barra se queda quieta y el cuerpo
     // se desliza desde el lado de la pestaña que se dejó atrás.
     val appear = remember { Animatable(if (enterFrom == 0 || reduceMotion) 1f else 0f) }
@@ -994,7 +997,11 @@ private fun TopLevelScaffold(
                     items = dockItems,
                     selectedRoute = selectedRoute,
                     onNavigate = { route ->
-                        if (route != selectedRoute) onNavigate(route)
+                        if (route != selectedRoute) {
+                            onNavigate(route)
+                        } else {
+                            tabScroll.requestScrollToTop()
+                        }
                     },
                 )
             }
@@ -1014,7 +1021,9 @@ private fun TopLevelScaffold(
                         alpha = 0.82f + 0.18f * appear.value
                     },
             ) {
-                content()
+                CompositionLocalProvider(LocalTabScroll provides tabScroll) {
+                    content()
+                }
             }
         }
     }

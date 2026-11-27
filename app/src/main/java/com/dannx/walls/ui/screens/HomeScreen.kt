@@ -134,6 +134,7 @@ import com.dannx.walls.ui.theme.Motion
 import com.dannx.walls.ui.theme.MotionDuration
 import com.dannx.walls.ui.components.wallpaperThumbRequest
 import com.dannx.walls.ui.theme.LocalLiteMode
+import com.dannx.walls.ui.LocalTabScroll
 import com.dannx.walls.ui.LocalWindowSizeClass
 import kotlin.math.min
 import kotlinx.coroutines.delay
@@ -208,6 +209,11 @@ fun HomeScreen(
         }
     }
     val gridState = rememberLazyGridState()
+    val tabScroll = LocalTabScroll.current
+    // Tocar la pestaña activa en la barra vuelve la cuadrícula al principio.
+    LaunchedEffect(tabScroll.tick) {
+        if (tabScroll.tick > 0) gridState.animateScrollToItem(0)
+    }
     val pullState = rememberPullToRefreshState()
     var lastRandomId by rememberSaveable { mutableStateOf<String?>(null) }
     // Aviso sutil al terminar una recarga manual.

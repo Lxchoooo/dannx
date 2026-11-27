@@ -16,6 +16,7 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.itemsIndexed
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.FavoriteBorder
 import androidx.compose.material3.MaterialTheme
@@ -23,6 +24,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -43,6 +45,7 @@ import com.dannx.walls.R
 import com.dannx.walls.LoadState
 import com.dannx.walls.UiState
 import com.dannx.walls.data.Wallpaper
+import com.dannx.walls.ui.LocalTabScroll
 import com.dannx.walls.ui.LocalWindowSizeClass
 import com.dannx.walls.ui.components.EmptyState
 import com.dannx.walls.ui.components.ErrorState
@@ -90,6 +93,12 @@ fun FavoritesScreen(
         WindowWidthSizeClass.Medium -> 3
         else -> 4
     }
+    val gridState = rememberLazyGridState()
+    val tabScroll = LocalTabScroll.current
+    // Tocar la pestaña activa en la barra vuelve la cuadrícula al principio.
+    LaunchedEffect(tabScroll.tick) {
+        if (tabScroll.tick > 0) gridState.animateScrollToItem(0)
+    }
     PullRefreshBox(
         isRefreshing = state.refreshing,
         onRefresh = onRefresh,
@@ -98,6 +107,7 @@ fun FavoritesScreen(
             .statusBarsPadding(),
     ) {
         LazyVerticalGrid(
+            state = gridState,
             columns = GridCells.Fixed(gridColumns),
             modifier = Modifier.fillMaxSize(),
             contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 14.dp, bottom = 28.dp),

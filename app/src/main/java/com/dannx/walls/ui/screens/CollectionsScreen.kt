@@ -23,6 +23,7 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.itemsIndexed
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
@@ -75,6 +76,7 @@ import coil.request.ImageRequest
 import com.dannx.walls.LoadState
 import com.dannx.walls.UiState
 import com.dannx.walls.data.WallpaperCollection
+import com.dannx.walls.ui.LocalTabScroll
 import com.dannx.walls.ui.LocalWindowSizeClass
 import com.dannx.walls.ui.components.EmptyState
 import com.dannx.walls.ui.components.ErrorState
@@ -111,6 +113,12 @@ fun CollectionsScreen(
         WindowWidthSizeClass.Compact -> 1
         else -> 2
     }
+    val gridState = rememberLazyGridState()
+    val tabScroll = LocalTabScroll.current
+    // Tocar la pestaña activa en la barra vuelve la cuadrícula al principio.
+    LaunchedEffect(tabScroll.tick) {
+        if (tabScroll.tick > 0) gridState.animateScrollToItem(0)
+    }
 
     PullRefreshBox(
         isRefreshing = state.refreshing,
@@ -120,6 +128,7 @@ fun CollectionsScreen(
             .statusBarsPadding(),
     ) {
         LazyVerticalGrid(
+            state = gridState,
             columns = GridCells.Fixed(gridColumns),
             modifier = Modifier.fillMaxSize(),
             contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 14.dp, bottom = 28.dp),
