@@ -10,6 +10,8 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkHorizontally
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
@@ -26,12 +28,23 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateMapOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.boundsInRoot
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInRoot
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
@@ -53,6 +66,10 @@ data class DockItem(
  * Barra inferior flotante al estilo Expressive: una píldora con contorno que
  * deja ver el fondo de la app y agranda solo la pestaña activa.
  *
+ * Además del toque, se puede cambiar de apartado **arrastrando el dedo** por
+ * la barra: cada vez que el dedo cruza a otra pestaña se navega al momento,
+ * con la píldora siguiéndolo y el contenido de la pantalla cambiando detrás.
+ *
  * No usa los inset del sistema: la pantalla que la coloca se encarga del
  * `navigationBarsPadding` para que la píldora quede separada del borde.
  */
@@ -64,6 +81,13 @@ fun FloatingDock(
     modifier: Modifier = Modifier,
 ) {
     val reduceMotion = LocalReduceMotion.current
+    val haptics = LocalHapticFeedback.current
+    // Límites de cada pestaña en coordenadas de raíz: con ellos el dedo sabe
+    // en cuál está, aunque el ancho cambie al abrirse la etiqueta activa.
+    val entryBounds = remember { mutableStateMapOf<String, Rect>() }
+    var rowOrigin by remember { mutableStateOf(Offset.Zero) }
+    // Pestaña que el dedo lleva tomada mientras arrastra; se pinta pulsada.
+    var dragRoute by remember { mutableStateOf<String?>(null) }
     Surface(
         modifier = modifier,
         shape = CircleShape,
@@ -79,6 +103,52 @@ fun FloatingDock(
             modifier = Modifier
                 .height(60.dp)
                 .animateContentSize(animationSpec = Motion.spatial(reduceMotion))
+                .onGloballyPositioned { rowOrigin = it.positionInRoot() }
+                .pointerInput(items) {
+                    awaitEachGesture {
+                        val down = awaitFirstDown(requireUnconsumed = false)
+                        val downPosition = down.position
+                        dragRoute = hitTest(downPosition + rowOrigin, entryBounds)
+                        var lastRoute = dragRoute
+                        var dragged = false
+                        try {
+                            while (true) {
+                                val event = awaitPointerEvent()
+                                val change =
+                                    event.changes.firstOrNull { it.id == down.id } ?: break
+                                if (!change.pressed) break
+                                val route =
+                                    hitTest(change.position + rowOrigin, entryBounds)
+                                var crossed = false
+                                if (route != null && route != lastRoute) {
+                                    // Cruzar a otra pestaña cambia de apartado en
+                                    // el momento, con el dedo todavía en la barra.
+                                    crossed = true
+                                    lastRoute = route
+                                    dragRoute = route
+                                    haptics.performHapticFeedback(
+                                        HapticFeedbackType.TextHandleMove,
+                                    )
+                                    onNavigate(route)
+                                }
+                                // El gesto es nuestro desde que el dedo pasa el
+                                // slop o cruza de pestaña: se consume para que el
+                                // toque simple no se dispare al soltar y no
+                                // devuelva la navegación al sitio de partida.
+                                if (!dragged &&
+                                    (crossed ||
+                                        change.position.minus(downPosition).getDistance() >
+                                            viewConfiguration.touchSlop)
+                                ) {
+                                    dragged = true
+                                }
+                                if (dragged) change.consume()
+                            }
+                        } finally {
+                            dragRoute = null
+                        }
+                    }
+                }
                 .padding(6.dp),
             horizontalArrangement = Arrangement.spacedBy(4.dp, Alignment.CenterHorizontally),
             verticalAlignment = Alignment.CenterVertically,
@@ -87,25 +157,33 @@ fun FloatingDock(
                 DockEntry(
                     item = item,
                     selected = selectedRoute == item.route,
+                    dragging = dragRoute == item.route,
                     onClick = { onNavigate(item.route) },
+                    onPositioned = { entryBounds[item.route] = it },
                 )
             }
         }
     }
 }
 
+/** Pestaña cuyo rectángulo contiene al punto, o `null` si cae en un hueco. */
+private fun hitTest(position: Offset, bounds: Map<String, Rect>): String? =
+    bounds.entries.firstOrNull { position in it.value }?.key
+
 @Composable
 private fun DockEntry(
     item: DockItem,
     selected: Boolean,
+    dragging: Boolean,
     onClick: () -> Unit,
+    onPositioned: (Rect) -> Unit,
 ) {
     val reduceMotion = LocalReduceMotion.current
     val colors = MaterialTheme.colorScheme
     val interactionSource = remember { MutableInteractionSource() }
     val pressed by interactionSource.collectIsPressedAsState()
     val pressScale by animateFloatAsState(
-        targetValue = if (pressed && !reduceMotion) 0.94f else 1f,
+        targetValue = if ((pressed || dragging) && !reduceMotion) 0.94f else 1f,
         animationSpec = Motion.press(reduceMotion),
         label = "dockPress",
     )
@@ -129,6 +207,7 @@ private fun DockEntry(
         interactionSource = interactionSource,
         modifier = Modifier
             .scale(pressScale)
+            .onGloballyPositioned { onPositioned(it.boundsInRoot()) }
             .semantics { role = Role.Tab },
     ) {
         Row(

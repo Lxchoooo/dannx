@@ -18,9 +18,11 @@ import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
@@ -48,6 +50,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -202,6 +205,23 @@ private fun MainApp(
     LaunchedEffect(currentRoute) {
         if (currentRoute in topTabRoutes) previousTabRoute = currentRoute
     }
+    // La barra vive acá, una sola vez para toda la app, y no dentro de cada
+    // pestaña: así el dedo puede arrastrar de una a otra sin que la barra se
+    // destruya con la pantalla que se va. La pestaña marcada la da la ruta
+    // actual y el gesto de arrastre navega por su cuenta.
+    val tabScroll = remember { TabScrollBus() }
+    val currentRouteState = rememberUpdatedState(currentRoute)
+    val dockLabels = tabs.map { stringResource(it.labelRes) }
+    val dockItems = remember(dockLabels) {
+        tabs.mapIndexed { index, tab ->
+            DockItem(
+                route = tab.route,
+                icon = tab.icon,
+                selectedIcon = tab.selectedIcon,
+                label = dockLabels[index],
+            )
+        }
+    }
     val snackbarHostState = remember { SnackbarHostState() }
     val haptics = LocalHapticFeedback.current
     // Tacto de confirmación cuando el fondo terminó de aplicarse. Se guarda el
@@ -258,8 +278,9 @@ private fun MainApp(
         modifier = Modifier.fillMaxSize(),
         containerColor = MaterialTheme.colorScheme.background,
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
-        // La barra ya no vive acá: ahora cada pestaña dibuja la suya. El
-        // snackbar se corre hacia arriba cuando hay barra para no taparla.
+        // La barra se dibuja arriba de todo, una sola vez para toda la app;
+        // acá solo se reserva el espacio que ocupa. El snackbar se corre hacia
+        // arriba cuando hay barra para no taparla.
         snackbarHost = {
             SnackbarHost(
                 hostState = snackbarHostState,
@@ -288,6 +309,7 @@ private fun MainApp(
                     LocalSharedTransitionScope provides this,
                     LocalLastAccent provides lastAccent,
                     LocalBackdropGlass provides backdropGlass,
+                    LocalTabScroll provides tabScroll,
                 ) {
                     NavHost(
                         navController = navController,
@@ -464,9 +486,7 @@ private fun MainApp(
                     ) {
                         ProvideSharedVisibilityScope {
                             TopLevelScaffold(
-                                selectedRoute = "home",
                                 enterFrom = tabDirection(previousTabRoute, "home"),
-                                onNavigate = { route -> navController.navigateTopLevel(route) },
                             ) {
                                 HomeScreen(
                                     state = state,
@@ -522,9 +542,7 @@ private fun MainApp(
                     ) {
                         ProvideSharedVisibilityScope {
                             TopLevelScaffold(
-                                selectedRoute = "favorites",
                                 enterFrom = tabDirection(previousTabRoute, "favorites"),
-                                onNavigate = { route -> navController.navigateTopLevel(route) },
                             ) {
                                 FavoritesScreen(
                                     state = state,
@@ -551,9 +569,7 @@ private fun MainApp(
                         popExitTransition = { ExitTransition.None },
                     ) {
                         TopLevelScaffold(
-                            selectedRoute = "collections",
                             enterFrom = tabDirection(previousTabRoute, "collections"),
-                            onNavigate = { route -> navController.navigateTopLevel(route) },
                         ) {
                             ProvideSharedVisibilityScope {
                                 CollectionsScreen(
@@ -909,6 +925,31 @@ private fun MainApp(
                 }
                 }
             }
+            // La barra se dibuja acá, por encima del NavHost y fuera de las
+            // pantallas: no se destruye al cambiar de pestaña, así que el
+            // dedo puede arrastrar de una a otra sin soltarla.
+            if (showBar) {
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .fillMaxWidth()
+                        .navigationBarsPadding()
+                        .padding(horizontal = 22.dp, vertical = 12.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    FloatingDock(
+                        items = dockItems,
+                        selectedRoute = currentRoute.orEmpty(),
+                        onNavigate = { route ->
+                            if (route != currentRouteState.value) {
+                                navController.navigateTopLevel(route)
+                            } else {
+                                tabScroll.requestScrollToTop()
+                            }
+                        },
+                    )
+                }
+            }
             DebugFpsOverlay(Modifier.fillMaxSize())
         }
     }
@@ -945,26 +986,10 @@ private fun RouteError(
 
 @Composable
 private fun TopLevelScaffold(
-    selectedRoute: String,
-    onNavigate: (String) -> Unit,
     enterFrom: Int = 0,
     content: @Composable () -> Unit,
 ) {
-    val labels = tabs.map { stringResource(it.labelRes) }
-    val dockItems = remember(labels) {
-        tabs.mapIndexed { index, tab ->
-            DockItem(
-                route = tab.route,
-                icon = tab.icon,
-                selectedIcon = tab.selectedIcon,
-                label = labels[index],
-            )
-        }
-    }
     val reduceMotion = LocalReduceMotion.current
-    // La misma señal para la barra y la pantalla visible: tocar la pestaña
-    // que ya está abierta pide volver arriba en vez de recargar nada.
-    val tabScroll = remember { TabScrollBus() }
     // Entrada direccional del contenido: la barra se queda quieta y el cuerpo
     // se desliza desde el lado de la pestaña que se dejó atrás.
     val appear = remember { Animatable(if (enterFrom == 0 || reduceMotion) 1f else 0f) }
@@ -984,26 +1009,15 @@ private fun TopLevelScaffold(
         containerColor = MaterialTheme.colorScheme.background,
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
         bottomBar = {
-            // La píldora flota sobre el fondo: el Scaffold reserva su altura
-            // y el contenido no queda tapado por la barra.
+            // Reserva la altura de la píldora, que dibuja la barra común por
+            // encima de todas las pantallas; el contenido no queda tapado.
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .navigationBarsPadding()
                     .padding(horizontal = 22.dp, vertical = 12.dp),
-                contentAlignment = Alignment.Center,
             ) {
-                FloatingDock(
-                    items = dockItems,
-                    selectedRoute = selectedRoute,
-                    onNavigate = { route ->
-                        if (route != selectedRoute) {
-                            onNavigate(route)
-                        } else {
-                            tabScroll.requestScrollToTop()
-                        }
-                    },
-                )
+                Spacer(Modifier.height(60.dp))
             }
         },
     ) { innerPadding ->
@@ -1021,9 +1035,7 @@ private fun TopLevelScaffold(
                         alpha = 0.82f + 0.18f * appear.value
                     },
             ) {
-                CompositionLocalProvider(LocalTabScroll provides tabScroll) {
-                    content()
-                }
+                content()
             }
         }
     }
