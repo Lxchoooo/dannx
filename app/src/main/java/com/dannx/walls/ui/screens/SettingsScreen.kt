@@ -23,15 +23,19 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.Animation
 import androidx.compose.material.icons.rounded.CleaningServices
+import androidx.compose.material.icons.rounded.Download
 import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.Language
 import androidx.compose.material.icons.rounded.LightMode
 import androidx.compose.material.icons.rounded.OpenInNew
 import androidx.compose.material.icons.rounded.Speed
 import androidx.compose.material.icons.rounded.Tune
+import androidx.compose.material.icons.rounded.Wifi
+import androidx.compose.material.icons.rounded.WifiOff
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
@@ -53,6 +57,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
@@ -140,6 +145,7 @@ fun SettingsScreen(
         },
     ) { padding ->
         val haptics = LocalHapticFeedback.current
+        val downloads = state.downloadedIds.size
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
             contentPadding = PaddingValues(
@@ -315,8 +321,38 @@ fun SettingsScreen(
                 }
             }
 
-            staggeredItem(10) { SectionTitle(stringResource(R.string.settings_credits)) }
+            staggeredItem(10) { SectionTitle(stringResource(R.string.settings_status)) }
             staggeredItem(11) {
+                SettingsCard {
+                    SettingsRow(
+                        icon = if (state.offline) Icons.Rounded.WifiOff else Icons.Rounded.Wifi,
+                        title = stringResource(R.string.settings_status_connection),
+                        hint = stringResource(
+                            if (state.offline) {
+                                R.string.settings_status_offline
+                            } else {
+                                R.string.settings_status_online
+                            },
+                        ),
+                    )
+                    HorizontalDivider(
+                        modifier = Modifier.padding(horizontal = 16.dp),
+                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f),
+                    )
+                    SettingsRow(
+                        icon = Icons.Rounded.Download,
+                        title = stringResource(R.string.settings_status_downloads),
+                        hint = pluralStringResource(
+                            R.plurals.settings_status_downloads_count,
+                            downloads,
+                            downloads,
+                        ),
+                    )
+                }
+            }
+
+            staggeredItem(12) { SectionTitle(stringResource(R.string.settings_credits)) }
+            staggeredItem(13) {
                 SettingsCard {
                     Column(Modifier.padding(16.dp)) {
                         SettingsCardHeader(
@@ -372,8 +408,8 @@ fun SettingsScreen(
                 }
             }
 
-            staggeredItem(12) { SectionTitle(stringResource(R.string.settings_advanced)) }
-            staggeredItem(13) {
+            staggeredItem(14) { SectionTitle(stringResource(R.string.settings_advanced)) }
+            staggeredItem(15) {
                 SettingsCard {
                     Column(Modifier.padding(horizontal = 8.dp, vertical = 8.dp)) {
                         TextButton(onClick = { confirmResetAppearance = true }) {

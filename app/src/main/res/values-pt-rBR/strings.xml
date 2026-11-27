@@ -245,6 +245,15 @@
     <string name="color_style_content_desc">Monta a paleta a partir da própria cor.</string>
     <string name="color_style_cmf">CMF</string>
     <string name="color_style_cmf_desc">Adiciona um tom complementar quente.</string>
+    <string name="settings_status">Status</string>
+    <string name="settings_status_connection">Conexão</string>
+    <string name="settings_status_online">Online</string>
+    <string name="settings_status_offline">Sem conexão</string>
+    <string name="settings_status_downloads">Downloads</string>
+    <plurals name="settings_status_downloads_count">
+        <item quantity="one">%d papel de parede baixado</item>
+        <item quantity="other">%d papéis de parede baixados</item>
+    </plurals>
     <string name="settings_storage">Armazenamento</string>
     <string name="settings_cache">Cache</string>
     <string name="settings_cache_hint">Guardamos o feed e as imagens para o app abrir mais rápido.</string>

@@ -245,6 +245,15 @@
     <string name="color_style_content_desc">Construit la palette à partir de la couleur elle-même.</string>
     <string name="color_style_cmf">CMF</string>
     <string name="color_style_cmf_desc">Ajoute une teinte complémentaire chaleureuse.</string>
+    <string name="settings_status">Statut</string>
+    <string name="settings_status_connection">Connexion</string>
+    <string name="settings_status_online">En ligne</string>
+    <string name="settings_status_offline">Hors ligne</string>
+    <string name="settings_status_downloads">Téléchargements</string>
+    <plurals name="settings_status_downloads_count">
+        <item quantity="one">%d fond d\'écran téléchargé</item>
+        <item quantity="other">%d fonds d\'écran téléchargés</item>
+    </plurals>
     <string name="settings_storage">Stockage</string>
     <string name="settings_cache">Cache</string>
     <string name="settings_cache_hint">Nous gardons le flux et les images pour que l\'application s\'ouvre plus vite.</string>
