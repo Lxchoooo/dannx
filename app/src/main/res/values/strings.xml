@@ -140,6 +140,10 @@
         <item quantity="one">%d saved wallpaper</item>
         <item quantity="other">%d saved wallpapers</item>
     </plurals>
+    <string name="favorites_search">Search favorites</string>
+    <string name="favorites_sort">Sort</string>
+    <string name="favorites_sort_recent">Recent</string>
+    <string name="favorites_sort_name">Name A–Z</string>
 
     <!-- Collections -->
     <string name="collections_title">Collections</string>

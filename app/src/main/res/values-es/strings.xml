@@ -140,6 +140,10 @@
         <item quantity="one">%d fondo guardado</item>
         <item quantity="other">%d fondos guardados</item>
     </plurals>
+    <string name="favorites_search">Buscar en favoritos</string>
+    <string name="favorites_sort">Ordenar</string>
+    <string name="favorites_sort_recent">Recientes</string>
+    <string name="favorites_sort_name">Nombre A–Z</string>
 
     <!-- Colecciones -->
     <string name="collections_title">Colecciones</string>

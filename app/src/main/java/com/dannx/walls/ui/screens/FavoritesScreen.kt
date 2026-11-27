@@ -12,14 +12,21 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.FavoriteBorder
+import androidx.compose.material.icons.rounded.Search
+import androidx.compose.material.icons.rounded.SearchOff
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
@@ -45,10 +52,12 @@ import com.dannx.walls.R
 import com.dannx.walls.LoadState
 import com.dannx.walls.UiState
 import com.dannx.walls.data.Wallpaper
+import com.dannx.walls.data.filterWallpapers
 import com.dannx.walls.ui.LocalTabScroll
 import com.dannx.walls.ui.LocalWindowSizeClass
 import com.dannx.walls.ui.components.EmptyState
 import com.dannx.walls.ui.components.ErrorState
+import com.dannx.walls.ui.components.ExpressiveFilterChip
 import com.dannx.walls.ui.components.FeedSkeleton
 import com.dannx.walls.ui.components.OfflineBanner
 import com.dannx.walls.ui.components.PullRefreshBox
@@ -56,6 +65,7 @@ import com.dannx.walls.ui.components.SelectionToolbar
 import com.dannx.walls.ui.components.StaggeredAppear
 import com.dannx.walls.ui.components.WallpaperCard
 import com.dannx.walls.ui.components.animateItemMotion
+import java.util.Locale
 
 @Composable
 fun FavoritesScreen(
@@ -71,11 +81,27 @@ fun FavoritesScreen(
     val items = remember(state.wallpapers, state.favorites) { state.favoriteWallpapers }
     var selectionMode by rememberSaveable { mutableStateOf(false) }
     var selectedIds by rememberSaveable { mutableStateOf(emptyList<String>()) }
-    val selectedSet = selectedIds.toSet()
-    val selectedItems = remember(items, selectedIds) {
-        items.filter { it.id in selectedSet }
+    var searchQuery by rememberSaveable { mutableStateOf("") }
+    var sortByName by rememberSaveable { mutableStateOf(false) }
+    // La búsqueda recorre el mismo filtro que la portada (título, categoría,
+    // autor y etiquetas) y el orden se aplica encima, sin tocar la lista base.
+    val visibleItems = remember(items, searchQuery, sortByName) {
+        val matched = if (searchQuery.isBlank()) {
+            items
+        } else {
+            filterWallpapers(items, searchQuery, null)
+        }
+        if (sortByName) {
+            matched.sortedBy { it.title.lowercase(Locale.ROOT) }
+        } else {
+            matched
+        }
     }
-    val allSelected = items.isNotEmpty() && items.all { it.id in selectedSet }
+    val selectedSet = selectedIds.toSet()
+    val selectedItems = remember(visibleItems, selectedIds) {
+        visibleItems.filter { it.id in selectedSet }
+    }
+    val allSelected = visibleItems.isNotEmpty() && visibleItems.all { it.id in selectedSet }
     fun clearSelection() {
         selectionMode = false
         selectedIds = emptyList()
@@ -86,6 +112,11 @@ fun FavoritesScreen(
         val updated = if (id in selectedSet) selectedIds - id else selectedIds + id
         selectedIds = updated
         if (updated.isEmpty()) selectionMode = false
+    }
+    // La selección vive sobre lo que se ve: cambiar la búsqueda la descarta.
+    fun onSearchChange(value: String) {
+        searchQuery = value
+        if (selectionMode) clearSelection()
     }
     // Mismo criterio que el feed de portada: más columnas en pantallas anchas.
     val gridColumns = when (LocalWindowSizeClass.current.widthSizeClass) {
@@ -184,18 +215,85 @@ fun FavoritesScreen(
                                 null
                             },
                             allSelected = allSelected,
-                            onToggleSelectAll = if (items.isEmpty()) {
+                            onToggleSelectAll = if (visibleItems.isEmpty()) {
                                 null
                             } else {
                                 {
                                     selectedIds = if (allSelected) {
                                         emptyList()
                                     } else {
-                                        items.map { it.id }
+                                        visibleItems.map { it.id }
                                     }
                                 }
                             },
                         )
+                    }
+                    if (items.isNotEmpty()) {
+                        Spacer(Modifier.height(10.dp))
+                        OutlinedTextField(
+                            value = searchQuery,
+                            onValueChange = { onSearchChange(it) },
+                            modifier = Modifier.fillMaxWidth(),
+                            placeholder = { Text(stringResource(R.string.favorites_search)) },
+                            leadingIcon = {
+                                Icon(Icons.Rounded.Search, contentDescription = null)
+                            },
+                            trailingIcon = {
+                                if (searchQuery.isNotEmpty()) {
+                                    IconButton(onClick = { onSearchChange("") }) {
+                                        Icon(
+                                            Icons.Rounded.Close,
+                                            contentDescription = stringResource(
+                                                R.string.home_clear_search,
+                                            ),
+                                        )
+                                    }
+                                }
+                            },
+                            singleLine = true,
+                            shape = MaterialTheme.shapes.medium,
+                        )
+                        Spacer(Modifier.height(8.dp))
+                        LazyRow(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            contentPadding = PaddingValues(end = 12.dp),
+                        ) {
+                            item(key = "fav-sort-label") {
+                                Text(
+                                    text = stringResource(R.string.favorites_sort),
+                                    style = MaterialTheme.typography.labelLarge,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                            item(key = "fav-sort-recent") {
+                                ExpressiveFilterChip(
+                                    selected = !sortByName,
+                                    onClick = {
+                                        haptics.performHapticFeedback(
+                                            HapticFeedbackType.TextHandleMove,
+                                        )
+                                        sortByName = false
+                                    },
+                                    label = {
+                                        Text(stringResource(R.string.favorites_sort_recent))
+                                    },
+                                )
+                            }
+                            item(key = "fav-sort-name") {
+                                ExpressiveFilterChip(
+                                    selected = sortByName,
+                                    onClick = {
+                                        haptics.performHapticFeedback(
+                                            HapticFeedbackType.TextHandleMove,
+                                        )
+                                        sortByName = true
+                                    },
+                                    label = {
+                                        Text(stringResource(R.string.favorites_sort_name))
+                                    },
+                                )
+                            }
+                        }
                     }
                     Spacer(Modifier.height(12.dp))
                 }
@@ -228,9 +326,19 @@ fun FavoritesScreen(
                         onAction = onExplore,
                     )
                 }
+            } else if (visibleItems.isEmpty()) {
+                item(span = { GridItemSpan(gridColumns) }) {
+                    EmptyState(
+                        title = stringResource(R.string.state_empty_filter_title),
+                        message = stringResource(R.string.state_empty_filter_body),
+                        icon = Icons.Rounded.SearchOff,
+                        actionLabel = stringResource(R.string.home_clear_search),
+                        onAction = { onSearchChange("") },
+                    )
+                }
             } else {
                 itemsIndexed(
-                    items = items,
+                    items = visibleItems,
                     key = { _, wallpaper -> wallpaper.id },
                     contentType = { _, _ -> "wall" },
                 ) { index, wallpaper ->

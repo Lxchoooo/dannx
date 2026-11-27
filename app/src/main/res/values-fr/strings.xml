@@ -140,6 +140,10 @@
         <item quantity="one">%d fond d\'écran enregistré</item>
         <item quantity="other">%d fonds d\'écran enregistrés</item>
     </plurals>
+    <string name="favorites_search">Rechercher dans les favoris</string>
+    <string name="favorites_sort">Trier</string>
+    <string name="favorites_sort_recent">Récents</string>
+    <string name="favorites_sort_name">Nom A–Z</string>
 
     <!-- Collections -->
     <string name="collections_title">Collections</string>
