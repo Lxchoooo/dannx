@@ -81,6 +81,7 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.dannx.walls.R
@@ -395,12 +396,20 @@ private fun PageContent(
             // Cada capa entra a su turno: la insignia primero, el título
             // después y el mensaje al final, como si se posaran.
             Reveal(intro, start = 0.16f, end = 0.76f, rise = 16f) {
+                val pageLabel = stringResource(
+                    R.string.onboarding_page_of,
+                    index + 1,
+                    pagerState.pageCount,
+                )
                 Text(
                     text = stringResource(page.title),
                     style = MaterialTheme.typography.displayMedium,
                     textAlign = TextAlign.Center,
                     color = MaterialTheme.colorScheme.onBackground,
-                    modifier = Modifier.semantics { heading() },
+                    modifier = Modifier.semantics {
+                        heading()
+                        stateDescription = pageLabel
+                    },
                 )
             }
             Spacer(Modifier.height(14.dp))

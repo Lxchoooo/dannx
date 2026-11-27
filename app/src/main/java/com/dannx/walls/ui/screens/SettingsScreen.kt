@@ -398,7 +398,7 @@ fun SettingsScreen(
     if (confirmClearCache) {
         AlertDialog(
             onDismissRequest = { confirmClearCache = false },
-            title = { Text(stringResource(R.string.settings_cache_clear_title)) },
+            title = { Text(stringResource(R.string.settings_cache_clear_title), modifier = Modifier.semantics { heading() }) },
             text = { Text(stringResource(R.string.settings_cache_clear_body)) },
             confirmButton = {
                 TextButton(
@@ -421,7 +421,7 @@ fun SettingsScreen(
     if (confirmResetAppearance) {
         AlertDialog(
             onDismissRequest = { confirmResetAppearance = false },
-            title = { Text(stringResource(R.string.settings_reset)) },
+            title = { Text(stringResource(R.string.settings_reset), modifier = Modifier.semantics { heading() }) },
             text = { Text(stringResource(R.string.settings_reset_body)) },
             confirmButton = {
                 TextButton(
@@ -444,7 +444,7 @@ fun SettingsScreen(
     if (confirmSignOut) {
         AlertDialog(
             onDismissRequest = { confirmSignOut = false },
-            title = { Text(stringResource(R.string.settings_sign_out_title)) },
+            title = { Text(stringResource(R.string.settings_sign_out_title), modifier = Modifier.semantics { heading() }) },
             text = { Text(stringResource(R.string.settings_sign_out_body)) },
             confirmButton = {
                 TextButton(

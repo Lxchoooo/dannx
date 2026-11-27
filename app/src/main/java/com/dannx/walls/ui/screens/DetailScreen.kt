@@ -115,7 +115,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.LiveRegion
 import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.core.view.WindowCompat
 import coil.compose.AsyncImage
@@ -833,7 +835,9 @@ fun DetailScreen(
                             ),
                             style = MaterialTheme.typography.labelLarge,
                             color = Color.White.copy(alpha = 0.9f),
-                            modifier = Modifier.weight(1f),
+                            modifier = Modifier
+                                .weight(1f)
+                                .semantics { liveRegion = LiveRegion.Polite },
                         )
                         TextButton(onClick = onCancelAction) {
                             Text(
@@ -918,7 +922,7 @@ fun DetailScreen(
     if (downloadPrompt != null) {
         AlertDialog(
             onDismissRequest = onDismissDownloadPrompt,
-            title = { Text(stringResource(R.string.download_duplicate_title)) },
+            title = { Text(stringResource(R.string.download_duplicate_title), modifier = Modifier.semantics { heading() }) },
             text = { Text(stringResource(R.string.download_duplicate_body)) },
             confirmButton = {
                 TextButton(onClick = { onDownloadAgain(downloadPrompt.wallpaperId) }) {
@@ -978,7 +982,7 @@ private fun CollectionPickerDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.detail_save_collection)) },
+        title = { Text(stringResource(R.string.detail_save_collection), modifier = Modifier.semantics { heading() }) },
         text = {
             Column {
                 if (collections.isEmpty()) {
@@ -1055,7 +1059,7 @@ private fun NewCollectionDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.collection_new)) },
+        title = { Text(stringResource(R.string.collection_new), modifier = Modifier.semantics { heading() }) },
         text = {
             Column {
                 OutlinedTextField(

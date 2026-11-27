@@ -6,6 +6,7 @@
 
     <string name="onboarding_skip">Passer</string>
     <string name="onboarding_next">Suivant</string>
+    <string name="onboarding_page_of">Page %1$d sur %2$d</string>
     <string name="onboarding_start">Entrer</string>
     <string name="onboarding_title_1">Pas juste un fond d\'écran.</string>
     <string name="onboarding_message_1">Une autre façon de regarder.</string>
@@ -77,6 +78,7 @@
     <string name="action_change">Modifier</string>
     <string name="action_settings">Paramètres</string>
     <string name="action_retry">Réessayer</string>
+    <string name="action_refresh">Actualiser</string>
     <string name="action_add_favorite">Ajouter aux favoris</string>
     <string name="action_remove_favorite">Retirer des favoris</string>
     <string name="favorite_state_on">Favori</string>

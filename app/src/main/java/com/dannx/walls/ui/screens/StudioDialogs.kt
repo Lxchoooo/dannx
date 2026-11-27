@@ -102,6 +102,8 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -129,7 +131,7 @@ internal fun BulkCategoryDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.studio_bulk_category_title)) },
+        title = { Text(stringResource(R.string.studio_bulk_category_title), modifier = Modifier.semantics { heading() }) },
         text = {
             Column(
                 modifier = Modifier
@@ -185,7 +187,7 @@ internal fun BulkTagsDialog(
     if (mode == null) {
         AlertDialog(
             onDismissRequest = onDismiss,
-            title = { Text(stringResource(R.string.studio_bulk_edit_title)) },
+            title = { Text(stringResource(R.string.studio_bulk_edit_title), modifier = Modifier.semantics { heading() }) },
             text = {
                 Column {
                     if (selectedIds.size > BulkTagLimit) {
@@ -300,7 +302,7 @@ internal fun BulkTagsResultDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.studio_bulk_edit_title)) },
+        title = { Text(stringResource(R.string.studio_bulk_edit_title), modifier = Modifier.semantics { heading() }) },
         text = {
             Column {
                 Text(
@@ -392,7 +394,7 @@ internal fun CategoryDeleteDialog(
     var reassignTo by remember(category.id) { mutableStateOf(alternatives.firstOrNull()?.id) }
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.studio_delete_category)) },
+        title = { Text(stringResource(R.string.studio_delete_category), modifier = Modifier.semantics { heading() }) },
         text = {
             Column {
                 Text(
@@ -535,7 +537,7 @@ internal fun CollectionWallsDialog(
     }
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(collection.name) },
+        title = { Text(collection.name, modifier = Modifier.semantics { heading() }) },
         text = {
             LazyColumn(modifier = Modifier.heightIn(max = 420.dp)) {
                 item(key = "collection-walls-actions") {
@@ -618,7 +620,7 @@ internal fun CollectionOrderDialog(
     var order by remember(collection.id) { mutableStateOf(initial) }
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.studio_collection_order_title, collection.name)) },
+        title = { Text(stringResource(R.string.studio_collection_order_title, collection.name), modifier = Modifier.semantics { heading() }) },
         text = {
             LazyColumn(modifier = Modifier.heightIn(max = 420.dp)) {
                 itemsIndexed(items = order, key = { _, id -> id }) { index, id ->
@@ -698,7 +700,7 @@ internal fun TagCreateDialog(
     val selected = remember { mutableStateOf(emptySet<String>()) }
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.studio_create_tag)) },
+        title = { Text(stringResource(R.string.studio_create_tag), modifier = Modifier.semantics { heading() }) },
         text = {
             LazyColumn(modifier = Modifier.heightIn(max = 430.dp)) {
                 item(key = "tag-create-header") {
@@ -793,7 +795,7 @@ internal fun TagEditDialog(
     val selectedCategory = categoryId?.let { id -> categories.firstOrNull { it.id == id } }
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.studio_edit_tag_title)) },
+        title = { Text(stringResource(R.string.studio_edit_tag_title), modifier = Modifier.semantics { heading() }) },
         text = {
             Column {
                 OutlinedTextField(
@@ -923,7 +925,7 @@ internal fun ConfirmDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(title) },
+        title = { Text(title, modifier = Modifier.semantics { heading() }) },
         text = { Text(text) },
         confirmButton = {
             TextButton(onClick = onConfirm) { Text(confirm) }

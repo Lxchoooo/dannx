@@ -96,6 +96,8 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.CustomAccessibilityAction
+import androidx.compose.ui.semantics.customActions
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
@@ -325,12 +327,21 @@ fun HomeScreen(
                             // El título reacciona a una pulsación sostenida que no
                             // se mueve del lugar.
                             val haptics = LocalHapticFeedback.current
+                            val refreshLabel = stringResource(R.string.action_refresh)
                             Text(
                                 text = stringResource(R.string.app_name),
                                 style = MaterialTheme.typography.displayLarge,
                                 color = MaterialTheme.colorScheme.primary,
                                 modifier = Modifier
-                                    .semantics { heading() }
+                                    .semantics {
+                                        heading()
+                                        customActions = listOf(
+                                            CustomAccessibilityAction(refreshLabel) {
+                                                onRefresh()
+                                                true
+                                            },
+                                        )
+                                    }
                                     .pointerInput(onOpenStudio) {
                                     awaitEachGesture {
                                         val down = awaitFirstDown()

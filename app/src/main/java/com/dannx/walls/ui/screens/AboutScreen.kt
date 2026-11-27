@@ -230,7 +230,7 @@ private fun shareApp(context: Context) {
 private fun LicensesDialog(onDismiss: () -> Unit) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.about_licenses)) },
+        title = { Text(stringResource(R.string.about_licenses), modifier = Modifier.semantics { heading() }) },
         text = {
             Column(
                 modifier = Modifier

@@ -682,7 +682,7 @@ fun StudioScreen(
     state.bulkProgress?.let { (done, total) ->
         AlertDialog(
             onDismissRequest = {},
-            title = { Text(stringResource(R.string.studio_bulk_edit_title)) },
+            title = { Text(stringResource(R.string.studio_bulk_edit_title), modifier = Modifier.semantics { heading() }) },
             text = {
                 Column {
                     Text(stringResource(R.string.studio_bulk_progress, done, total))
@@ -805,6 +805,7 @@ private fun StudioOverview(
             Text(
                 text = stringResource(R.string.studio_overview),
                 style = MaterialTheme.typography.titleMediumEmphasized,
+                modifier = Modifier.semantics { heading() },
             )
             Spacer(Modifier.height(10.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -940,6 +941,7 @@ private fun ContentPanel(
     Text(
         stringResource(R.string.studio_content),
         style = MaterialTheme.typography.headlineMediumEmphasized,
+        modifier = Modifier.semantics { heading() },
     )
     Spacer(Modifier.height(6.dp))
     Text(
@@ -1009,6 +1011,7 @@ private fun ContentPreview(
     Text(
         text = stringResource(R.string.studio_content_preview),
         style = MaterialTheme.typography.titleMedium,
+        modifier = Modifier.semantics { heading() },
     )
     Spacer(Modifier.height(4.dp))
     Text(
@@ -1076,6 +1079,7 @@ private fun FeaturedOrderPanel(
     Text(
         stringResource(R.string.studio_featured_order),
         style = MaterialTheme.typography.headlineMediumEmphasized,
+        modifier = Modifier.semantics { heading() },
     )
     Spacer(Modifier.height(6.dp))
     Text(
@@ -1198,6 +1202,7 @@ private fun SetupCard(onRefresh: () -> Unit) {
             Text(
                 text = stringResource(R.string.studio_setup_title),
                 style = MaterialTheme.typography.headlineMediumEmphasized,
+                modifier = Modifier.semantics { heading() },
             )
             Spacer(Modifier.height(6.dp))
             Text(
@@ -1353,6 +1358,7 @@ private fun PublishPanel(
     Text(
         text = stringResource(R.string.studio_new_wallpaper),
         style = MaterialTheme.typography.headlineMediumEmphasized,
+        modifier = Modifier.semantics { heading() },
     )
     Spacer(Modifier.height(12.dp))
     Card(
@@ -1617,7 +1623,9 @@ private fun LazyListScope.wallsPanel(
                 Text(
                     text = stringResource(R.string.studio_my_walls),
                     style = MaterialTheme.typography.headlineMediumEmphasized,
-                    modifier = Modifier.weight(1f),
+                    modifier = Modifier
+                        .weight(1f)
+                        .semantics { heading() },
                 )
                 ExpressiveFilterChip(
                     selected = showArchived,
@@ -1970,7 +1978,9 @@ private fun LazyListScope.trashPanel(
                 Text(
                     text = stringResource(R.string.studio_trash),
                     style = MaterialTheme.typography.headlineMediumEmphasized,
-                    modifier = Modifier.weight(1f),
+                    modifier = Modifier
+                        .weight(1f)
+                        .semantics { heading() },
                 )
                 if (trash.isNotEmpty()) {
                     TextButton(
@@ -2257,6 +2267,7 @@ private fun CategoriesPanel(
     Text(
         stringResource(R.string.studio_categories),
         style = MaterialTheme.typography.headlineMediumEmphasized,
+        modifier = Modifier.semantics { heading() },
     )
     Spacer(Modifier.height(6.dp))
     Text(
@@ -2516,6 +2527,7 @@ private fun TagsPanel(
         Text(
             text = stringResource(R.string.studio_tag_rules_orphans),
             style = MaterialTheme.typography.titleMedium,
+            modifier = Modifier.semantics { heading() },
         )
         Spacer(Modifier.height(4.dp))
         Text(
@@ -2568,7 +2580,9 @@ private fun CollectionsPanel(
         Text(
             text = stringResource(R.string.studio_collections),
             style = MaterialTheme.typography.headlineMediumEmphasized,
-            modifier = Modifier.weight(1f),
+            modifier = Modifier
+                .weight(1f)
+                .semantics { heading() },
         )
         Button(onClick = onCreate, shape = CircleShape) {
             Icon(Icons.Rounded.Add, contentDescription = null, modifier = Modifier.size(18.dp))

@@ -42,6 +42,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.semantics.CustomAccessibilityAction
+import androidx.compose.ui.semantics.customActions
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.res.pluralStringResource
@@ -125,10 +127,19 @@ fun CollectionDetailScreen(
                         }
                         Spacer(Modifier.width(12.dp))
                         Column(Modifier.weight(1f)) {
+                            val refreshLabel = stringResource(R.string.action_refresh)
                             Text(
                                 text = collection.name,
                                 style = MaterialTheme.typography.headlineMediumEmphasized,
-                                modifier = Modifier.semantics { heading() },
+                                modifier = Modifier.semantics {
+                                    heading()
+                                    customActions = listOf(
+                                        CustomAccessibilityAction(refreshLabel) {
+                                            onRefresh()
+                                            true
+                                        },
+                                    )
+                                },
                             )
                             Text(
                                 text = if (items.size == total) {
@@ -317,7 +328,7 @@ fun CollectionDetailScreen(
     if (confirmDelete) {
         AlertDialog(
             onDismissRequest = { confirmDelete = false },
-            title = { Text(stringResource(R.string.collection_delete)) },
+            title = { Text(stringResource(R.string.collection_delete), modifier = Modifier.semantics { heading() }) },
             text = {
                 Text(
                     stringResource(R.string.collection_delete_body, collection.name),

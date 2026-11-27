@@ -57,6 +57,8 @@ import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.foundation.LocalIndication
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.semantics.CustomAccessibilityAction
+import androidx.compose.ui.semantics.customActions
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.graphics.Brush
@@ -126,10 +128,19 @@ fun CollectionsScreen(
         ) {
             item(span = { GridItemSpan(gridColumns) }) {
                 Column(Modifier.fillMaxWidth()) {
+                    val refreshLabel = stringResource(R.string.action_refresh)
                     Text(
                         text = stringResource(R.string.collections_title),
                         style = MaterialTheme.typography.displayMediumEmphasized,
-                        modifier = Modifier.semantics { heading() },
+                        modifier = Modifier.semantics {
+                            heading()
+                            customActions = listOf(
+                                CustomAccessibilityAction(refreshLabel) {
+                                    onRefresh()
+                                    true
+                                },
+                            )
+                        },
                     )
                     Text(
                         text = stringResource(R.string.collections_subtitle),
@@ -402,7 +413,7 @@ private fun CreateCollectionDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.collection_new)) },
+        title = { Text(stringResource(R.string.collection_new), modifier = Modifier.semantics { heading() }) },
         text = {
             Column {
                 OutlinedTextField(

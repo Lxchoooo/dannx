@@ -32,6 +32,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.semantics.CustomAccessibilityAction
+import androidx.compose.ui.semantics.customActions
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.res.pluralStringResource
@@ -106,10 +108,19 @@ fun FavoritesScreen(
                 Column(Modifier.fillMaxWidth()) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Column(Modifier.weight(1f)) {
+                            val refreshLabel = stringResource(R.string.action_refresh)
                             Text(
                                 text = stringResource(R.string.favorites_title),
                                 style = MaterialTheme.typography.displayMediumEmphasized,
-                                modifier = Modifier.semantics { heading() },
+                                modifier = Modifier.semantics {
+                                    heading()
+                                    customActions = listOf(
+                                        CustomAccessibilityAction(refreshLabel) {
+                                            onRefresh()
+                                            true
+                                        },
+                                    )
+                                },
                             )
                             Text(
                                 text = pluralStringResource(

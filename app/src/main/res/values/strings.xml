@@ -6,6 +6,7 @@
 
     <string name="onboarding_skip">Skip</string>
     <string name="onboarding_next">Next</string>
+    <string name="onboarding_page_of">Page %1$d of %2$d</string>
     <string name="onboarding_start">Step in</string>
     <string name="onboarding_title_1">Not another wallpaper.</string>
     <string name="onboarding_message_1">A different way to see.</string>
@@ -77,6 +78,7 @@
     <string name="action_change">Change</string>
     <string name="action_settings">Settings</string>
     <string name="action_retry">Retry</string>
+    <string name="action_refresh">Refresh</string>
     <string name="action_add_favorite">Add to favorites</string>
     <string name="action_remove_favorite">Remove from favorites</string>
     <string name="favorite_state_on">Favorite</string>

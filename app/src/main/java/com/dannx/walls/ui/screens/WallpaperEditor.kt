@@ -64,6 +64,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
@@ -426,7 +427,7 @@ internal fun WallpaperEditorSheet(
             AlertDialog(
                 onDismissRequest = { askDiscard = false },
                 properties = DialogProperties(dismissOnClickOutside = false),
-                title = { Text(stringResource(R.string.editor_discard_title)) },
+                title = { Text(stringResource(R.string.editor_discard_title), modifier = Modifier.semantics { heading() }) },
                 text = { Text(stringResource(R.string.editor_discard_body)) },
                 confirmButton = {
                     TextButton(
