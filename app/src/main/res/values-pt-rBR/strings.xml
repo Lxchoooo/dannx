@@ -272,8 +272,6 @@
     <string name="settings_sign_out">Sair da conta</string>
     <string name="settings_sign_out_title">Sair da conta?</string>
     <string name="settings_sign_out_body">Você precisará desta conta de novo para publicar ou gerenciar seus wallpapers.</string>
-    <string name="settings_sign_out_title">Sair da conta?</string>
-    <string name="settings_sign_out_body">Você precisará desta conta de novo para publicar ou gerenciar seus wallpapers.</string>
     <string name="settings_about">Sobre</string>
     <string name="settings_privacy">Privacidade</string>
 
