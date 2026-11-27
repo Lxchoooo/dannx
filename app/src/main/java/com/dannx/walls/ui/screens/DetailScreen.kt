@@ -115,7 +115,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.LiveRegion
+import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
@@ -837,7 +837,7 @@ fun DetailScreen(
                             color = Color.White.copy(alpha = 0.9f),
                             modifier = Modifier
                                 .weight(1f)
-                                .semantics { liveRegion = LiveRegion.Polite },
+                                .semantics { liveRegion = LiveRegionMode.Polite },
                         )
                         TextButton(onClick = onCancelAction) {
                             Text(

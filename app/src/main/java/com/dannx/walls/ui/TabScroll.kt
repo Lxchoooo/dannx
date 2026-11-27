@@ -3,7 +3,7 @@ package com.dannx.walls.ui
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.platform.staticCompositionLocalOf
+import androidx.compose.runtime.staticCompositionLocalOf
 
 /**
  * Señal compartida para que tocar la pestaña activa de la barra pida volver
